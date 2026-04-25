@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, Package, FileText,
   ShoppingCart, BarChart3, Settings, LogOut,
@@ -7,18 +8,20 @@ import {
   HelpCircle, Menu, X,
 } from 'lucide-react';
 import './Layout.css';
+import LanguageSwitcher from './LanguageSwitcher';
 
-const NAV = [
-  { label: 'Dashboard',     icon: <LayoutDashboard size={18}/>, path: '/dashboard' },
-  { label: 'Parties',       icon: <Users size={18}/>,           path: '/dashboard/parties' },
-  { label: 'Items',         icon: <Package size={18}/>,         path: '/dashboard/items' },
-  { label: 'Sales',         icon: <ShoppingCart size={18}/>,    path: '/dashboard/sales' },
-  { label: 'Purchases',     icon: <FileText size={18}/>,        path: '/dashboard/purchases' },
-  { label: 'Reports',       icon: <BarChart3 size={18}/>,       path: '/dashboard/reports' },
-  { label: 'Settings',      icon: <Settings size={18}/>,        path: '/dashboard/settings' },
+const NAV_KEYS = [
+  { key: 'nav.dashboard', icon: <LayoutDashboard size={18}/>, path: '/dashboard' },
+  { key: 'nav.parties',   icon: <Users size={18}/>,           path: '/dashboard/parties' },
+  { key: 'nav.items',     icon: <Package size={18}/>,         path: '/dashboard/items' },
+  { key: 'nav.sales',     icon: <ShoppingCart size={18}/>,    path: '/dashboard/sales' },
+  { key: 'nav.purchases', icon: <FileText size={18}/>,        path: '/dashboard/purchases' },
+  { key: 'nav.reports',   icon: <BarChart3 size={18}/>,       path: '/dashboard/reports' },
+  { key: 'nav.settings',  icon: <Settings size={18}/>,        path: '/dashboard/settings' },
 ];
 
 export default function Layout() {
+  const { t } = useTranslation();
   const navigate  = useNavigate();
   const location  = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -62,20 +65,19 @@ export default function Layout() {
         </div>
       )}
 
-      {/* Nav */}
       <nav className="sidebar-nav">
-        <div className="nav-group-label">{(!collapsed || mobile) && 'MENU'}</div>
-        {NAV.map(item => (
+        <div className="nav-group-label">{(!collapsed || mobile) && t('nav.menu','MENU')}</div>
+        {NAV_KEYS.map(item => (
           <button
             key={item.path}
-            id={`nav-${item.label.toLowerCase()}`}
+            id={`nav-${item.key.replace('nav.','')}`}
             className={`nav-item ${isActive(item.path) ? 'nav-item-active' : ''}`}
             onClick={() => { navigate(item.path); if (mobile) setMobileOpen(false); }}
-            title={collapsed && !mobile ? item.label : undefined}
+            title={collapsed && !mobile ? t(item.key) : undefined}
           >
             <span className="nav-icon">{item.icon}</span>
-            {(!collapsed || mobile) && <span className="nav-label">{item.label}</span>}
-            {item.label === 'Reports' && (!collapsed || mobile) && (
+            {(!collapsed || mobile) && <span className="nav-label">{t(item.key)}</span>}
+            {item.key === 'nav.reports' && (!collapsed || mobile) && (
               <span className="nav-badge">New</span>
             )}
           </button>
@@ -155,8 +157,9 @@ export default function Layout() {
           <div className="topbar-right">
             <div className="gst-status">
               <span className="gst-dot"/>
-              <span className="gst-label">GST Active</span>
+              <span className="gst-label">{t('common.gst_active','GST Active')}</span>
             </div>
+            <LanguageSwitcher />
             <button id="notifications-btn" className="topbar-icon-btn" aria-label="Notifications">
               <Bell size={17}/>
               <span className="notif-dot"/>

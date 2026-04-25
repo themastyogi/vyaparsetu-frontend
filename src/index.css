@@ -54,7 +54,20 @@
 html, body, #root { height: 100%; }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family:
+    'Inter',
+    'Noto Sans Devanagari',
+    'Noto Sans Bengali',
+    'Noto Sans Tamil',
+    'Noto Sans Telugu',
+    'Noto Sans Gujarati',
+    'Noto Sans Kannada',
+    'Noto Sans Malayalam',
+    'Noto Sans Oriya',
+    'Noto Sans Gurmukhi',
+    'Noto Nastaliq Urdu',
+    'Noto Sans Ol Chiki',
+    sans-serif;
   background-color: var(--bg-base);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -107,3 +120,14 @@ body {
 
 .animate-fade-in-up { animation: fadeInUp 0.5s ease forwards; }
 .animate-fade-in    { animation: fadeIn 0.4s ease forwards; }
+
+/* ─── RTL Support (Urdu, Kashmiri, Sindhi) ─── */
+[dir="rtl"] .sidebar       { border-right: none; border-left: 1px solid var(--border-subtle); }
+[dir="rtl"] .topbar-left   { flex-direction: row-reverse; }
+[dir="rtl"] .topbar-right  { flex-direction: row-reverse; }
+[dir="rtl"] .nav-item      { flex-direction: row-reverse; text-align: right; }
+[dir="rtl"] .nav-badge     { margin-right: auto; margin-left: 0; }
+[dir="rtl"] .modal         { text-align: right; direction: rtl; }
+[dir="rtl"] .data-table    { direction: rtl; text-align: right; }
+[dir="rtl"] .party-name-cell { flex-direction: row-reverse; }
+[dir="rtl"] .lang-dropdown { left: 0; right: auto; }

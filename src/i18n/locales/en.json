@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "dashboard": "Dashboard", "parties": "Parties", "items": "Items",
+    "sales": "Sales", "purchases": "Purchases", "reports": "Reports",
+    "settings": "Settings", "help": "Help & Support", "menu": "MENU", "logout": "Logout"
+  },
+  "login": {
+    "tagline": "Smart Accounting for India",
+    "hero_title": "Your business,", "hero_title2": "fully in control.",
+    "hero_sub": "The accounting platform built for Indian SMEs — GST-ready, CA-reviewed, and production-grade from day one.",
+    "welcome": "Welcome back", "subtitle": "Sign in to your VyaparSetu workspace",
+    "email": "Email address", "email_ph": "you@company.in",
+    "password": "Password", "forgot": "Forgot password?", "signin": "Sign in",
+    "demo_label": "Demo credentials", "fill_demo": "Fill demo credentials",
+    "no_account": "Don't have an account?", "request_access": "Request access",
+    "mfa_title": "Two-factor auth", "mfa_subtitle": "Enter the 6-digit code from your authenticator app",
+    "otp_hint": "Any 6 digits accepted in demo mode",
+    "verify": "Verify & continue", "back": "← Back to login"
+  },
+  "dashboard": {
+    "greeting": "Good afternoon", "subtitle": "Here's what's happening with {{company}} today.",
+    "new_invoice": "New Invoice", "record_purchase": "Record Purchase",
+    "total_revenue": "Total Revenue", "outstanding": "Outstanding Receivable",
+    "total_parties": "Total Parties", "low_stock": "Low Stock Items",
+    "vs_last_month": "vs last month", "parties_pending": "parties pending",
+    "added_month": "added this month", "below_reorder": "below reorder level",
+    "revenue_expenses": "Revenue vs Expenses", "last_7": "Last 7 months · FY 2025–26",
+    "quick_actions": "Quick Actions", "create_invoice": "Create Sales Invoice",
+    "add_party": "Add New Party", "add_item": "Add Item / Stock",
+    "view_trial": "View Trial Balance", "gst_auto": "GST auto-calculated",
+    "gstin_val": "GSTIN validated", "hsn_ready": "HSN lookup ready",
+    "live_updated": "Live & updated", "recent_txn": "Recent Transactions",
+    "all_vouchers": "All vouchers · April 2026", "view_all": "View all",
+    "revenue": "Revenue", "expenses": "Expenses", "action_needed": "Action needed"
+  },
+  "parties": {
+    "title": "Parties", "subtitle": "Manage your customers, vendors, and business contacts",
+    "add": "Add Party", "total": "Total Parties", "receivable": "Total Receivable",
+    "payable": "Total Payable", "search": "Search by name or GSTIN…", "export": "Export",
+    "all": "All", "customer": "Customer", "vendor": "Vendor", "both": "Both",
+    "col_name": "Party Name", "col_type": "Type", "col_gstin": "GSTIN",
+    "col_state": "State", "col_balance": "Balance", "col_status": "Status",
+    "active": "Active", "inactive": "Inactive", "empty": "No parties found",
+    "modal_title": "Add New Party", "name_label": "Party Name *",
+    "name_ph": "e.g. Ravi Enterprises", "gstin_label": "GSTIN",
+    "gstin_ph": "15-char GSTIN", "type_label": "Type *",
+    "state_label": "State", "state_ph": "e.g. Maharashtra",
+    "save": "Save Party", "cancel": "Cancel", "saved": "Party saved successfully!"
+  },
+  "items": {
+    "title": "Items & Services", "subtitle": "Manage your product catalogue, HSN codes, and GST rates",
+    "add": "Add Item", "total": "Total Items", "stock": "Stock Items",
+    "services": "Services", "restock": "Need Restock",
+    "search": "Search by name or HSN code…", "export": "Export",
+    "all": "All", "stock_t": "Stock", "service": "Service", "expense": "Expense", "asset": "Asset",
+    "col_name": "Item Name", "col_type": "Type", "col_hsn": "HSN / SAC",
+    "col_gst": "GST Rate", "col_price": "Unit Price", "col_stock": "Stock", "col_status": "Status",
+    "in_stock": "In Stock", "low_stock": "Low Stock", "out_stock": "Out of Stock",
+    "modal_title": "Add New Item", "name_label": "Item Name *", "name_ph": "e.g. A4 Paper Ream",
+    "type_label": "Type *", "gst_label": "GST Rate", "hsn_label": "HSN / SAC *",
+    "hsn_ph": "e.g. 48021000", "price_label": "Unit Price (₹)", "price_ph": "0.00",
+    "save": "Save Item", "cancel": "Cancel", "saved": "Item saved successfully!"
+  },
+  "common": {
+    "gst_active": "GST Active", "search_ph": "Search parties, items, invoices…",
+    "production": "Production", "help": "Help & Support", "dismiss": "Dismiss",
+    "coming_soon": "This module is coming soon", "na": "N/A"
+  },
+  "alerts": {
+    "gstr3b": "GSTR-3B due in 5 days — ₹1.2L payable",
+    "recon": "3 purchase invoices pending reconciliation"
+  },
+  "status": { "paid": "Paid", "pending": "Pending", "draft": "Draft", "overdue": "Overdue" },
+  "txn": { "type": "Type", "party": "Party", "amount": "Amount", "gst": "GST", "date": "Date", "status": "Status" }
+}
