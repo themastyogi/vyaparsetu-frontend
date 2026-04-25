@@ -22,6 +22,11 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  const currentHour = new Date().getHours();
+  let greetingKey = 'dashboard.greeting_afternoon';
+  if (currentHour < 12) greetingKey = 'dashboard.greeting_morning';
+  else if (currentHour >= 17) greetingKey = 'dashboard.greeting_evening';
+
   const STATS = [
     { id: 'total-revenue',         label: t('dashboard.total_revenue'), value: '₹ 24,80,500', change: '+18.4%', positive: true,  sub: t('dashboard.vs_last_month'),    icon: <IndianRupee size={20}/>, color: 'purple' },
     { id: 'outstanding-receivable', label: t('dashboard.outstanding'),  value: '₹ 6,32,000',  change: '-4.2%',  positive: false, sub: `12 ${t('dashboard.parties_pending')}`, icon: <TrendingUp size={20}/>, color: 'blue' },
@@ -54,7 +59,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="dash-header">
         <div>
-          <h1 className="dash-title">{t('dashboard.greeting')}, Vikas 👋</h1>
+          <h1 className="dash-title">{t(greetingKey)}, Vikas 👋</h1>
           <p className="dash-sub">{t('dashboard.subtitle', { company: 'Sharma Traders' })}</p>
         </div>
         <div className="dash-header-actions">

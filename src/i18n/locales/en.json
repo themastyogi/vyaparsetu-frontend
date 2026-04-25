@@ -18,7 +18,8 @@
     "verify": "Verify & continue", "back": "← Back to login"
   },
   "dashboard": {
-    "greeting": "Good afternoon", "subtitle": "Here's what's happening with {{company}} today.",
+    "greeting_morning": "Good morning", "greeting_afternoon": "Good afternoon", "greeting_evening": "Good evening",
+    "subtitle": "Here's what's happening with {{company}} today.",
     "new_invoice": "New Invoice", "record_purchase": "Record Purchase",
     "total_revenue": "Total Revenue", "outstanding": "Outstanding Receivable",
     "total_parties": "Total Parties", "low_stock": "Low Stock Items",
