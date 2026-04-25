@@ -58,6 +58,24 @@ export default function BasicDetailsStep({ wizard }: Props) {
         </div>
       )}
 
+      {/* Scanned Image Preview */}
+      {data.imageUrl && (
+        <div style={{
+          width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden',
+          border: '1px solid var(--border-color)', position: 'relative', flexShrink: 0,
+          background: '#000'
+        }}>
+          <img 
+            src={data.imageUrl} 
+            alt="Scanned Bill" 
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+          />
+          <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 12 }}>
+            {t('purchase.scanned_doc', 'Scanned Document')}
+          </div>
+        </div>
+      )}
+
       {/* Form Fields using Parties.css field classes */}
       <div className="modal-form" style={{ flex: 1 }}>
         <div className="field-group">

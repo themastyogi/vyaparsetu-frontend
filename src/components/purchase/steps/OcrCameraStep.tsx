@@ -67,6 +67,18 @@ export default function OcrCameraStep({ wizard }: Props) {
   }, [facingMode, startCamera]);
 
   const captureImage = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        wizard.updateData({ imageUrl: dataUrl });
+      }
+    }
+
     // Stop the camera stream before transitioning
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
@@ -78,9 +90,17 @@ export default function OcrCameraStep({ wizard }: Props) {
   const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Treat gallery upload same as capture — go to processing
-      captureImage();
+      const imageUrl = URL.createObjectURL(file);
+      wizard.updateData({ imageUrl });
+      
+      // Stop the camera stream before transitioning
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      wizard.goToStep('ocr_processing');
     }
+    e.target.value = ''; // Reset input so same file can be selected again
   };
 
   const flipCamera = () => {

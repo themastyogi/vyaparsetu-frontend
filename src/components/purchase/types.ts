@@ -32,6 +32,7 @@ export interface PurchaseDraftData {
     invoiceNo?: boolean;
     totalAmount?: boolean;
   };
+  imageUrl?: string;
 }
 
 export interface WizardState {

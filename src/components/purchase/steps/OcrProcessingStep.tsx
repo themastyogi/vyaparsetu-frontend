@@ -9,11 +9,12 @@ interface Props {
 
 export default function OcrProcessingStep({ wizard }: Props) {
   const { t } = useTranslation();
+  const { updateData, goToStep } = wizard;
 
   useEffect(() => {
     // Simulate realistic OCR delay (2.5 seconds)
     const timer = setTimeout(() => {
-      wizard.updateData({
+      updateData({
         vendorName: 'Sharma Traders (OCR)',
         vendorGstin: '27AADCS1234F1Z9',
         invoiceNo: 'INV-7742',
@@ -28,11 +29,11 @@ export default function OcrProcessingStep({ wizard }: Props) {
           invoiceNo: true,
         }
       });
-      wizard.goToStep('basic_details');
+      goToStep('basic_details');
     }, 2500);
 
     return () => clearTimeout(timer);
-  }, [wizard]);
+  }, [updateData, goToStep]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px' }}>
