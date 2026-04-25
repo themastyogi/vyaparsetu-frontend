@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Parties from './pages/Parties';
 import Items from './pages/Items';
+import Purchases from './pages/Purchases';
 import './index.css';
 
 // Placeholder screens for nav items not yet built
@@ -26,7 +27,7 @@ export default function App() {
           <Route path="parties"   element={<Parties />} />
           <Route path="items"     element={<Items />} />
           <Route path="sales"     element={<ComingSoon title="Sales Invoices" />} />
-          <Route path="purchases" element={<ComingSoon title="Purchase Bills" />} />
+          <Route path="purchases" element={<Purchases />} />
           <Route path="reports"   element={<ComingSoon title="Reports & Trial Balance" />} />
           <Route path="settings"  element={<ComingSoon title="Settings" />} />
         </Route>
