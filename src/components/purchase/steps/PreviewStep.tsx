@@ -21,7 +21,21 @@ export default function PreviewStep({ wizard }: Props) {
     // API Call Mock
     setTimeout(() => {
       wizard.setProcessing(false);
-      // Let's pretend it succeeds
+      
+      // Add the newly saved bill to the mock list so it shows up in Purchases.tsx
+      import('../../../pages/Purchases').then(({ addMockPurchase }) => {
+        const newBill = {
+          id: crypto.randomUUID(),
+          vendorName: data.vendorName || 'Unknown Vendor',
+          invoiceNo: data.invoiceNo || `INV-${Math.floor(Math.random() * 10000)}`,
+          date: data.invoiceDate || new Date().toISOString().split('T')[0],
+          amount: total,
+          status: 'posted',
+          isOcr: data.source === 'ocr'
+        };
+        addMockPurchase(newBill);
+      });
+
       wizard.updateData({ ...data }); // normally update with server ID
       wizard.goToStep('status');
       // In a real app we'd clear local storage here, but we'll let StatusStep handle it if needed

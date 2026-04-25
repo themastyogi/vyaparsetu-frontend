@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, Plus, Camera, Filter, FileText } from 'lucide-react';
 import { usePurchaseWizard } from '../components/purchase/usePurchaseWizard';
@@ -6,20 +6,33 @@ import PurchaseWizard from '../components/purchase/PurchaseWizard';
 import './Parties.css'; // Reusing layout CSS
 
 // Mock data for the list
-const MOCK_PURCHASES = [
+export let MOCK_PURCHASES = [
   { id: '1', vendorName: 'Sharma Traders', invoiceNo: 'INV-2026-042', date: '2026-04-20', amount: 45000, status: 'posted', isOcr: true },
   { id: '2', vendorName: 'Reliance Retail Ltd', invoiceNo: 'RR/001/26', date: '2026-04-22', amount: 12500, status: 'processing', isOcr: true },
   { id: '3', vendorName: 'Office World', invoiceNo: 'OW-8892', date: '2026-04-24', amount: 3200, status: 'failed', isOcr: false },
   { id: '4', vendorName: 'Tech Solutions India', invoiceNo: 'TSI-APR-05', date: '2026-04-18', amount: 89000, status: 'posted', isOcr: true },
 ];
 
+export const addMockPurchase = (purchase: any) => {
+  MOCK_PURCHASES = [purchase, ...MOCK_PURCHASES];
+  window.dispatchEvent(new Event('purchases_updated'));
+};
+
 export default function Purchases() {
   const { t } = useTranslation();
   const wizard = usePurchaseWizard();
+  const [purchases, setPurchases] = useState(MOCK_PURCHASES);
   const [filter, setFilter] = useState<'all' | 'posted' | 'processing' | 'failed'>('all');
   const [search, setSearch] = useState('');
 
-  const filtered = MOCK_PURCHASES
+  // Listen for newly added purchases
+  useEffect(() => {
+    const handleUpdate = () => setPurchases([...MOCK_PURCHASES]);
+    window.addEventListener('purchases_updated', handleUpdate);
+    return () => window.removeEventListener('purchases_updated', handleUpdate);
+  }, []);
+
+  const filtered = purchases
     .filter(p => filter === 'all' || p.status === filter)
     .filter(p => 
       p.vendorName.toLowerCase().includes(search.toLowerCase()) || 
@@ -64,7 +77,7 @@ export default function Purchases() {
       {/* Summary Cards */}
       <div className="party-summary">
         <div className="summary-card">
-          <div className="summary-val">{MOCK_PURCHASES.length}</div>
+          <div className="summary-val">{purchases.length}</div>
           <div className="summary-lbl">{t('purchase.total_bills', 'Total Bills')}</div>
         </div>
         <div className="summary-card summary-pay">
