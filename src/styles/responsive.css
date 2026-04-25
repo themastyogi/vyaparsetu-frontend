@@ -1,0 +1,101 @@
+/* ─── VyaparSetu Responsive Design Tokens ─── */
+
+/*
+  Breakpoints:
+  xs  : < 480px   (small phones)
+  sm  : 480–640px (phones landscape)
+  md  : 640–768px (large phones / small tablets)
+  lg  : 768–1024px (tablets / iPad)
+  xl  : 1024–1280px (laptop)
+  2xl : > 1280px  (desktop)
+*/
+
+/* Mobile-first card view for data tables */
+@media (max-width: 640px) {
+  /* Convert tables to stacked card layout */
+  .table-responsive thead { display: none; }
+
+  .table-responsive tbody tr {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle) !important;
+    margin-bottom: 10px;
+    padding: 14px;
+    gap: 8px;
+  }
+
+  .table-responsive tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0 !important;
+    border: none !important;
+    font-size: 13px;
+  }
+
+  .table-responsive tbody td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    margin-right: 12px;
+  }
+
+  /* Hide less important columns on mobile */
+  .col-hide-mobile { display: none !important; }
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) {
+  .col-hide-tablet { display: none !important; }
+}
+
+/* Responsive grid helpers */
+.grid-responsive-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+@media (max-width: 1024px) {
+  .grid-responsive-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .grid-responsive-4 { grid-template-columns: 1fr; }
+}
+
+.grid-responsive-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .grid-responsive-2 { grid-template-columns: 1fr; }
+}
+
+/* Touch-friendly tap targets */
+@media (hover: none) and (pointer: coarse) {
+  .nav-item         { min-height: 44px; }
+  .btn-action       { min-height: 44px; }
+  .filter-tab       { min-height: 36px; }
+  .field-input      { min-height: 44px; }
+  .otp-box          { min-height: 52px; min-width: 44px; }
+  .row-action-btn   { min-width: 36px; min-height: 36px; }
+}
+
+/* Prevent horizontal overflow globally */
+* { box-sizing: border-box; }
+body { overflow-x: hidden; }
+
+/* Safe area for notched phones */
+.layout-content {
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
+}
+.topbar {
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
