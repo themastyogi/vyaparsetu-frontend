@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown, Users, Package, IndianRupee, AlertTriangle, ArrowUpRight, FileText, ShoppingCart, Clock } from 'lucide-react';
 import './Dashboard.css';
@@ -19,6 +20,7 @@ const RECENT_TXN = [
 
 export default function Dashboard() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const STATS = [
     { id: 'total-revenue',         label: t('dashboard.total_revenue'), value: '₹ 24,80,500', change: '+18.4%', positive: true,  sub: t('dashboard.vs_last_month'),    icon: <IndianRupee size={20}/>, color: 'purple' },
@@ -40,10 +42,10 @@ export default function Dashboard() {
   };
 
   const QUICK = [
-    { id: 'qa-sales', icon: <FileText size={16}/>,   label: t('dashboard.create_invoice'), sub: t('dashboard.gst_auto') },
-    { id: 'qa-party', icon: <Users size={16}/>,       label: t('dashboard.add_party'),      sub: t('dashboard.gstin_val') },
-    { id: 'qa-item',  icon: <Package size={16}/>,     label: t('dashboard.add_item'),       sub: t('dashboard.hsn_ready') },
-    { id: 'qa-trial', icon: <TrendingUp size={16}/>,  label: t('dashboard.view_trial'),     sub: t('dashboard.live_updated') },
+    { id: 'qa-sales', icon: <FileText size={16}/>,   label: t('dashboard.create_invoice'), sub: t('dashboard.gst_auto'),    path: '/dashboard/sales' },
+    { id: 'qa-party', icon: <Users size={16}/>,       label: t('dashboard.add_party'),      sub: t('dashboard.gstin_val'),   path: '/dashboard/parties' },
+    { id: 'qa-item',  icon: <Package size={16}/>,     label: t('dashboard.add_item'),       sub: t('dashboard.hsn_ready'),   path: '/dashboard/items' },
+    { id: 'qa-trial', icon: <TrendingUp size={16}/>,  label: t('dashboard.view_trial'),     sub: t('dashboard.live_updated'), path: '/dashboard/reports' },
   ];
 
   return (
@@ -56,10 +58,10 @@ export default function Dashboard() {
           <p className="dash-sub">{t('dashboard.subtitle', { company: 'Sharma Traders' })}</p>
         </div>
         <div className="dash-header-actions">
-          <button id="new-invoice-btn" className="btn-action btn-action-secondary">
+          <button id="new-invoice-btn" className="btn-action btn-action-secondary" onClick={() => navigate('/dashboard/sales')}>
             <FileText size={15}/> {t('dashboard.new_invoice')}
           </button>
-          <button id="new-purchase-btn" className="btn-action btn-action-primary">
+          <button id="new-purchase-btn" className="btn-action btn-action-primary" onClick={() => navigate('/dashboard/purchases')}>
             <ShoppingCart size={15}/> {t('dashboard.record_purchase')}
           </button>
         </div>
@@ -121,7 +123,7 @@ export default function Dashboard() {
         <div className="dash-quick-card">
           <h3 className="card-title" style={{ marginBottom: 16 }}>{t('dashboard.quick_actions')}</h3>
           {QUICK.map(q => (
-            <button key={q.id} id={q.id} className="quick-btn">
+            <button key={q.id} id={q.id} className="quick-btn" onClick={() => navigate(q.path)}>
               <div className="quick-icon">{q.icon}</div>
               <div className="quick-info">
                 <span className="quick-label">{q.label}</span>
