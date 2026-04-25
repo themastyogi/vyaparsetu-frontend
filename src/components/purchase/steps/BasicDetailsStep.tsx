@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { usePurchaseWizard } from '../usePurchaseWizard';
@@ -6,6 +6,16 @@ import { usePurchaseWizard } from '../usePurchaseWizard';
 interface Props {
   wizard: ReturnType<typeof usePurchaseWizard>;
 }
+
+const MOCK_VENDORS = [
+  { name: 'Ravi Enterprises', gstin: '29AABCR1234F1ZS' },
+  { name: 'Sahil Traders', gstin: '27AAACS2222B1Z5' },
+  { name: 'Metro Retail Co.', gstin: '07AAACM5678K1ZP' },
+  { name: 'Alpha Supplies', gstin: '24AAACA7890L1Z3' },
+  { name: 'Kumar & Sons', gstin: '09AAACK4567N1Z1' },
+  { name: 'Bharat Logistics', gstin: '06AAACB5432F1Z7' },
+  { name: 'Sharma Traders (OCR)', gstin: '27AADCS1234F1Z9' },
+];
 
 export default function BasicDetailsStep({ wizard }: Props) {
   const { t } = useTranslation();
@@ -18,6 +28,22 @@ export default function BasicDetailsStep({ wizard }: Props) {
   const [invoiceNo, setInvoiceNo] = useState(data.invoiceNo);
   const [invoiceDate, setInvoiceDate] = useState(data.invoiceDate);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  
+  // Autocomplete state
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const filteredVendors = vendorName.trim() ? MOCK_VENDORS.filter(v => v.name.toLowerCase().includes(vendorName.toLowerCase())) : [];
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const hasOcrWarnings = isOcr && data.needsChecking && Object.keys(data.needsChecking).length > 0;
 
@@ -78,17 +104,53 @@ export default function BasicDetailsStep({ wizard }: Props) {
 
       {/* Form Fields using Parties.css field classes */}
       <div className="modal-form" style={{ flex: 1 }}>
-        <div className="field-group">
+        <div className="field-group" style={{ position: 'relative' }} ref={suggestionsRef}>
           <label className="field-label">{t('purchase.vendor_name', 'Vendor Name')} *</label>
           <input 
             type="text" 
             className="field-input" 
             style={{ borderColor: errors.vendorName || data.needsChecking?.vendorName ? 'var(--border-error, #EF4444)' : undefined }}
             value={vendorName} 
-            onChange={e => { setVendorName(e.target.value); setErrors(prev => ({...prev, vendorName: ''})); }}
+            onChange={e => { 
+              setVendorName(e.target.value); 
+              setErrors(prev => ({...prev, vendorName: ''})); 
+              setShowSuggestions(true);
+            }}
+            onFocus={() => { if (vendorName) setShowSuggestions(true); }}
             placeholder="Search or enter new..."
           />
           {errors.vendorName && <span style={{ color: '#EF4444', fontSize: '11px' }}>{errors.vendorName}</span>}
+          
+          {/* Autocomplete Dropdown */}
+          {showSuggestions && filteredVendors.length > 0 && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0,
+              background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+              borderRadius: '6px', marginTop: '4px', zIndex: 50,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflow: 'hidden'
+            }}>
+              {filteredVendors.map((v, i) => (
+                <div 
+                  key={i}
+                  style={{
+                    padding: '10px 14px', cursor: 'pointer', borderBottom: i === filteredVendors.length - 1 ? 'none' : '1px solid var(--border-color)',
+                    display: 'flex', flexDirection: 'column', gap: '2px', background: 'var(--bg-card)'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-main)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                  onClick={() => {
+                    setVendorName(v.name);
+                    setVendorGstin(v.gstin);
+                    setShowSuggestions(false);
+                    setErrors(prev => ({...prev, vendorName: ''}));
+                  }}
+                >
+                  <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{v.name}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{v.gstin}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="modal-row">
