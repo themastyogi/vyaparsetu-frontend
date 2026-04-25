@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Search, Download, Package, ChevronRight, AlertTriangle } from 'lucide-react';
 import './Parties.css';
 
@@ -13,20 +14,18 @@ const ITEMS = [
 ];
 
 const TYPE_COLORS: Record<string, string> = {
-  stock:   'tag-customer',
-  service: 'tag-both',
-  expense: 'tag-vendor',
-  asset:   'tag-customer',
+  stock: 'tag-customer', service: 'tag-both', expense: 'tag-vendor', asset: 'tag-customer',
 };
 
-function stockStatus(qty: number | null, reorder: number | null) {
+function stockStatus(qty: number | null, reorder: number | null, t: (k: string) => string) {
   if (qty === null) return null;
-  if (qty === 0) return { cls: 'stock-out', label: 'Out of Stock' };
-  if (reorder !== null && qty < reorder) return { cls: 'stock-low', label: 'Low Stock' };
-  return { cls: 'stock-ok', label: 'In Stock' };
+  if (qty === 0) return { cls: 'stock-out', label: t('items.out_stock') };
+  if (reorder !== null && qty < reorder) return { cls: 'stock-low', label: t('items.low_stock') };
+  return { cls: 'stock-ok', label: t('items.in_stock') };
 }
 
 export default function Items() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all'|'stock'|'service'|'expense'|'asset'>('all');
   const [showAdd, setShowAdd] = useState(false);
@@ -35,11 +34,10 @@ export default function Items() {
 
   const filtered = ITEMS
     .filter(i => filter === 'all' || i.type === filter)
-    .filter(i => i.name.toLowerCase().includes(search.toLowerCase()) ||
-                 i.hsn.includes(search));
+    .filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.hsn.includes(search));
 
   const lowStockCount = ITEMS.filter(i => {
-    const s = stockStatus(i.qty, i.reorder);
+    const s = stockStatus(i.qty, i.reorder, t);
     return s?.cls === 'stock-low' || s?.cls === 'stock-out';
   }).length;
 
@@ -49,16 +47,21 @@ export default function Items() {
     setTimeout(() => { setShowAdd(false); setSaved(false); }, 1200);
   };
 
+  const FILTER_KEYS: Record<string, string> = {
+    all: 'items.all', stock: 'items.stock_t', service: 'items.service',
+    expense: 'items.expense', asset: 'items.asset',
+  };
+
   return (
     <div className="page-root animate-fade-in">
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Items & Services</h1>
-          <p className="page-sub">Manage your product catalogue, HSN codes, and GST rates</p>
+          <h1 className="page-title">{t('items.title')}</h1>
+          <p className="page-sub">{t('items.subtitle')}</p>
         </div>
         <button id="add-item-btn" className="btn-action btn-action-primary" onClick={() => setShowAdd(true)}>
-          <Plus size={15}/> Add Item
+          <Plus size={15}/> {t('items.add')}
         </button>
       </div>
 
@@ -67,7 +70,7 @@ export default function Items() {
         <div className="dash-alert dash-alert-amber" style={{ display:'flex' }}>
           <AlertTriangle size={14} className="alert-icon"/>
           <span className="alert-text">
-            {lowStockCount} items are low on stock or out of stock — review inventory
+            {lowStockCount} {t('items.restock')}
           </span>
         </div>
       )}
@@ -75,10 +78,10 @@ export default function Items() {
       {/* Summary */}
       <div className="party-summary">
         {[
-          { id: 'is-total', val: ITEMS.length,                                        lbl: 'Total Items' },
-          { id: 'is-stock', val: ITEMS.filter(i=>i.type==='stock').length,             lbl: 'Stock Items' },
-          { id: 'is-svc',   val: ITEMS.filter(i=>i.type==='service').length,           lbl: 'Services' },
-          { id: 'is-low',   val: lowStockCount,                                        lbl: 'Need Restock' },
+          { id: 'is-total', val: ITEMS.length,                              lbl: t('items.total') },
+          { id: 'is-stock', val: ITEMS.filter(i=>i.type==='stock').length,  lbl: t('items.stock') },
+          { id: 'is-svc',   val: ITEMS.filter(i=>i.type==='service').length,lbl: t('items.services') },
+          { id: 'is-low',   val: lowStockCount,                             lbl: t('items.restock') },
         ].map(s => (
           <div key={s.id} id={s.id} className="summary-card">
             <div className="summary-val">{s.val}</div>
@@ -92,28 +95,24 @@ export default function Items() {
         <div className="toolbar-search">
           <Search size={14} className="toolbar-search-icon"/>
           <input
-            id="item-search"
-            type="text"
-            placeholder="Search by name or HSN code…"
+            id="item-search" type="text"
+            placeholder={t('items.search')}
             className="toolbar-search-input"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+            value={search} onChange={e => setSearch(e.target.value)}
           />
         </div>
         <div className="filter-tabs">
           {(['all','stock','service','expense','asset'] as const).map(f => (
-            <button
-              key={f}
-              id={`item-filter-${f}`}
+            <button key={f} id={`item-filter-${f}`}
               className={`filter-tab ${filter === f ? 'filter-tab-active' : ''}`}
               onClick={() => setFilter(f)}
             >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {t(FILTER_KEYS[f], f.charAt(0).toUpperCase() + f.slice(1))}
             </button>
           ))}
         </div>
         <button id="export-items" className="icon-btn">
-          <Download size={15}/> Export
+          <Download size={15}/> {t('items.export')}
         </button>
       </div>
 
@@ -123,47 +122,47 @@ export default function Items() {
           <table className="data-table" id="items-table">
             <thead>
               <tr>
-                <th>Item Name</th>
-                <th>Type</th>
-                <th>HSN / SAC</th>
-                <th>GST Rate</th>
-                <th>Unit Price</th>
-                <th>Stock</th>
-                <th>Status</th>
+                <th>{t('items.col_name')}</th>
+                <th>{t('items.col_type')}</th>
+                <th>{t('items.col_hsn')}</th>
+                <th>{t('items.col_gst')}</th>
+                <th>{t('items.col_price')}</th>
+                <th>{t('items.col_stock')}</th>
+                <th>{t('items.col_status')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="empty-cell">No items found</td></tr>
+                <tr><td colSpan={8} className="empty-cell">{t('common.na','No items found')}</td></tr>
               ) : filtered.map(item => {
-                const st = stockStatus(item.qty, item.reorder);
+                const st = stockStatus(item.qty, item.reorder, t);
                 return (
                   <tr key={item.id} id={item.id}>
-                    <td>
+                    <td data-label={t('items.col_name')}>
                       <div className="item-name-cell">
                         <div className="item-icon">{item.emoji}</div>
                         <span className="txn-party">{item.name}</span>
                       </div>
                     </td>
-                    <td>
+                    <td data-label={t('items.col_type')}>
                       <span className={`type-tag ${TYPE_COLORS[item.type]}`}>
-                        {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                        {t(`items.${item.type}`, item.type.charAt(0).toUpperCase() + item.type.slice(1))}
                       </span>
                     </td>
-                    <td><span className="mono">{item.hsn}</span></td>
-                    <td><span className="txn-amount">{item.gst}%</span></td>
-                    <td><span className="txn-amount">₹ {item.price.toLocaleString('en-IN')}</span></td>
-                    <td>
+                    <td data-label={t('items.col_hsn')}><span className="mono">{item.hsn}</span></td>
+                    <td data-label={t('items.col_gst')}><span className="txn-amount">{item.gst}%</span></td>
+                    <td data-label={t('items.col_price')}><span className="txn-amount">₹ {item.price.toLocaleString('en-IN')}</span></td>
+                    <td data-label={t('items.col_stock')}>
                       {item.qty !== null
                         ? <span className="txn-date">{item.qty} {item.unit}</span>
-                        : <span className="txn-gst">N/A</span>
+                        : <span className="txn-gst">{t('common.na','N/A')}</span>
                       }
                     </td>
-                    <td>
+                    <td data-label={t('items.col_status')}>
                       {st
                         ? <span className={`stock-badge ${st.cls}`}>{st.label}</span>
-                        : <span className="status-pill status-paid">Active</span>
+                        : <span className="status-pill status-paid">{t('parties.active','Active')}</span>
                       }
                     </td>
                     <td>
@@ -184,35 +183,35 @@ export default function Items() {
         <div className="modal-overlay" onClick={() => setShowAdd(false)}>
           <div className="modal animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Add New Item</h3>
+              <h3 className="modal-title">{t('items.modal_title')}</h3>
               <button id="close-add-item" className="modal-close" onClick={() => setShowAdd(false)}>✕</button>
             </div>
             {saved ? (
               <div className="modal-success">
                 <Package size={36} className="success-ico" style={{ color: '#10B981' }}/>
-                <p>Item saved successfully!</p>
+                <p>{t('items.saved')}</p>
               </div>
             ) : (
               <form className="modal-form" onSubmit={handleSave}>
                 <div className="field-group">
-                  <label className="field-label">Item Name *</label>
+                  <label className="field-label">{t('items.name_label')}</label>
                   <input id="new-item-name" className="field-input" required
                     value={newItem.name} onChange={e => setNewItem(v=>({...v, name: e.target.value}))}
-                    placeholder="e.g. A4 Paper Ream"/>
+                    placeholder={t('items.name_ph')}/>
                 </div>
                 <div className="modal-row">
                   <div className="field-group" style={{flex:1}}>
-                    <label className="field-label">Type *</label>
+                    <label className="field-label">{t('items.type_label')}</label>
                     <select id="new-item-type" className="field-input"
                       value={newItem.type} onChange={e => setNewItem(v=>({...v, type: e.target.value}))}>
-                      <option value="stock">Stock</option>
-                      <option value="service">Service</option>
-                      <option value="expense">Expense</option>
-                      <option value="asset">Asset</option>
+                      <option value="stock">{t('items.stock_t')}</option>
+                      <option value="service">{t('items.service')}</option>
+                      <option value="expense">{t('items.expense')}</option>
+                      <option value="asset">{t('items.asset')}</option>
                     </select>
                   </div>
                   <div className="field-group" style={{flex:1}}>
-                    <label className="field-label">GST Rate</label>
+                    <label className="field-label">{t('items.gst_label')}</label>
                     <select id="new-item-gst" className="field-input"
                       value={newItem.gst} onChange={e => setNewItem(v=>({...v, gst: e.target.value}))}>
                       {['0','5','12','18','28'].map(r => <option key={r} value={r}>{r}%</option>)}
@@ -221,21 +220,25 @@ export default function Items() {
                 </div>
                 <div className="modal-row">
                   <div className="field-group" style={{flex:1}}>
-                    <label className="field-label">HSN / SAC *</label>
+                    <label className="field-label">{t('items.hsn_label')}</label>
                     <input id="new-item-hsn" className="field-input" required
                       value={newItem.hsn} onChange={e => setNewItem(v=>({...v, hsn: e.target.value}))}
-                      placeholder="e.g. 48021000"/>
+                      placeholder={t('items.hsn_ph')}/>
                   </div>
                   <div className="field-group" style={{flex:1}}>
-                    <label className="field-label">Unit Price (₹)</label>
+                    <label className="field-label">{t('items.price_label')}</label>
                     <input id="new-item-price" className="field-input" type="number"
                       value={newItem.price} onChange={e => setNewItem(v=>({...v, price: e.target.value}))}
-                      placeholder="0.00"/>
+                      placeholder={t('items.price_ph')}/>
                   </div>
                 </div>
                 <div className="modal-actions">
-                  <button type="button" className="btn-action btn-action-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
-                  <button id="save-item-btn" type="submit" className="btn-action btn-action-primary">Save Item</button>
+                  <button type="button" className="btn-action btn-action-secondary" onClick={() => setShowAdd(false)}>
+                    {t('items.cancel')}
+                  </button>
+                  <button id="save-item-btn" type="submit" className="btn-action btn-action-primary">
+                    {t('items.save')}
+                  </button>
                 </div>
               </form>
             )}

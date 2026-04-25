@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Eye, EyeOff, ArrowRight, ShieldCheck,
   Building2, TrendingUp, Users, Zap,
 } from 'lucide-react';
 import './Login.css';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const DEMO_EMAIL = 'owner@vyaparsetu.in';
 const DEMO_PASS  = 'Demo@1234';
 
 export default function Login() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [email, setEmail]         = useState('');
   const [password, setPassword]   = useState('');
@@ -70,6 +73,10 @@ export default function Login() {
 
   return (
     <div className="login-root">
+      {/* Lang switcher top-right */}
+      <div style={{ position:'absolute', top:16, right:16, zIndex:10 }}>
+        <LanguageSwitcher />
+      </div>
       {/* ── Left panel ── */}
       <div className="login-left">
         <div className="login-left-inner">
@@ -80,20 +87,17 @@ export default function Login() {
             </div>
             <div className="logo-text">
               <span className="logo-name">VyaparSetu</span>
-              <span className="logo-tagline">Smart Accounting for India</span>
+              <span className="logo-tagline">{t('login.tagline')}</span>
             </div>
           </div>
 
           {/* Hero headline */}
           <div className="login-hero animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
             <h1 className="hero-title">
-              Your business,<br />
-              <span className="gradient-text">fully in control.</span>
+              {t('login.hero_title')}<br />
+              <span className="gradient-text">{t('login.hero_title2')}</span>
             </h1>
-            <p className="hero-sub">
-              The accounting platform built for Indian SMEs — GST-ready,
-              CA-reviewed, and production-grade from day one.
-            </p>
+            <p className="hero-sub">{t('login.hero_sub')}</p>
           </div>
 
           {/* Feature chips */}
@@ -141,8 +145,8 @@ export default function Login() {
           {step === 'login' ? (
             <>
               <div className="form-header">
-                <h2 className="form-title">Welcome back</h2>
-                <p className="form-sub">Sign in to your VyaparSetu workspace</p>
+                <h2 className="form-title">{t('login.welcome')}</h2>
+                <p className="form-sub">{t('login.subtitle')}</p>
               </div>
 
               {error && (
@@ -153,12 +157,12 @@ export default function Login() {
 
               <form onSubmit={handleLogin} className="form-body" noValidate>
                 <div className="field-group">
-                  <label className="field-label">Email address</label>
+                  <label className="field-label">{t('login.email')}</label>
                   <input
                     id="login-email"
                     type="email"
                     className="field-input"
-                    placeholder="you@company.in"
+                    placeholder={t('login.email_ph')}
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     autoComplete="email"
@@ -167,8 +171,8 @@ export default function Login() {
 
                 <div className="field-group">
                   <div className="field-label-row">
-                    <label className="field-label">Password</label>
-                    <button type="button" className="link-btn">Forgot password?</button>
+                    <label className="field-label">{t('login.password')}</label>
+                    <button type="button" className="link-btn">{t('login.forgot')}</button>
                   </div>
                   <div className="field-input-wrap">
                     <input
@@ -193,12 +197,12 @@ export default function Login() {
 
                 <button id="login-submit" type="submit" className="btn-primary" disabled={loading}>
                   {loading ? <span className="btn-spinner"/> : (
-                    <><span>Sign in</span><ArrowRight size={16}/></>
+                    <><span>{t('login.signin')}</span><ArrowRight size={16}/></>
                   )}
                 </button>
               </form>
 
-              <div className="form-divider"><span>Demo credentials</span></div>
+              <div className="form-divider"><span>{t('login.demo_label')}</span></div>
               <div className="demo-creds">
                 <button
                   id="demo-fill"
@@ -206,7 +210,7 @@ export default function Login() {
                   className="demo-btn"
                   onClick={() => { setEmail(DEMO_EMAIL); setPassword(DEMO_PASS); }}
                 >
-                  Fill demo credentials
+                  {t('login.fill_demo')}
                 </button>
               </div>
             </>
@@ -217,10 +221,8 @@ export default function Login() {
                 <div className="mfa-icon-wrap">
                   <ShieldCheck size={28} className="mfa-icon"/>
                 </div>
-                <h2 className="form-title">Two-factor auth</h2>
-                <p className="form-sub">
-                  Enter the 6-digit code from your authenticator app
-                </p>
+                <h2 className="form-title">{t('login.mfa_title')}</h2>
+                <p className="form-sub">{t('login.mfa_subtitle')}</p>
               </div>
 
               {error && (
@@ -245,10 +247,10 @@ export default function Login() {
                     />
                   ))}
                 </div>
-                <p className="otp-hint">Any 6 digits accepted in demo mode</p>
+                <p className="otp-hint">{t('login.otp_hint')}</p>
                 <button id="mfa-submit" type="submit" className="btn-primary" disabled={loading}>
                   {loading ? <span className="btn-spinner"/> : (
-                    <><span>Verify &amp; continue</span><ArrowRight size={16}/></>
+                    <><span>{t('login.verify')}</span><ArrowRight size={16}/></>
                   )}
                 </button>
                 <button
@@ -257,15 +259,15 @@ export default function Login() {
                   className="btn-ghost"
                   onClick={() => { setStep('login'); setError(''); setOtp(['','','','','','']); }}
                 >
-                  ← Back to login
+                  {t('login.back')}
                 </button>
               </form>
             </>
           )}
 
           <p className="form-footer">
-            Don't have an account?&nbsp;
-            <button type="button" className="link-btn">Request access</button>
+            {t('login.no_account')}&nbsp;
+            <button type="button" className="link-btn">{t('login.request_access')}</button>
           </p>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Search, Download, Users, ChevronRight, CheckCircle } from 'lucide-react';
 import './Parties.css';
 
@@ -30,6 +31,7 @@ const BAL_MAP: Record<string, string> = {
 };
 
 export default function Parties() {
+  const { t } = useTranslation();
   const [search, setSearch]   = useState('');
   const [filter, setFilter]   = useState<'all'|'customer'|'vendor'|'both'>('all');
   const [showAdd, setShowAdd] = useState(false);
@@ -55,11 +57,11 @@ export default function Parties() {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Parties</h1>
-          <p className="page-sub">Manage your customers, vendors, and business contacts</p>
+          <h1 className="page-title">{t('parties.title')}</h1>
+          <p className="page-sub">{t('parties.subtitle')}</p>
         </div>
         <button id="add-party-btn" className="btn-action btn-action-primary" onClick={() => setShowAdd(true)}>
-          <Plus size={15}/> Add Party
+          <Plus size={15}/> {t('parties.add')}
         </button>
       </div>
 
@@ -68,15 +70,15 @@ export default function Parties() {
         <div id="summary-total" className="summary-card">
           <Users size={18} className="summary-icon"/>
           <div className="summary-val">{SAMPLE.length}</div>
-          <div className="summary-lbl">Total Parties</div>
+          <div className="summary-lbl">{t('parties.total')}</div>
         </div>
         <div id="summary-receivable" className="summary-card summary-recv">
           <div className="summary-val">₹ {(totalRec/100000).toFixed(1)}L</div>
-          <div className="summary-lbl">Total Receivable</div>
+          <div className="summary-lbl">{t('parties.receivable')}</div>
         </div>
         <div id="summary-payable" className="summary-card summary-pay">
           <div className="summary-val">₹ {(totalPay/1000).toFixed(0)}K</div>
-          <div className="summary-lbl">Total Payable</div>
+          <div className="summary-lbl">{t('parties.payable')}</div>
         </div>
       </div>
 
@@ -87,7 +89,7 @@ export default function Parties() {
           <input
             id="party-search"
             type="text"
-            placeholder="Search by name or GSTIN…"
+            placeholder={t('parties.search')}
             className="toolbar-search-input"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -101,12 +103,12 @@ export default function Parties() {
               className={`filter-tab ${filter === f ? 'filter-tab-active' : ''}`}
               onClick={() => setFilter(f)}
             >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {t(`parties.${f}`, f.charAt(0).toUpperCase() + f.slice(1))}
             </button>
           ))}
         </div>
         <button id="export-parties" className="icon-btn">
-          <Download size={15}/> Export
+          <Download size={15}/> {t('parties.export')}
         </button>
       </div>
 
@@ -116,39 +118,39 @@ export default function Parties() {
           <table className="data-table" id="parties-table">
             <thead>
               <tr>
-                <th>Party Name</th>
-                <th>Type</th>
-                <th>GSTIN</th>
-                <th>State</th>
-                <th>Balance</th>
-                <th>Status</th>
+                <th>{t('parties.col_name')}</th>
+                <th>{t('parties.col_type')}</th>
+                <th>{t('parties.col_gstin')}</th>
+                <th>{t('parties.col_state')}</th>
+                <th>{t('parties.col_balance')}</th>
+                <th>{t('parties.col_status')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={7} className="empty-cell">No parties found</td></tr>
+                <tr><td colSpan={7} className="empty-cell">{t('parties.empty')}</td></tr>
               ) : filtered.map(p => (
               <tr key={p.id} id={p.id}>
-                  <td data-label="Party">
+                  <td data-label={t('parties.col_name')}>
                     <div className="party-name-cell">
                       <div className="party-avatar">{p.name.charAt(0)}</div>
                       <span className="txn-party">{p.name}</span>
                     </div>
                   </td>
-                  <td data-label="Type"><span className={`type-tag ${TYPE_MAP[p.type].cls}`}>{TYPE_MAP[p.type].label}</span></td>
-                  <td data-label="GSTIN" className="col-mobile-hide"><span className="mono">{p.gstin}</span></td>
-                  <td data-label="State" className="col-mobile-hide"><span className="txn-date">{p.state}</span></td>
-                  <td data-label="Balance">
+                  <td data-label={t('parties.col_type')}><span className={`type-tag ${TYPE_MAP[p.type].cls}`}>{t(`parties.${p.type}`, TYPE_MAP[p.type].label)}</span></td>
+                  <td data-label={t('parties.col_gstin')} className="col-mobile-hide"><span className="mono">{p.gstin}</span></td>
+                  <td data-label={t('parties.col_state')} className="col-mobile-hide"><span className="txn-date">{p.state}</span></td>
+                  <td data-label={t('parties.col_balance')}>
                     <span className={`balance-cell ${BAL_MAP[p.balType]}`}>
                       {p.balance === 0 ? '—' : `₹ ${p.balance.toLocaleString('en-IN')}`}
                       {p.balance > 0 && <span className="bal-suffix">{p.balType === 'receivable' ? 'Dr' : 'Cr'}</span>}
                     </span>
                   </td>
-                  <td data-label="Status">
+                  <td data-label={t('parties.col_status')}>
                     {p.active
-                      ? <span className="status-pill status-paid">Active</span>
-                      : <span className="status-pill status-overdue">Inactive</span>
+                      ? <span className="status-pill status-paid">{t('parties.active')}</span>
+                      : <span className="status-pill status-overdue">{t('parties.inactive')}</span>
                     }
                   </td>
                   <td>
@@ -168,46 +170,46 @@ export default function Parties() {
         <div className="modal-overlay" onClick={() => setShowAdd(false)}>
           <div className="modal animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Add New Party</h3>
+              <h3 className="modal-title">{t('parties.modal_title')}</h3>
               <button id="close-add-party" className="modal-close" onClick={() => setShowAdd(false)}>✕</button>
             </div>
             {saved ? (
               <div className="modal-success">
                 <CheckCircle size={36} className="success-ico"/>
-                <p>Party saved successfully!</p>
+                <p>{t('parties.saved')}</p>
               </div>
             ) : (
               <form className="modal-form" onSubmit={handleSave}>
                 <div className="field-group">
-                  <label className="field-label">Party Name *</label>
+                  <label className="field-label">{t('parties.name_label')}</label>
                   <input id="new-party-name" className="field-input" required value={newParty.name}
-                    onChange={e => setNewParty(v => ({...v, name: e.target.value}))} placeholder="e.g. Ravi Enterprises"/>
+                    onChange={e => setNewParty(v => ({...v, name: e.target.value}))} placeholder={t('parties.name_ph')}/>
                 </div>
                 <div className="modal-row">
                   <div className="field-group" style={{ flex: 1 }}>
-                    <label className="field-label">GSTIN</label>
+                    <label className="field-label">{t('parties.gstin_label')}</label>
                     <input id="new-party-gstin" className="field-input" value={newParty.gstin}
                       onChange={e => setNewParty(v => ({...v, gstin: e.target.value.toUpperCase()}))}
-                      placeholder="15-char GSTIN" maxLength={15}/>
+                      placeholder={t('parties.gstin_ph')} maxLength={15}/>
                   </div>
                   <div className="field-group" style={{ flex: 1 }}>
-                    <label className="field-label">Type *</label>
+                    <label className="field-label">{t('parties.type_label')}</label>
                     <select id="new-party-type" className="field-input" value={newParty.type}
                       onChange={e => setNewParty(v => ({...v, type: e.target.value}))}>
-                      <option value="customer">Customer</option>
-                      <option value="vendor">Vendor</option>
-                      <option value="both">Both</option>
+                      <option value="customer">{t('parties.customer')}</option>
+                      <option value="vendor">{t('parties.vendor')}</option>
+                      <option value="both">{t('parties.both')}</option>
                     </select>
                   </div>
                 </div>
                 <div className="field-group">
-                  <label className="field-label">State</label>
+                  <label className="field-label">{t('parties.state_label')}</label>
                   <input id="new-party-state" className="field-input" value={newParty.state}
-                    onChange={e => setNewParty(v => ({...v, state: e.target.value}))} placeholder="e.g. Maharashtra"/>
+                    onChange={e => setNewParty(v => ({...v, state: e.target.value}))} placeholder={t('parties.state_ph')}/>
                 </div>
                 <div className="modal-actions">
-                  <button type="button" className="btn-action btn-action-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
-                  <button id="save-party-btn" type="submit" className="btn-action btn-action-primary">Save Party</button>
+                  <button type="button" className="btn-action btn-action-secondary" onClick={() => setShowAdd(false)}>{t('parties.cancel')}</button>
+                  <button id="save-party-btn" type="submit" className="btn-action btn-action-primary">{t('parties.save')}</button>
                 </div>
               </form>
             )}
