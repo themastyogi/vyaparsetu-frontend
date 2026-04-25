@@ -47,16 +47,14 @@ export default function Purchases() {
           <button className="btn-action btn-action-secondary" onClick={() => {
             wizard.clearDraft();
             wizard.updateData({ source: 'manual' });
-            wizard.openWizard();
-            wizard.goToStep('basic_details'); // Skip directly to manual entry
+            wizard.openWizardAtStep('basic_details');
           }}>
             <Plus size={15}/> {t('purchase.add_manual', 'Add Manually')}
           </button>
           <button className="btn-action btn-action-primary" onClick={() => {
             wizard.clearDraft();
             wizard.updateData({ source: 'ocr' });
-            wizard.openWizard();
-            wizard.goToStep('ocr_camera'); // Go straight to OCR
+            wizard.openWizardAtStep('ocr_camera');
           }}>
             <Camera size={15}/> {t('purchase.scan_bill', 'Scan Bill')}
           </button>

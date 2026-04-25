@@ -38,6 +38,11 @@ export function usePurchaseWizard() {
     setState(s => ({ ...s, isOpen: true, step: 'entry_options' }));
   }, []);
 
+  // Opens wizard directly at a specific step — avoids race condition with openWizard + goToStep
+  const openWizardAtStep = useCallback((step: WizardStep) => {
+    setState(s => ({ ...s, isOpen: true, step, error: undefined }));
+  }, []);
+
   const closeWizard = useCallback(() => {
     setState(s => ({ ...s, isOpen: false }));
   }, []);
@@ -69,6 +74,7 @@ export function usePurchaseWizard() {
   return {
     state,
     openWizard,
+    openWizardAtStep,
     closeWizard,
     goToStep,
     updateData,
