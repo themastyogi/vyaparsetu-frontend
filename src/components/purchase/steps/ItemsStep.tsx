@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, ArrowRight } from 'lucide-react';
 import { usePurchaseWizard } from '../usePurchaseWizard';
@@ -8,6 +8,18 @@ interface Props {
   wizard: ReturnType<typeof usePurchaseWizard>;
 }
 
+const MOCK_ITEMS = [
+  { name: 'A4 Paper Ream', price: 450 },
+  { name: 'Office Chair – Mesh', price: 8500 },
+  { name: 'Accounting Software', price: 5999 },
+  { name: 'Printer Ink Cartridge', price: 1200 },
+  { name: 'Rice Basmati 5kg', price: 380 },
+  { name: 'Transport Charges', price: 2500 },
+  { name: 'Stapler Machine', price: 650 },
+  { name: 'Premium Widget', price: 1200 },
+  { name: 'Basic Widget', price: 450 },
+];
+
 export default function ItemsStep({ wizard }: Props) {
   const { t } = useTranslation();
   const { data } = wizard.state;
@@ -16,6 +28,20 @@ export default function ItemsStep({ wizard }: Props) {
   const [items, setItems] = useState<PurchaseLineItem[]>(data.items.length > 0 ? data.items : [
     { id: crypto.randomUUID(), name: '', qty: 1, rate: 0, discount: 0 }
   ]);
+
+  // Autocomplete state
+  const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setActiveItemIndex(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const updateItem = (index: number, field: keyof PurchaseLineItem, value: any) => {
     const newItems = [...items];
@@ -67,11 +93,54 @@ export default function ItemsStep({ wizard }: Props) {
               )}
             </div>
 
-            <div className="field-group" style={{ marginBottom: '12px' }}>
+            <div className="field-group" style={{ marginBottom: '12px', position: 'relative' }}>
               <input 
                 type="text" className="field-input" placeholder={t('purchase.item_name_ph', 'Item name or description')}
-                value={item.name} onChange={e => updateItem(index, 'name', e.target.value)}
+                value={item.name} 
+                onChange={e => {
+                  updateItem(index, 'name', e.target.value);
+                  setActiveItemIndex(index);
+                }}
+                onFocus={() => { if (item.name) setActiveItemIndex(index); }}
               />
+              
+              {/* Autocomplete Dropdown */}
+              {activeItemIndex === index && item.name.trim() && (
+                (() => {
+                  const filtered = MOCK_ITEMS.filter(i => i.name.toLowerCase().includes(item.name.toLowerCase()));
+                  if (filtered.length === 0) return null;
+                  
+                  return (
+                    <div ref={suggestionsRef} style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0,
+                      background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                      borderRadius: '6px', marginTop: '4px', zIndex: 50,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflow: 'hidden'
+                    }}>
+                      {filtered.map((mockItem, idx) => (
+                        <div 
+                          key={idx}
+                          style={{
+                            padding: '10px 14px', cursor: 'pointer', borderBottom: idx === filtered.length - 1 ? 'none' : '1px solid var(--border-color)',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-main)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                          onClick={() => {
+                            const newItems = [...items];
+                            newItems[index] = { ...newItems[index], name: mockItem.name, rate: mockItem.price };
+                            setItems(newItems);
+                            setActiveItemIndex(null);
+                          }}
+                        >
+                          <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{mockItem.name}</span>
+                          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>₹ {mockItem.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()
+              )}
             </div>
 
             <div className="modal-row">
