@@ -13,6 +13,21 @@ export default function StatusStep({ wizard }: Props) {
 
   const isSuccess = !error;
 
+  const numberToWords = (num: number): string => {
+    const a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+    const b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
+    if ((num = num.toString() as any).length > 9) return 'overflow';
+    const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!n) return '';
+    let str = '';
+    str += (n[1] != '00') ? (a[Number(n[1])] || b[n[1][0] as any] + ' ' + a[n[1][1] as any]) + 'Crore ' : '';
+    str += (n[2] != '00') ? (a[Number(n[2])] || b[n[2][0] as any] + ' ' + a[n[2][1] as any]) + 'Lakh ' : '';
+    str += (n[3] != '00') ? (a[Number(n[3])] || b[n[3][0] as any] + ' ' + a[n[3][1] as any]) + 'Thousand ' : '';
+    str += (n[4] != '0') ? (a[Number(n[4])] || b[n[4][0] as any] + ' ' + a[n[4][1] as any]) + 'Hundred ' : '';
+    str += (n[5] != '00') ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0] as any] + ' ' + a[n[5][1] as any]) : '';
+    return str.trim() ? str.trim() + ' Only' : 'Zero';
+  };
+
   useEffect(() => {
     // Only clear draft if user navigates away, but since we are showing status and might want to print,
     // we keep the data for now. We clear it when "Add Another Bill" is clicked.
@@ -25,39 +40,64 @@ export default function StatusStep({ wizard }: Props) {
       
       {/* Hidden Printable Voucher */}
       <div className="print-only-voucher" style={{ display: 'none' }}>
-        <div style={{ border: '2px solid #000', padding: '40px', width: '100%', maxWidth: '800px', margin: '0 auto', textAlign: 'left', fontFamily: 'serif' }}>
-          <h1 style={{ textAlign: 'center', textTransform: 'uppercase', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '20px' }}>Journal Voucher</h1>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', fontWeight: 'bold' }}>
-            <div>Vendor: {data.vendorName}</div>
-            <div>Date: {data.invoiceDate || new Date().toLocaleDateString()}</div>
-          </div>
-          <div style={{ marginBottom: '20px', fontWeight: 'bold' }}>Invoice Ref: {data.invoiceNo}</div>
+        <div style={{ padding: '40px', width: '100%', maxWidth: '800px', margin: '0 auto', textAlign: 'left', fontFamily: 'Arial, sans-serif' }}>
           
-          <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '30px' }}>
+          <h1 style={{ textAlign: 'center', fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>
+            {/* Real app would fetch this from company context */}
+            Sharma Traders Pvt Ltd
+          </h1>
+          <h2 style={{ textAlign: 'center', fontSize: '18px', fontWeight: 'bold', borderBottom: '1px solid #000', paddingBottom: '10px', marginBottom: '20px' }}>
+            Purchase Voucher
+          </h2>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '14px' }}>
+            <div>No. : <b>{data.invoiceNo || '1'}</b></div>
+            <div>Dated : <b>{data.invoiceDate ? new Date(data.invoiceDate).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'}) : new Date().toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'})}</b></div>
+          </div>
+          
+          <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: '1px solid #000', borderBottom: '1px solid #000', borderLeft: '1px solid #000', borderRight: '1px solid #000', marginBottom: '20px' }}>
             <thead>
-              <tr>
-                <th style={{ border: '1px solid #000', padding: '10px', textAlign: 'left' }}>Particulars</th>
-                <th style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}>Debit (₹)</th>
-                <th style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}>Credit (₹)</th>
+              <tr style={{ borderBottom: '1px solid #000' }}>
+                <th style={{ padding: '8px', textAlign: 'left', borderRight: '1px solid #000', width: '75%' }}>Particulars</th>
+                <th style={{ padding: '8px', textAlign: 'right', width: '25%' }}>Amount</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td style={{ border: '1px solid #000', padding: '10px' }}>Inventory / Expense A/c<br/><small style={{ marginLeft: '20px' }}>(Being goods purchased from {data.vendorName})</small></td>
-                <td style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                <td style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}></td>
+                <td style={{ padding: '16px 8px', borderRight: '1px solid #000', verticalAlign: 'top' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Account :</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ marginLeft: '20px', fontWeight: 'bold' }}>{data.vendorName}</span>
+                    <span>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })} Cr</span>
+                  </div>
+                  <div style={{ marginLeft: '20px', marginTop: '20px', fontSize: '12px' }}>
+                    (Purchase Ref: {data.invoiceNo})
+                  </div>
+                  
+                  <div style={{ fontWeight: 'bold', marginTop: '30px', marginBottom: '4px' }}>Through :</div>
+                  <div style={{ marginLeft: '20px' }}>Inventory / Expense A/c</div>
+                  
+                  <div style={{ fontWeight: 'bold', marginTop: '30px', marginBottom: '4px' }}>Amount (in words) :</div>
+                  <div style={{ marginLeft: '20px' }}>INR {numberToWords(Math.floor(total))}</div>
+                </td>
+                <td style={{ padding: '16px 8px', textAlign: 'right', verticalAlign: 'top' }}>
+                  <div style={{ marginTop: '20px' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                </td>
               </tr>
-              <tr>
-                <td style={{ border: '1px solid #000', padding: '10px' }}>To {data.vendorName} A/c</td>
-                <td style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}></td>
-                <td style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              <tr style={{ borderTop: '1px solid #000' }}>
+                <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #000' }}>₹</td>
+                <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
               </tr>
             </tbody>
           </table>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '60px' }}>
-            <div style={{ borderTop: '1px solid #000', paddingTop: '10px', width: '200px', textAlign: 'center' }}>Prepared By</div>
-            <div style={{ borderTop: '1px solid #000', paddingTop: '10px', width: '200px', textAlign: 'center' }}>Authorized Signatory</div>
+          
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '60px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ borderBottom: '1px solid #000', width: '200px', marginBottom: '5px' }}></div>
+              <div>Authorised Signatory</div>
+            </div>
           </div>
+          
         </div>
       </div>
       
