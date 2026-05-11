@@ -51,14 +51,41 @@ export default function PreviewStep({ wizard }: Props) {
   const isInterState = vendorStateCode !== 'unknown' && vendorStateCode !== company.stateCode;
   const total = totalTaxableValue + totalGst + totalNonTaxableCharges;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     wizard.setProcessing(true);
     
-    // API Call Mock
-    setTimeout(() => {
-      wizard.setProcessing(false);
-      
-      // Add the newly saved bill to the mock list so it shows up in Purchases.tsx
+    try {
+      // 1. Send to Backend
+      const payload = {
+        vendorName: data.vendorName,
+        vendorGstin: data.vendorGstin,
+        invoiceNo: data.invoiceNo,
+        invoiceDate: data.invoiceDate,
+        purpose: data.purpose,
+        items: data.items,
+        discount: data.discount,
+        charges: data.charges,
+        remarks: data.remarks,
+        totalTaxableValue,
+        totalGst,
+        totalAmount: total
+      };
+
+      // Ensure your NestJS app is running on 3000 and has CORS enabled
+      const response = await fetch('http://localhost:3000/purchase/ingestion/manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'tenantId': 'default-tenant'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save invoice to backend');
+      }
+
+      // We still update the mock array so the frontend Purchases list reflects it immediately
       import('../../../pages/Purchases').then(({ addMockPurchase }) => {
         const newBill = {
           id: crypto.randomUUID(),
@@ -72,10 +99,14 @@ export default function PreviewStep({ wizard }: Props) {
         addMockPurchase(newBill);
       });
 
-      wizard.updateData({ ...data }); // normally update with server ID
+      wizard.updateData({ ...data }); 
       wizard.goToStep('status');
-      // In a real app we'd clear local storage here, but we'll let StatusStep handle it if needed
-    }, 1500);
+    } catch (error) {
+      console.error(error);
+      alert('Error saving bill. Please ensure the backend is running on port 3000.');
+    } finally {
+      wizard.setProcessing(false);
+    }
   };
 
   return (

@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Parties from './pages/Parties';
 import Items from './pages/Items';
 import Purchases from './pages/Purchases';
+import Reports from './pages/Reports';
 import './index.css';
 
 // Generic coming soon
@@ -60,7 +61,7 @@ export default function App() {
           <Route path="items"     element={<Items />} />
           <Route path="sales"     element={<SalesComingSoon />} />
           <Route path="purchases" element={<Purchases />} />
-          <Route path="reports"   element={<ComingSoon title="Reports & Trial Balance" />} />
+          <Route path="reports"   element={<Reports />} />
           <Route path="settings"  element={<ComingSoon title="Settings" />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
