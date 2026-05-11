@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, TrendingDown, Users, Package, IndianRupee, AlertTriangle, ArrowUpRight, FileText, ShoppingCart, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, Package, IndianRupee, AlertTriangle, ArrowUpRight, FileText, ShoppingCart, Clock, Printer } from 'lucide-react';
 import './Dashboard.css';
 
 const MONTHLY = [
@@ -11,12 +12,27 @@ const MONTHLY = [
 ];
 
 const RECENT_TXN = [
-  { id: 'txn-1', type: 'Sales Invoice',  party: 'Ravi Enterprises', amount: '₹ 42,000', gst: '₹ 7,560',  date: '23 Apr 2026', status: 'paid' },
-  { id: 'txn-2', type: 'Purchase Bill',  party: 'Sahil Traders',    amount: '₹ 18,500', gst: '₹ 3,330',  date: '22 Apr 2026', status: 'pending' },
-  { id: 'txn-3', type: 'Sales Invoice',  party: 'Metro Retail Co.', amount: '₹ 95,000', gst: '₹ 17,100', date: '21 Apr 2026', status: 'paid' },
-  { id: 'txn-4', type: 'Credit Note',    party: 'Alpha Supplies',   amount: '₹ 5,200',  gst: '₹ 936',    date: '20 Apr 2026', status: 'draft' },
-  { id: 'txn-5', type: 'Purchase Bill',  party: 'Kumar & Sons',     amount: '₹ 31,000', gst: '₹ 5,580',  date: '19 Apr 2026', status: 'overdue' },
+  { id: 'txn-1', type: 'Sales Invoice',  party: 'Ravi Enterprises', amount: '42000', gst: '7560',  date: '23 Apr 2026', status: 'paid' },
+  { id: 'txn-2', type: 'Purchase Bill',  party: 'Sahil Traders',    amount: '18500', gst: '3330',  date: '22 Apr 2026', status: 'pending' },
+  { id: 'txn-3', type: 'Sales Invoice',  party: 'Metro Retail Co.', amount: '95000', gst: '17100', date: '21 Apr 2026', status: 'paid' },
+  { id: 'txn-4', type: 'Credit Note',    party: 'Alpha Supplies',   amount: '5200',  gst: '936',    date: '20 Apr 2026', status: 'draft' },
+  { id: 'txn-5', type: 'Purchase Bill',  party: 'Kumar & Sons',     amount: '31000', gst: '5580',  date: '19 Apr 2026', status: 'overdue' },
 ];
+
+const numberToWords = (num: number): string => {
+  const a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+  const b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
+  if ((num = num.toString() as any).length > 9) return 'overflow';
+  const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+  if (!n) return '';
+  let str = '';
+  str += (n[1] != '00') ? (a[Number(n[1])] || b[n[1][0] as any] + ' ' + a[n[1][1] as any]) + 'Crore ' : '';
+  str += (n[2] != '00') ? (a[Number(n[2])] || b[n[2][0] as any] + ' ' + a[n[2][1] as any]) + 'Lakh ' : '';
+  str += (n[3] != '00') ? (a[Number(n[3])] || b[n[3][0] as any] + ' ' + a[n[3][1] as any]) + 'Thousand ' : '';
+  str += (n[4] != '0') ? (a[Number(n[4])] || b[n[4][0] as any] + ' ' + a[n[4][1] as any]) + 'Hundred ' : '';
+  str += (n[5] != '00') ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0] as any] + ' ' + a[n[5][1] as any]) : '';
+  return str.trim() ? str.trim() + ' Only' : 'Zero';
+};
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -27,11 +43,13 @@ export default function Dashboard() {
   if (currentHour < 12) greetingKey = 'dashboard.greeting_morning';
   else if (currentHour >= 17) greetingKey = 'dashboard.greeting_evening';
 
+  const [printTxn, setPrintTxn] = useState<any>(null);
+
   const STATS = [
-    { id: 'total-revenue',         label: t('dashboard.total_revenue'), value: '₹ 24,80,500', change: '+18.4%', positive: true,  sub: t('dashboard.vs_last_month'),    icon: <IndianRupee size={20}/>, color: 'purple' },
-    { id: 'outstanding-receivable', label: t('dashboard.outstanding'),  value: '₹ 6,32,000',  change: '-4.2%',  positive: false, sub: `12 ${t('dashboard.parties_pending')}`, icon: <TrendingUp size={20}/>, color: 'blue' },
-    { id: 'total-parties',          label: t('dashboard.total_parties'), value: '148',         change: '+6',     positive: true,  sub: t('dashboard.added_month'),      icon: <Users size={20}/>,        color: 'green' },
-    { id: 'low-stock-items',        label: t('dashboard.low_stock'),    value: '7',            change: t('dashboard.action_needed'), positive: false, sub: t('dashboard.below_reorder'), icon: <Package size={20}/>, color: 'amber' },
+    { id: 'total-revenue',         label: t('dashboard.total_revenue'), value: '₹ 24,80,500', change: '+18.4%', positive: true,  sub: t('dashboard.vs_last_month'),    icon: <IndianRupee size={20}/>, color: 'purple', path: '/dashboard/sales' },
+    { id: 'outstanding-receivable', label: t('dashboard.outstanding'),  value: '₹ 6,32,000',  change: '-4.2%',  positive: false, sub: `12 ${t('dashboard.parties_pending')}`, icon: <TrendingUp size={20}/>, color: 'blue', path: '/dashboard/parties' },
+    { id: 'total-parties',          label: t('dashboard.total_parties'), value: '148',         change: '+6',     positive: true,  sub: t('dashboard.added_month'),      icon: <Users size={20}/>,        color: 'green', path: '/dashboard/parties' },
+    { id: 'low-stock-items',        label: t('dashboard.low_stock'),    value: '7',            change: t('dashboard.action_needed'), positive: false, sub: t('dashboard.below_reorder'), icon: <Package size={20}/>, color: 'amber', path: '/dashboard/items' },
   ];
 
   const ALERTS = [
@@ -84,7 +102,7 @@ export default function Dashboard() {
       {/* KPI Stats */}
       <div className="dash-stats">
         {STATS.map(s => (
-          <div key={s.id} id={s.id} className={`stat-card stat-card-${s.color}`}>
+          <div key={s.id} id={s.id} className={`stat-card stat-card-${s.color}`} onClick={() => navigate(s.path)} style={{ cursor: 'pointer' }}>
             <div className="stat-top">
               <div className={`stat-icon-wrap stat-icon-${s.color}`}>{s.icon}</div>
               <div className={`stat-change ${s.positive ? 'change-up' : 'change-down'}`}>
@@ -161,6 +179,7 @@ export default function Dashboard() {
                 <th>{t('txn.gst')}</th>
                 <th>{t('txn.date')}</th>
                 <th>{t('txn.status')}</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -168,13 +187,21 @@ export default function Dashboard() {
                 <tr key={txn.id} id={txn.id}>
                   <td data-label={t('txn.type')}><span className="txn-type">{txn.type}</span></td>
                   <td data-label={t('txn.party')}><span className="txn-party">{txn.party}</span></td>
-                  <td data-label={t('txn.amount')}><span className="txn-amount">{txn.amount}</span></td>
-                  <td data-label={t('txn.gst')}><span className="txn-gst">{txn.gst}</span></td>
+                  <td data-label={t('txn.amount')}><span className="txn-amount">₹ {Number(txn.amount).toLocaleString('en-IN')}</span></td>
+                  <td data-label={t('txn.gst')}><span className="txn-gst">₹ {Number(txn.gst).toLocaleString('en-IN')}</span></td>
                   <td data-label={t('txn.date')}><span className="txn-date">{txn.date}</span></td>
                   <td data-label={t('txn.status')}>
                     <span className={`status-pill ${STATUS_KEYS[txn.status].cls}`}>
                       {t(STATUS_KEYS[txn.status].key)}
                     </span>
+                  </td>
+                  <td data-label="Action">
+                    <button className="btn-action btn-action-ghost" onClick={() => {
+                      setPrintTxn(txn);
+                      setTimeout(() => window.print(), 100);
+                    }}>
+                      <Printer size={14} /> Print
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -182,6 +209,71 @@ export default function Dashboard() {
           </table>
         </div>
       </div>
+
+      {/* Hidden Printable Voucher for Dashboard Recent Txns */}
+      {printTxn && (
+        <div className="print-only-voucher" style={{ display: 'none' }}>
+          <div style={{ padding: '40px', width: '100%', maxWidth: '800px', margin: '0 auto', textAlign: 'left', fontFamily: 'Arial, sans-serif' }}>
+            
+            <h1 style={{ textAlign: 'center', fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>
+              Sharma Traders Pvt Ltd
+            </h1>
+            <h2 style={{ textAlign: 'center', fontSize: '18px', fontWeight: 'bold', borderBottom: '1px solid #000', paddingBottom: '10px', marginBottom: '20px' }}>
+              {printTxn.type} Voucher
+            </h2>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '14px' }}>
+              <div>No. : <b>{printTxn.id.split('-')[1]}</b></div>
+              <div>Dated : <b>{printTxn.date}</b></div>
+            </div>
+            
+            <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: '1px solid #000', borderBottom: '1px solid #000', borderLeft: '1px solid #000', borderRight: '1px solid #000', marginBottom: '20px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #000' }}>
+                  <th style={{ padding: '8px', textAlign: 'left', borderRight: '1px solid #000', width: '75%' }}>Particulars</th>
+                  <th style={{ padding: '8px', textAlign: 'right', width: '25%' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ padding: '16px 8px', borderRight: '1px solid #000', verticalAlign: 'top' }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Account :</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ marginLeft: '20px', fontWeight: 'bold' }}>{printTxn.party}</span>
+                      <span>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} Cr</span>
+                    </div>
+                    <div style={{ marginLeft: '20px', marginTop: '20px', fontSize: '12px' }}>
+                      (Ref: {printTxn.id})
+                    </div>
+                    
+                    <div style={{ fontWeight: 'bold', marginTop: '30px', marginBottom: '4px' }}>Through :</div>
+                    <div style={{ marginLeft: '20px' }}>{printTxn.type.includes('Purchase') ? 'Inventory / Expense A/c' : 'Sales / Income A/c'}</div>
+                    
+                    <div style={{ fontWeight: 'bold', marginTop: '30px', marginBottom: '4px' }}>Amount (in words) :</div>
+                    <div style={{ marginLeft: '20px' }}>INR {numberToWords(Math.floor(Number(printTxn.amount)))}</div>
+                  </td>
+                  <td style={{ padding: '16px 8px', textAlign: 'right', verticalAlign: 'top' }}>
+                    <div style={{ marginTop: '20px' }}>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  </td>
+                </tr>
+                <tr style={{ borderTop: '1px solid #000' }}>
+                  <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #000' }}>₹</td>
+                  <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '60px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ borderBottom: '1px solid #000', width: '200px', marginBottom: '5px' }}></div>
+                <div>Authorised Signatory</div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
