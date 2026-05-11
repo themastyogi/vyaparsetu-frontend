@@ -17,10 +17,11 @@ const TYPE_COLORS: Record<string, string> = {
   stock: 'tag-customer', service: 'tag-both', expense: 'tag-vendor', asset: 'tag-customer',
 };
 
-function stockStatus(qty: number | null, reorder: number | null, t: (k: string) => string) {
+function stockStatus(qty: number | null, reorder: number | null, type: string, t: (k: string) => string) {
+  if (type === 'service' || type === 'expense') return null; // Non-stock items don't have stock status
   if (qty === null) return null;
   if (qty === 0) return { cls: 'stock-out', label: t('items.out_stock') };
-  if (reorder !== null && qty < reorder) return { cls: 'stock-low', label: t('items.low_stock') };
+  if (reorder !== null && qty <= reorder) return { cls: 'stock-low', label: t('items.low_stock') };
   return { cls: 'stock-ok', label: t('items.in_stock') };
 }
 
@@ -37,9 +38,36 @@ export default function Items() {
     .filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.hsn.includes(search));
 
   const lowStockCount = ITEMS.filter(i => {
-    const s = stockStatus(i.qty, i.reorder, t);
+    const s = stockStatus(i.qty, i.reorder, i.type, t);
     return s?.cls === 'stock-low' || s?.cls === 'stock-out';
   }).length;
+
+  const handleExport = () => {
+    const headers = ['Name', 'Type', 'HSN', 'GST %', 'Price', 'Stock Qty', 'Reorder Level'];
+    const csvRows = [headers.join(',')];
+    
+    ITEMS.forEach(i => {
+      const row = [
+        `"${i.name}"`, 
+        i.type, 
+        i.hsn, 
+        i.gst, 
+        i.price, 
+        i.qty ?? '', 
+        i.reorder ?? ''
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + csvRows.join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'items_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,71 +139,129 @@ export default function Items() {
             </button>
           ))}
         </div>
-        <button id="export-items" className="icon-btn">
+        <button id="export-items" className="icon-btn" onClick={handleExport}>
           <Download size={15}/> {t('items.export')}
         </button>
       </div>
 
       {/* Table */}
-      <div className="page-card">
-        <div className="table-wrap">
-          <table className="data-table" id="items-table">
-            <thead>
-              <tr>
-                <th>{t('items.col_name')}</th>
-                <th>{t('items.col_type')}</th>
-                <th>{t('items.col_hsn')}</th>
-                <th>{t('items.col_gst')}</th>
-                <th>{t('items.col_price')}</th>
-                <th>{t('items.col_stock')}</th>
-                <th>{t('items.col_status')}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="empty-cell">{t('common.na','No items found')}</td></tr>
-              ) : filtered.map(item => {
-                const st = stockStatus(item.qty, item.reorder, t);
-                return (
-                  <tr key={item.id} id={item.id}>
-                    <td data-label={t('items.col_name')}>
-                      <div className="item-name-cell">
-                        <div className="item-icon">{item.emoji}</div>
-                        <span className="txn-party">{item.name}</span>
-                      </div>
-                    </td>
-                    <td data-label={t('items.col_type')}>
-                      <span className={`type-tag ${TYPE_COLORS[item.type]}`}>
-                        {t(`items.${item.type}`, item.type.charAt(0).toUpperCase() + item.type.slice(1))}
-                      </span>
-                    </td>
-                    <td data-label={t('items.col_hsn')}><span className="mono">{item.hsn}</span></td>
-                    <td data-label={t('items.col_gst')}><span className="txn-amount">{item.gst}%</span></td>
-                    <td data-label={t('items.col_price')}><span className="txn-amount">₹ {item.price.toLocaleString('en-IN')}</span></td>
-                    <td data-label={t('items.col_stock')}>
-                      {item.qty !== null
-                        ? <span className="txn-date">{item.qty} {item.unit}</span>
-                        : <span className="txn-gst">{t('common.na','N/A')}</span>
-                      }
-                    </td>
-                    <td data-label={t('items.col_status')}>
-                      {st
-                        ? <span className={`stock-badge ${st.cls}`}>{st.label}</span>
-                        : <span className="status-pill status-paid">{t('parties.active','Active')}</span>
-                      }
-                    </td>
-                    <td>
-                      <button id={`view-item-${item.id}`} className="row-action-btn" aria-label="View">
-                        <ChevronRight size={15}/>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      <div className="page-card" style={{ display: 'flex', flexDirection: 'column', gap: '30px', background: 'transparent', border: 'none', padding: 0 }}>
+        
+        {/* Products / Stock Section */}
+        {(filter === 'all' || filter === 'stock' || filter === 'asset') && (
+          <div className="table-wrap" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+            <h3 style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)', margin: 0, fontSize: '16px', fontWeight: 600 }}>Products & Assets (Stock)</h3>
+            <table className="data-table" id="items-table-stock">
+              <thead>
+                <tr>
+                  <th>{t('items.col_name')}</th>
+                  <th>{t('items.col_type')}</th>
+                  <th>{t('items.col_hsn')}</th>
+                  <th>{t('items.col_gst')}</th>
+                  <th>{t('items.col_price')}</th>
+                  <th>{t('items.col_stock')}</th>
+                  <th>{t('items.col_status')}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.filter(i => i.type === 'stock' || i.type === 'asset').length === 0 ? (
+                  <tr><td colSpan={8} className="empty-cell">{t('common.na','No products found')}</td></tr>
+                ) : filtered.filter(i => i.type === 'stock' || i.type === 'asset').map(item => {
+                  const st = stockStatus(item.qty, item.reorder, item.type, t);
+                  return (
+                    <tr key={item.id} id={item.id}>
+                      <td data-label={t('items.col_name')}>
+                        <div className="item-name-cell">
+                          <div className="item-icon">{item.emoji}</div>
+                          <span className="txn-party">{item.name}</span>
+                        </div>
+                      </td>
+                      <td data-label={t('items.col_type')}>
+                        <span className={`type-tag ${TYPE_COLORS[item.type]}`}>
+                          {t(`items.${item.type}`, item.type.charAt(0).toUpperCase() + item.type.slice(1))}
+                        </span>
+                      </td>
+                      <td data-label={t('items.col_hsn')}><span className="mono">{item.hsn}</span></td>
+                      <td data-label={t('items.col_gst')}><span className="txn-amount">{item.gst}%</span></td>
+                      <td data-label={t('items.col_price')}><span className="txn-amount">₹ {item.price.toLocaleString('en-IN')}</span></td>
+                      <td data-label={t('items.col_stock')}>
+                        {item.qty !== null
+                          ? <span className="txn-date">{item.qty} {item.unit}</span>
+                          : <span className="txn-gst">{t('common.na','N/A')}</span>
+                        }
+                      </td>
+                      <td data-label={t('items.col_status')}>
+                        {st
+                          ? <span className={`stock-badge ${st.cls}`}>{st.label}</span>
+                          : <span className="status-pill status-paid">{t('parties.active','Active')}</span>
+                        }
+                      </td>
+                      <td>
+                        <button id={`view-item-${item.id}`} className="row-action-btn" aria-label="View">
+                          <ChevronRight size={15}/>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Services / Non-Stock Section */}
+        {(filter === 'all' || filter === 'service' || filter === 'expense') && (
+          <div className="table-wrap" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+            <h3 style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)', margin: 0, fontSize: '16px', fontWeight: 600 }}>Services & Charges (Non-Stock)</h3>
+            <table className="data-table" id="items-table-services">
+              <thead>
+                <tr>
+                  <th>{t('items.col_name')}</th>
+                  <th>{t('items.col_type')}</th>
+                  <th>SAC Code</th>
+                  <th>{t('items.col_gst')}</th>
+                  <th>{t('items.col_price')}</th>
+                  <th>{t('items.col_status')}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.filter(i => i.type === 'service' || i.type === 'expense').length === 0 ? (
+                  <tr><td colSpan={7} className="empty-cell">{t('common.na','No services found')}</td></tr>
+                ) : filtered.filter(i => i.type === 'service' || i.type === 'expense').map(item => {
+                  return (
+                    <tr key={item.id} id={item.id}>
+                      <td data-label={t('items.col_name')}>
+                        <div className="item-name-cell">
+                          <div className="item-icon">{item.emoji}</div>
+                          <span className="txn-party">{item.name}</span>
+                        </div>
+                      </td>
+                      <td data-label={t('items.col_type')}>
+                        <span className={`type-tag ${TYPE_COLORS[item.type]}`}>
+                          {t(`items.${item.type}`, item.type.charAt(0).toUpperCase() + item.type.slice(1))}
+                        </span>
+                      </td>
+                      <td data-label="SAC Code"><span className="mono">{item.hsn}</span></td>
+                      <td data-label={t('items.col_gst')}><span className="txn-amount">{item.gst}%</span></td>
+                      <td data-label={t('items.col_price')}><span className="txn-amount">₹ {item.price.toLocaleString('en-IN')}</span></td>
+                      <td data-label={t('items.col_status')}>
+                        <span className="status-pill status-paid">{t('parties.active','Active')}</span>
+                      </td>
+                      <td>
+                        <button id={`view-item-${item.id}`} className="row-action-btn" aria-label="View">
+                          <ChevronRight size={15}/>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
       </div>
 
       {/* Add Item Modal */}

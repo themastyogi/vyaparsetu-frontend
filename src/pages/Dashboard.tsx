@@ -47,11 +47,15 @@ export default function Dashboard() {
 
   const [printTxn, setPrintTxn] = useState<any>(null);
 
+  const totalRevenue = RECENT_TXN.filter(t => t.type === 'Sales Invoice').reduce((sum, t) => sum + Number(t.amount), 0);
+  const outstanding = RECENT_TXN.filter(t => t.type === 'Sales Invoice' && (t.status === 'pending' || t.status === 'overdue')).reduce((sum, t) => sum + Number(t.amount), 0);
+  const totalParties = new Set(RECENT_TXN.map(t => t.party)).size;
+
   const STATS = [
-    { id: 'total-revenue',         label: t('dashboard.total_revenue'), value: '₹ 24,80,500', change: '+18.4%', positive: true,  sub: t('dashboard.vs_last_month'),    icon: <IndianRupee size={20}/>, color: 'purple', path: '/dashboard/sales' },
-    { id: 'outstanding-receivable', label: t('dashboard.outstanding'),  value: '₹ 6,32,000',  change: '-4.2%',  positive: false, sub: `12 ${t('dashboard.parties_pending')}`, icon: <TrendingUp size={20}/>, color: 'blue', path: '/dashboard/parties' },
-    { id: 'total-parties',          label: t('dashboard.total_parties'), value: '148',         change: '+6',     positive: true,  sub: t('dashboard.added_month'),      icon: <Users size={20}/>,        color: 'green', path: '/dashboard/parties' },
-    { id: 'low-stock-items',        label: t('dashboard.low_stock'),    value: '7',            change: t('dashboard.action_needed'), positive: false, sub: t('dashboard.below_reorder'), icon: <Package size={20}/>, color: 'amber', path: '/dashboard/items' },
+    { id: 'total-revenue',         label: t('dashboard.total_revenue'), value: `₹ ${totalRevenue.toLocaleString('en-IN')}`, change: '+18.4%', positive: true,  sub: t('dashboard.vs_last_month'),    icon: <IndianRupee size={20}/>, color: 'purple', path: '/dashboard/sales' },
+    { id: 'outstanding-receivable', label: t('dashboard.outstanding'),  value: `₹ ${outstanding.toLocaleString('en-IN')}`,  change: '-4.2%',  positive: false, sub: `2 ${t('dashboard.parties_pending')}`, icon: <TrendingUp size={20}/>, color: 'blue', path: '/dashboard/parties' },
+    { id: 'total-parties',          label: t('dashboard.total_parties'), value: totalParties.toString(),         change: '+2',     positive: true,  sub: t('dashboard.added_month'),      icon: <Users size={20}/>,        color: 'green', path: '/dashboard/parties' },
+    { id: 'low-stock-items',        label: t('dashboard.low_stock'),    value: '2',            change: t('dashboard.action_needed'), positive: false, sub: t('dashboard.below_reorder'), icon: <Package size={20}/>, color: 'amber', path: '/dashboard/items' },
   ];
 
   const ALERTS = [
