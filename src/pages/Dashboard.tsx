@@ -265,41 +265,84 @@ export default function Dashboard() {
               <div>Dated : <b>{printTxn.date}</b></div>
             </div>
             
-            <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: '1px solid #000', borderBottom: '1px solid #000', borderLeft: '1px solid #000', borderRight: '1px solid #000', marginBottom: '20px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: '2px solid #000', borderBottom: '2px solid #000', borderLeft: '1px solid #000', borderRight: '1px solid #000', marginBottom: '20px' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #000' }}>
-                  <th style={{ padding: '8px', textAlign: 'left', borderRight: '1px solid #000', width: '75%' }}>Particulars</th>
-                  <th style={{ padding: '8px', textAlign: 'right', width: '25%' }}>Amount</th>
+                <tr style={{ borderBottom: '1px solid #000', background: 'rgba(0,0,0,0.03)' }}>
+                  <th style={{ padding: '10px 12px', textAlign: 'left', borderRight: '1px solid #000', width: '60%', fontWeight: 'bold' }}>Particulars</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', borderRight: '1px solid #000', width: '20%', fontWeight: 'bold' }}>Debit (₹)</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', width: '20%', fontWeight: 'bold' }}>Credit (₹)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td style={{ padding: '16px 8px', borderRight: '1px solid #000', verticalAlign: 'top' }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Account :</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ marginLeft: '20px', fontWeight: 'bold' }}>{printTxn.party}</span>
-                      <span>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {printTxn.type.includes('Purchase') ? 'Cr' : 'Dr'}</span>
+                  <td style={{ padding: '20px 12px', borderRight: '1px solid #000', verticalAlign: 'top', lineHeight: '1.6' }}>
+                    {printTxn.type.includes('Sales') ? (
+                      <>
+                        <div style={{ fontWeight: 'bold' }}>{printTxn.party}</div>
+                        <div style={{ marginLeft: '40px', marginTop: '12px' }}>To Sales A/c</div>
+                        {Number(printTxn.gst) > 0 && (
+                          <div style={{ marginLeft: '40px', marginTop: '8px' }}>To Output GST A/c</div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontWeight: 'bold' }}>Inventory / Expense A/c</div>
+                        {Number(printTxn.gst) > 0 && (
+                          <div style={{ fontWeight: 'bold', marginTop: '8px' }}>Input GST A/c</div>
+                        )}
+                        <div style={{ marginLeft: '40px', marginTop: '12px' }}>To {printTxn.party}</div>
+                      </>
+                    )}
+                    <div style={{ marginTop: '40px', fontStyle: 'italic', fontSize: '13px' }}>
+                      <b>Narration:</b> Being {printTxn.type} recorded for {printTxn.party} (Ref: {printTxn.id}).
                     </div>
-                    <div style={{ marginLeft: '20px', marginTop: '20px', fontSize: '12px' }}>
-                      (Ref: {printTxn.id})
-                    </div>
-                    
-                    <div style={{ fontWeight: 'bold', marginTop: '30px', marginBottom: '4px' }}>Through :</div>
-                    <div style={{ marginLeft: '20px' }}>{printTxn.type.includes('Purchase') ? 'Inventory / Expense A/c' : printTxn.type.includes('Sales') ? 'Sales / Revenue A/c' : 'Bank / Cash A/c'}</div>
-                    
-                    <div style={{ fontWeight: 'bold', marginTop: '30px', marginBottom: '4px' }}>Amount (in words) :</div>
-                    <div style={{ marginLeft: '20px' }}>INR {numberToWords(Math.floor(Number(printTxn.amount)))}</div>
                   </td>
-                  <td style={{ padding: '16px 8px', textAlign: 'right', verticalAlign: 'top' }}>
-                    <div style={{ marginTop: '20px' }}>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  <td style={{ padding: '20px 12px', textAlign: 'right', borderRight: '1px solid #000', verticalAlign: 'top', lineHeight: '1.6' }}>
+                    {printTxn.type.includes('Sales') ? (
+                      <>
+                        <div>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                        <div style={{ marginTop: '12px' }}></div>
+                        <div style={{ marginTop: '8px' }}></div>
+                      </>
+                    ) : (
+                      <>
+                        <div>{(Number(printTxn.amount) - Number(printTxn.gst)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                        {Number(printTxn.gst) > 0 && (
+                          <div style={{ marginTop: '8px' }}>{Number(printTxn.gst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                        )}
+                        <div style={{ marginTop: '12px' }}></div>
+                      </>
+                    )}
+                  </td>
+                  <td style={{ padding: '20px 12px', textAlign: 'right', verticalAlign: 'top', lineHeight: '1.6' }}>
+                     {printTxn.type.includes('Sales') ? (
+                      <>
+                        <div></div>
+                        <div style={{ marginTop: '12px' }}>{(Number(printTxn.amount) - Number(printTxn.gst)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                        {Number(printTxn.gst) > 0 && (
+                          <div style={{ marginTop: '8px' }}>{Number(printTxn.gst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div></div>
+                        <div style={{ marginTop: '8px' }}></div>
+                        <div style={{ marginTop: '12px' }}>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                      </>
+                    )}
                   </td>
                 </tr>
-                <tr style={{ borderTop: '1px solid #000' }}>
-                  <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #000' }}>₹</td>
-                  <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                <tr style={{ borderTop: '1px solid #000', fontWeight: 'bold', background: 'rgba(0,0,0,0.03)' }}>
+                  <td style={{ padding: '12px', textAlign: 'right', borderRight: '1px solid #000' }}>Total:</td>
+                  <td style={{ padding: '12px', textAlign: 'right', borderRight: '1px solid #000' }}>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  <td style={{ padding: '12px', textAlign: 'right' }}>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                 </tr>
               </tbody>
             </table>
+
+            <div style={{ marginTop: '30px', fontSize: '14px' }}>
+              <span style={{ fontWeight: 'bold' }}>Amount (in words):</span> INR {numberToWords(Math.floor(Number(printTxn.amount)))}
+            </div>
             
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '60px' }}>
               <div style={{ textAlign: 'center' }}>

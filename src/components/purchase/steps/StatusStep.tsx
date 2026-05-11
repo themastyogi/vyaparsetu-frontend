@@ -36,6 +36,11 @@ export default function StatusStep({ wizard }: Props) {
   }, []);
 
   const total = data.items.reduce((sum, item) => sum + ((item.qty || 0) * (item.rate || 0)), 0);
+  const totalGst = data.items.reduce((sum, item) => {
+    const lineAmt = (item.qty || 0) * (item.rate || 0);
+    const gstPct = item.gstRate ? Number(item.gstRate) : 0;
+    return sum + (lineAmt * (gstPct / 100));
+  }, 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px', textAlign: 'center', padding: '0 20px' }}>
@@ -57,41 +62,52 @@ export default function StatusStep({ wizard }: Props) {
             <div>Dated : <b>{data.invoiceDate ? new Date(data.invoiceDate).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'}) : new Date().toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'})}</b></div>
           </div>
           
-          <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: '1px solid #000', borderBottom: '1px solid #000', borderLeft: '1px solid #000', borderRight: '1px solid #000', marginBottom: '20px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', borderTop: '2px solid #000', borderBottom: '2px solid #000', borderLeft: '1px solid #000', borderRight: '1px solid #000', marginBottom: '20px' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <th style={{ padding: '8px', textAlign: 'left', borderRight: '1px solid #000', width: '75%' }}>Particulars</th>
-                <th style={{ padding: '8px', textAlign: 'right', width: '25%' }}>Amount</th>
+              <tr style={{ borderBottom: '1px solid #000', background: 'rgba(0,0,0,0.03)' }}>
+                <th style={{ padding: '10px 12px', textAlign: 'left', borderRight: '1px solid #000', width: '60%', fontWeight: 'bold' }}>Particulars</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', borderRight: '1px solid #000', width: '20%', fontWeight: 'bold' }}>Debit (₹)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', width: '20%', fontWeight: 'bold' }}>Credit (₹)</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td style={{ padding: '16px 8px', borderRight: '1px solid #000', verticalAlign: 'top' }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Account :</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ marginLeft: '20px', fontWeight: 'bold' }}>{data.vendorName}</span>
-                    <span>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })} Cr</span>
+                <td style={{ padding: '20px 12px', borderRight: '1px solid #000', verticalAlign: 'top', lineHeight: '1.6' }}>
+                  <div style={{ fontWeight: 'bold' }}>Inventory / Expense A/c</div>
+                  {totalGst > 0 && (
+                    <div style={{ fontWeight: 'bold', marginTop: '8px' }}>Input GST A/c</div>
+                  )}
+                  <div style={{ marginLeft: '40px', marginTop: '12px' }}>To {data.vendorName || 'Vendor Payable'}</div>
+                  <div style={{ marginTop: '40px', fontStyle: 'italic', fontSize: '13px' }}>
+                    <b>Narration:</b> Being purchase bill recorded for {data.vendorName || 'Vendor'} (Ref: {data.invoiceNo}).
                   </div>
-                  <div style={{ marginLeft: '20px', marginTop: '20px', fontSize: '12px' }}>
-                    (Purchase Ref: {data.invoiceNo})
-                  </div>
-                  
-                  <div style={{ fontWeight: 'bold', marginTop: '30px', marginBottom: '4px' }}>Through :</div>
-                  <div style={{ marginLeft: '20px' }}>Inventory / Expense A/c</div>
-                  
-                  <div style={{ fontWeight: 'bold', marginTop: '30px', marginBottom: '4px' }}>Amount (in words) :</div>
-                  <div style={{ marginLeft: '20px' }}>INR {numberToWords(Math.floor(total))}</div>
                 </td>
-                <td style={{ padding: '16px 8px', textAlign: 'right', verticalAlign: 'top' }}>
-                  <div style={{ marginTop: '20px' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                <td style={{ padding: '20px 12px', textAlign: 'right', borderRight: '1px solid #000', verticalAlign: 'top', lineHeight: '1.6' }}>
+                  <div>{(total - totalGst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  {totalGst > 0 && (
+                    <div style={{ marginTop: '8px' }}>{totalGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  )}
+                  <div style={{ marginTop: '12px' }}></div>
+                </td>
+                <td style={{ padding: '20px 12px', textAlign: 'right', verticalAlign: 'top', lineHeight: '1.6' }}>
+                  <div></div>
+                  {totalGst > 0 && (
+                    <div style={{ marginTop: '8px' }}></div>
+                  )}
+                  <div style={{ marginTop: '12px' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
                 </td>
               </tr>
-              <tr style={{ borderTop: '1px solid #000' }}>
-                <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #000' }}>₹</td>
-                <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              <tr style={{ borderTop: '1px solid #000', fontWeight: 'bold', background: 'rgba(0,0,0,0.03)' }}>
+                <td style={{ padding: '12px', textAlign: 'right', borderRight: '1px solid #000' }}>Total:</td>
+                <td style={{ padding: '12px', textAlign: 'right', borderRight: '1px solid #000' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: '12px', textAlign: 'right' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
               </tr>
             </tbody>
           </table>
+
+          <div style={{ marginTop: '30px', fontSize: '14px' }}>
+            <span style={{ fontWeight: 'bold' }}>Amount (in words):</span> INR {numberToWords(Math.floor(total))}
+          </div>
           
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '60px' }}>
             <div style={{ textAlign: 'center' }}>
