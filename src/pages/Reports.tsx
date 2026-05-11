@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Printer } from 'lucide-react';
+import { FileText, Printer, ArrowLeft, Eye } from 'lucide-react';
 import './Dashboard.css';
 
 interface TrialBalanceEntry {
@@ -15,6 +15,12 @@ export default function Reports() {
   const [data, setData] = useState<TrialBalanceEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // General Ledger State
+  const [viewMode, setViewMode] = useState<'trial_balance' | 'general_ledger'>('trial_balance');
+  const [selectedAccount, setSelectedAccount] = useState<TrialBalanceEntry | null>(null);
+  const [glEntries, setGlEntries] = useState<any[]>([]);
+  const [glLoading, setGlLoading] = useState(false);
+
   useEffect(() => {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
@@ -24,7 +30,9 @@ export default function Reports() {
         setData([
           { accountId: 'inventory_asset_ac', accountName: 'Inventory (Asset)', accountType: 'asset', totalDebit: 50000, totalCredit: 0, balance: 50000 },
           { accountId: 'input_gst_ac', accountName: 'Input GST Receivable', accountType: 'asset', totalDebit: 9000, totalCredit: 0, balance: 9000 },
-          { accountId: 'vendor_payable_ac', accountName: 'Vendor Payable', accountType: 'liability', totalDebit: 0, totalCredit: 59000, balance: -59000 }
+          { accountId: 'freight_charges_ac', accountName: 'Freight & Charges', accountType: 'expense', totalDebit: 1500, totalCredit: 0, balance: 1500 },
+          { accountId: 'discount_received_ac', accountName: 'Discount Received', accountType: 'revenue', totalDebit: 0, totalCredit: 500, balance: -500 },
+          { accountId: 'vendor_payable_ac', accountName: 'Vendor Payable', accountType: 'liability', totalDebit: 0, totalCredit: 60000, balance: -60000 }
         ]);
         setLoading(false);
       }, 800);
@@ -49,6 +57,38 @@ export default function Reports() {
         setData([]);
       });
   }, []);
+
+  const fetchGeneralLedger = (account: TrialBalanceEntry) => {
+    setSelectedAccount(account);
+    setViewMode('general_ledger');
+    setGlLoading(true);
+
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocalhost) {
+      // Mock GL for Vercel
+      setTimeout(() => {
+        setGlEntries([
+          { voucherNo: 'PUR-001', date: new Date().toISOString(), debit: account.totalDebit, credit: account.totalCredit, voucherType: 'PURCHASE' }
+        ]);
+        setGlLoading(false);
+      }, 500);
+      return;
+    }
+
+    fetch(`http://localhost:3000/finance/general-ledger?accountId=${account.accountId}`, {
+      headers: { 'tenantId': 'default-tenant' }
+    })
+      .then(res => res.json())
+      .then(json => {
+        setGlEntries(json);
+        setGlLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch GL', err);
+        setGlLoading(false);
+        setGlEntries([]);
+      });
+  };
 
   const totalDebit = data.reduce((sum, item) => sum + Number(item.totalDebit), 0);
   const totalCredit = data.reduce((sum, item) => sum + Number(item.totalCredit), 0);
@@ -76,19 +116,29 @@ export default function Reports() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>Financial Reports</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>View your live trial balance and ledgers</p>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              {viewMode === 'trial_balance' ? 'View your live trial balance and ledgers' : `General Ledger: ${selectedAccount?.accountName}`}
+            </p>
           </div>
-          <button className="btn-action btn-action-secondary" onClick={() => window.print()}>
-            <Printer size={16} /> Print Report
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {viewMode === 'general_ledger' && (
+              <button className="btn-action btn-action-secondary" onClick={() => setViewMode('trial_balance')}>
+                <ArrowLeft size={16} /> Back to Trial Balance
+              </button>
+            )}
+            <button className="btn-action btn-action-secondary" onClick={() => window.print()}>
+              <Printer size={16} /> Print Report
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="print-area" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
-        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <FileText size={20} color="var(--brand-primary)" />
-          <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Trial Balance</h2>
-        </div>
+      {viewMode === 'trial_balance' ? (
+        <div className="print-area" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+          <div style={{ padding: '20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <FileText size={20} color="var(--brand-primary)" />
+            <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Trial Balance</h2>
+          </div>
 
         {loading ? (
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading ledgers...</div>
@@ -122,8 +172,8 @@ export default function Reports() {
                       </tr>
                       {/* Group Items */}
                       {group.map((row, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                          <td style={{ padding: '10px 20px', fontWeight: 500, color: 'var(--text-primary)', paddingLeft: '32px' }}>{row.accountName}</td>
+                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer' }} onClick={() => fetchGeneralLedger(row)} className="tr-hover">
+                          <td style={{ padding: '10px 20px', fontWeight: 500, color: 'var(--brand-primary)', paddingLeft: '32px', textDecoration: 'underline' }}>{row.accountName}</td>
                           <td style={{ padding: '10px 20px', textAlign: 'right', color: Number(row.totalDebit) > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                             {Number(row.totalDebit) > 0 ? Number(row.totalDebit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}
                           </td>
@@ -157,6 +207,55 @@ export default function Reports() {
           </div>
         )}
       </div>
+      ) : (
+        <div className="print-area" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+          <div style={{ padding: '20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <FileText size={20} color="var(--brand-primary)" />
+            <h2 style={{ fontSize: '18px', fontWeight: 600 }}>General Ledger: {selectedAccount?.accountName}</h2>
+          </div>
+
+          {glLoading ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading entries...</div>
+          ) : glEntries.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No journal entries found for this ledger.</div>
+          ) : (
+            <div style={{ overflowX: 'auto', width: '100%' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-elevated)', fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '12px 20px', fontWeight: 600 }}>Date</th>
+                    <th style={{ padding: '12px 20px', fontWeight: 600 }}>Voucher No</th>
+                    <th style={{ padding: '12px 20px', fontWeight: 600 }}>Voucher Type</th>
+                    <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Debit (₹)</th>
+                    <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Credit (₹)</th>
+                    <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'center' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {glEntries.map((row, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }} className="tr-hover">
+                      <td style={{ padding: '12px 20px', color: 'var(--text-primary)' }}>{new Date(row.date).toLocaleDateString()}</td>
+                      <td style={{ padding: '12px 20px', fontWeight: 500 }}>{row.voucherNo}</td>
+                      <td style={{ padding: '12px 20px' }}>{row.voucherType}</td>
+                      <td style={{ padding: '12px 20px', textAlign: 'right', color: Number(row.debit) > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        {Number(row.debit) > 0 ? Number(row.debit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}
+                      </td>
+                      <td style={{ padding: '12px 20px', textAlign: 'right', color: Number(row.credit) > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        {Number(row.credit) > 0 ? Number(row.credit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}
+                      </td>
+                      <td style={{ padding: '12px 20px', textAlign: 'center' }}>
+                        <button className="row-action-btn" aria-label="View Voucher">
+                          <Eye size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

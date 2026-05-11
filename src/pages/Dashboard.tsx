@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown, Users, Package, IndianRupee, AlertTriangle, ArrowUpRight, FileText, ShoppingCart, Clock, Printer } from 'lucide-react';
@@ -46,16 +46,47 @@ export default function Dashboard() {
   else if (currentHour >= 17) greetingKey = 'dashboard.greeting_evening';
 
   const [printTxn, setPrintTxn] = useState<any>(null);
+  const [stats, setStats] = useState({ revenue: 0, outstanding: 0, parties: 0, lowStock: 0 });
 
-  const totalRevenue = RECENT_TXN.filter(t => t.type === 'Sales Invoice').reduce((sum, t) => sum + Number(t.amount), 0);
-  const outstanding = RECENT_TXN.filter(t => t.type === 'Sales Invoice' && (t.status === 'pending' || t.status === 'overdue')).reduce((sum, t) => sum + Number(t.amount), 0);
-  const totalParties = new Set(RECENT_TXN.map(t => t.party)).size;
+  useEffect(() => {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    if (!isLocalhost) {
+      // Mock calculations for Vercel
+      const totalRevenue = RECENT_TXN.filter(t => t.type === 'Sales Invoice').reduce((sum, t) => sum + Number(t.amount), 0);
+      const outstanding = RECENT_TXN.filter(t => t.type === 'Sales Invoice' && (t.status === 'pending' || t.status === 'overdue')).reduce((sum, t) => sum + Number(t.amount), 0);
+      const totalParties = new Set(RECENT_TXN.map(t => t.party)).size;
+      setStats({ revenue: totalRevenue, outstanding, parties: totalParties, lowStock: 2 });
+      return;
+    }
+
+    fetch('http://localhost:3000/finance/dashboard-stats', {
+      headers: { 'tenantId': 'default-tenant' }
+    })
+      .then(res => res.json())
+      .then(data => {
+        setStats({
+          revenue: Number(data.revenue) || 0,
+          outstanding: Number(data.payables) || 0, // Using payables as mock for outstanding in this context
+          parties: 15, // Mocking from backend for now
+          lowStock: 2
+        });
+      })
+      .catch(err => {
+        console.error('Failed to fetch stats', err);
+        // Fallback to local mock
+        const totalRevenue = RECENT_TXN.filter(t => t.type === 'Sales Invoice').reduce((sum, t) => sum + Number(t.amount), 0);
+        const outstanding = RECENT_TXN.filter(t => t.type === 'Sales Invoice' && (t.status === 'pending' || t.status === 'overdue')).reduce((sum, t) => sum + Number(t.amount), 0);
+        const totalParties = new Set(RECENT_TXN.map(t => t.party)).size;
+        setStats({ revenue: totalRevenue, outstanding, parties: totalParties, lowStock: 2 });
+      });
+  }, []);
 
   const STATS = [
-    { id: 'total-revenue',         label: t('dashboard.total_revenue'), value: `₹ ${totalRevenue.toLocaleString('en-IN')}`, change: '+18.4%', positive: true,  sub: t('dashboard.vs_last_month'),    icon: <IndianRupee size={20}/>, color: 'purple', path: '/dashboard/sales' },
-    { id: 'outstanding-receivable', label: t('dashboard.outstanding'),  value: `₹ ${outstanding.toLocaleString('en-IN')}`,  change: '-4.2%',  positive: false, sub: `2 ${t('dashboard.parties_pending')}`, icon: <TrendingUp size={20}/>, color: 'blue', path: '/dashboard/parties' },
-    { id: 'total-parties',          label: t('dashboard.total_parties'), value: totalParties.toString(),         change: '+2',     positive: true,  sub: t('dashboard.added_month'),      icon: <Users size={20}/>,        color: 'green', path: '/dashboard/parties' },
-    { id: 'low-stock-items',        label: t('dashboard.low_stock'),    value: '2',            change: t('dashboard.action_needed'), positive: false, sub: t('dashboard.below_reorder'), icon: <Package size={20}/>, color: 'amber', path: '/dashboard/items' },
+    { id: 'total-revenue',         label: t('dashboard.total_revenue'), value: `₹ ${stats.revenue.toLocaleString('en-IN')}`, change: '+18.4%', positive: true,  sub: t('dashboard.vs_last_month'),    icon: <IndianRupee size={20}/>, color: 'purple', path: '/dashboard/sales' },
+    { id: 'outstanding-receivable', label: t('dashboard.outstanding'),  value: `₹ ${stats.outstanding.toLocaleString('en-IN')}`,  change: '-4.2%',  positive: false, sub: `2 ${t('dashboard.parties_pending')}`, icon: <TrendingUp size={20}/>, color: 'blue', path: '/dashboard/parties' },
+    { id: 'total-parties',          label: t('dashboard.total_parties'), value: stats.parties.toString(),         change: '+2',     positive: true,  sub: t('dashboard.added_month'),      icon: <Users size={20}/>,        color: 'green', path: '/dashboard/parties' },
+    { id: 'low-stock-items',        label: t('dashboard.low_stock'),    value: stats.lowStock.toString(),            change: t('dashboard.action_needed'), positive: false, sub: t('dashboard.below_reorder'), icon: <Package size={20}/>, color: 'amber', path: '/dashboard/items' },
   ];
 
   const ALERTS = [
