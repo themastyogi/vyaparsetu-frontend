@@ -14,7 +14,6 @@ export default function PurposeStep({ wizard }: Props) {
 
   const handleSelect = (purpose: PurchasePurpose) => {
     wizard.updateData({ purpose });
-    wizard.goToStep('preview');
   };
 
   const options: { id: PurchasePurpose; icon: React.ReactNode; title: string; desc: string }[] = [
@@ -51,6 +50,19 @@ export default function PurposeStep({ wizard }: Props) {
           </div>
         );
       })}
+
+      {/* Remarks Field */}
+      <div className="field-group" style={{ marginTop: '10px' }}>
+        <label className="field-label">Remarks (Optional)</label>
+        <textarea 
+          className="field-input" 
+          placeholder="Add any notes or context about this purchase..."
+          value={data.remarks || ''}
+          onChange={e => wizard.updateData({ remarks: e.target.value })}
+          rows={3}
+          style={{ resize: 'vertical' }}
+        />
+      </div>
 
       <div style={{ marginTop: '20px' }}>
         <button className="btn-action btn-action-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => wizard.goToStep('preview')}>

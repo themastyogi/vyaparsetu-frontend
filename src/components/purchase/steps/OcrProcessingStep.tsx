@@ -21,8 +21,8 @@ export default function OcrProcessingStep({ wizard }: Props) {
         invoiceDate: '2026-04-24',
         purpose: 'stock',
         items: [
-          { id: 'item-1', name: 'Premium Widget', qty: 10, rate: 1200, discount: 0 },
-          { id: 'item-2', name: 'Basic Widget', qty: 25, rate: 450, discount: 0 }
+          { id: 'item-1', name: 'Premium Widget', qty: 10, rate: 1200, gstRate: 18 },
+          { id: 'item-2', name: 'Basic Widget', qty: 25, rate: 450, gstRate: 18 }
         ],
         // Simulate partial data error (OCR couldn't confidently read InvoiceNo)
         needsChecking: {
