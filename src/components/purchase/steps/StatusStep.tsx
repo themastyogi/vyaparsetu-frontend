@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle, XCircle, Printer } from 'lucide-react';
 import { usePurchaseWizard } from '../usePurchaseWizard';
+import { useCompany } from '../../../hooks/useCompany';
 
 interface Props {
   wizard: ReturnType<typeof usePurchaseWizard>;
@@ -10,6 +11,7 @@ interface Props {
 export default function StatusStep({ wizard }: Props) {
   const { t } = useTranslation();
   const { error, data } = wizard.state;
+  const company = useCompany();
 
   const isSuccess = !error;
 
@@ -42,10 +44,10 @@ export default function StatusStep({ wizard }: Props) {
       <div className="print-only-voucher" style={{ display: 'none' }}>
         <div style={{ padding: '40px', width: '100%', maxWidth: '800px', margin: '0 auto', textAlign: 'left', fontFamily: 'Arial, sans-serif' }}>
           
-          <h1 style={{ textAlign: 'center', fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>
-            {/* Real app would fetch this from company context */}
-            Sharma Traders Pvt Ltd
+          <h1 style={{ textAlign: 'center', fontSize: '24px', fontWeight: 'bold', marginBottom: '2px' }}>
+            {company.companyName}
           </h1>
+          <div style={{ textAlign: 'center', fontSize: '12px', marginBottom: '16px' }}>{company.address}</div>
           <h2 style={{ textAlign: 'center', fontSize: '18px', fontWeight: 'bold', borderBottom: '1px solid #000', paddingBottom: '10px', marginBottom: '20px' }}>
             Purchase Voucher
           </h2>

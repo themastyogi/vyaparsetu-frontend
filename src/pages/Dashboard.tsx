@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown, Users, Package, IndianRupee, AlertTriangle, ArrowUpRight, FileText, ShoppingCart, Clock, Printer } from 'lucide-react';
+import { useCompany } from '../hooks/useCompany';
 import './Dashboard.css';
 
 const MONTHLY = [
@@ -37,6 +38,7 @@ const numberToWords = (num: number): string => {
 export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const company = useCompany();
 
   const currentHour = new Date().getHours();
   let greetingKey = 'dashboard.greeting_afternoon';
@@ -78,7 +80,7 @@ export default function Dashboard() {
       <div className="dash-header">
         <div>
           <h1 className="dash-title">{t(greetingKey)}, Vikas 👋</h1>
-          <p className="dash-sub">{t('dashboard.subtitle', { company: 'Sharma Traders' })}</p>
+          <p className="dash-sub">{company.companyName}</p>
         </div>
         <div className="dash-header-actions">
           <button id="new-invoice-btn" className="btn-action btn-action-secondary" onClick={() => navigate('/dashboard/sales')}>
@@ -215,9 +217,10 @@ export default function Dashboard() {
         <div className="print-only-voucher" style={{ display: 'none' }}>
           <div style={{ padding: '40px', width: '100%', maxWidth: '800px', margin: '0 auto', textAlign: 'left', fontFamily: 'Arial, sans-serif' }}>
             
-            <h1 style={{ textAlign: 'center', fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>
-              Sharma Traders Pvt Ltd
+            <h1 style={{ textAlign: 'center', fontSize: '24px', fontWeight: 'bold', marginBottom: '2px' }}>
+              {company.companyName}
             </h1>
+            <div style={{ textAlign: 'center', fontSize: '12px', marginBottom: '16px' }}>{company.address}</div>
             <h2 style={{ textAlign: 'center', fontSize: '18px', fontWeight: 'bold', borderBottom: '1px solid #000', paddingBottom: '10px', marginBottom: '20px' }}>
               {printTxn.type} Voucher
             </h2>
@@ -240,14 +243,14 @@ export default function Dashboard() {
                     <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Account :</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ marginLeft: '20px', fontWeight: 'bold' }}>{printTxn.party}</span>
-                      <span>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} Cr</span>
+                      <span>{Number(printTxn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {printTxn.type.includes('Purchase') ? 'Cr' : 'Dr'}</span>
                     </div>
                     <div style={{ marginLeft: '20px', marginTop: '20px', fontSize: '12px' }}>
                       (Ref: {printTxn.id})
                     </div>
                     
                     <div style={{ fontWeight: 'bold', marginTop: '30px', marginBottom: '4px' }}>Through :</div>
-                    <div style={{ marginLeft: '20px' }}>{printTxn.type.includes('Purchase') ? 'Inventory / Expense A/c' : 'Sales / Income A/c'}</div>
+                    <div style={{ marginLeft: '20px' }}>{printTxn.type.includes('Purchase') ? 'Inventory / Expense A/c' : printTxn.type.includes('Sales') ? 'Sales / Revenue A/c' : 'Bank / Cash A/c'}</div>
                     
                     <div style={{ fontWeight: 'bold', marginTop: '30px', marginBottom: '4px' }}>Amount (in words) :</div>
                     <div style={{ marginLeft: '20px' }}>INR {numberToWords(Math.floor(Number(printTxn.amount)))}</div>
