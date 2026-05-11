@@ -16,6 +16,21 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    if (!isLocalhost) {
+      // Mock data for Vercel live demo
+      setTimeout(() => {
+        setData([
+          { accountId: 'inventory_asset_ac', accountName: 'Inventory (Asset)', accountType: 'asset', totalDebit: 50000, totalCredit: 0, balance: 50000 },
+          { accountId: 'input_gst_ac', accountName: 'Input GST Receivable', accountType: 'asset', totalDebit: 9000, totalCredit: 0, balance: 9000 },
+          { accountId: 'vendor_payable_ac', accountName: 'Vendor Payable', accountType: 'liability', totalDebit: 0, totalCredit: 59000, balance: -59000 }
+        ]);
+        setLoading(false);
+      }, 800);
+      return;
+    }
+
     // In a real app, use the configured Axios instance
     fetch('http://localhost:3000/finance/trial-balance', {
       headers: {

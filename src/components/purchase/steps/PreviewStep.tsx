@@ -71,18 +71,25 @@ export default function PreviewStep({ wizard }: Props) {
         totalAmount: total
       };
 
-      // Ensure your NestJS app is running on 3000 and has CORS enabled
-      const response = await fetch('http://localhost:3000/purchase/ingestion/manual', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'tenantId': 'default-tenant'
-        },
-        body: JSON.stringify(payload)
-      });
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-      if (!response.ok) {
-        throw new Error('Failed to save invoice to backend');
+      if (isLocalhost) {
+        // Ensure your NestJS app is running on 3000 and has CORS enabled
+        const response = await fetch('http://localhost:3000/purchase/ingestion/manual', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'tenantId': 'default-tenant'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save invoice to backend');
+        }
+      } else {
+        // Fallback for Vercel live demo (cannot hit localhost backend)
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
 
       // We still update the mock array so the frontend Purchases list reflects it immediately
