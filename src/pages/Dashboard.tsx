@@ -20,20 +20,7 @@ const RECENT_TXN = [
   { id: 'txn-5', type: 'Purchase Bill',  party: 'Kumar & Sons',     amount: '31000', gst: '5580',  date: '19 Apr 2026', status: 'overdue' },
 ];
 
-const numberToWords = (num: number): string => {
-  const a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
-  const b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
-  if ((num = num.toString() as any).length > 9) return 'overflow';
-  const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-  if (!n) return '';
-  let str = '';
-  str += (n[1] != '00') ? (a[Number(n[1])] || b[n[1][0] as any] + ' ' + a[n[1][1] as any]) + 'Crore ' : '';
-  str += (n[2] != '00') ? (a[Number(n[2])] || b[n[2][0] as any] + ' ' + a[n[2][1] as any]) + 'Lakh ' : '';
-  str += (n[3] != '00') ? (a[Number(n[3])] || b[n[3][0] as any] + ' ' + a[n[3][1] as any]) + 'Thousand ' : '';
-  str += (n[4] != '0') ? (a[Number(n[4])] || b[n[4][0] as any] + ' ' + a[n[4][1] as any]) + 'Hundred ' : '';
-  str += (n[5] != '00') ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0] as any] + ' ' + a[n[5][1] as any]) : '';
-  return str.trim() ? str.trim() + ' Only' : 'Zero';
-};
+
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -45,8 +32,130 @@ export default function Dashboard() {
   if (currentHour < 12) greetingKey = 'dashboard.greeting_morning';
   else if (currentHour >= 17) greetingKey = 'dashboard.greeting_evening';
 
-  const [printTxn, setPrintTxn] = useState<any>(null);
   const [stats, setStats] = useState({ revenue: 0, outstanding: 0, parties: 0, lowStock: 0 });
+
+  // ── Print voucher in an isolated new window (no app CSS) ─────────
+  const printVoucher = (txn: typeof RECENT_TXN[0]) => {
+    const amt    = Number(txn.amount);
+    const gst    = Number(txn.gst);
+    const taxable = amt - gst;
+    const f2 = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const ntw = (num: number): string => {
+      const a = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+      const b = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+      if (!num) return 'Zero Only';
+      const n = ('000000000' + Math.floor(num)).slice(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/)!;
+      let s = '';
+      if (+n[1]) s += (a[+n[1]] || b[+n[1][0]] + ' ' + a[+n[1][1]]) + ' Crore ';
+      if (+n[2]) s += (a[+n[2]] || b[+n[2][0]] + ' ' + a[+n[2][1]]) + ' Lakh ';
+      if (+n[3]) s += (a[+n[3]] || b[+n[3][0]] + ' ' + a[+n[3][1]]) + ' Thousand ';
+      if (+n[4]) s += a[+n[4]] + ' Hundred ';
+      if (+n[5]) s += (s ? 'and ' : '') + (a[+n[5]] || b[+n[5][0]] + ' ' + a[+n[5][1]]);
+      return s.trim() + ' Only';
+    };
+    const isSales    = txn.type.includes('Sales');
+    const isPurchase = txn.type.includes('Purchase');
+    const vType      = isSales ? 'Sales Invoice Voucher' : isPurchase ? 'Purchase Voucher' : `${txn.type} Voucher`;
+
+    const drRows = isSales
+      ? `<tr style="border-bottom:1px dashed #ddd;">
+           <td style="padding:6px 10px;font-weight:bold;border-right:1px solid #000;">${txn.party} (Sundry Debtor)</td>
+           <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;font-family:'Courier New',monospace;">${f2(amt)}</td>
+           <td style="padding:6px 10px;text-align:right;"></td>
+         </tr>`
+      : `<tr style="border-bottom:1px dashed #ddd;">
+           <td style="padding:6px 10px;font-weight:bold;border-right:1px solid #000;">Inventory / Purchase A/c</td>
+           <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;font-family:'Courier New',monospace;">${f2(taxable)}</td>
+           <td style="padding:6px 10px;text-align:right;"></td>
+         </tr>
+         ${gst > 0 ? `<tr style="border-bottom:1px dashed #ddd;">
+           <td style="padding:6px 10px;font-weight:bold;border-right:1px solid #000;">Input CGST A/c</td>
+           <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;font-family:'Courier New',monospace;">${f2(gst / 2)}</td>
+           <td style="padding:6px 10px;text-align:right;"></td>
+         </tr>
+         <tr style="border-bottom:1px dashed #ddd;">
+           <td style="padding:6px 10px;font-weight:bold;border-right:1px solid #000;">Input SGST A/c</td>
+           <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;font-family:'Courier New',monospace;">${f2(gst / 2)}</td>
+           <td style="padding:6px 10px;text-align:right;"></td>
+         </tr>` : ''}`;
+
+    const crRows = isSales
+      ? `<tr style="border-bottom:1px dashed #ddd;">
+           <td style="padding:6px 10px 6px 28px;border-right:1px solid #000;">To &nbsp;<b>Sales A/c</b></td>
+           <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;"></td>
+           <td style="padding:6px 10px;text-align:right;font-family:'Courier New',monospace;">${f2(taxable)}</td>
+         </tr>
+         ${gst > 0 ? `<tr style="border-bottom:1px dashed #ddd;">
+           <td style="padding:6px 10px 6px 28px;border-right:1px solid #000;">To &nbsp;<b>Output CGST A/c</b></td>
+           <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;"></td>
+           <td style="padding:6px 10px;text-align:right;font-family:'Courier New',monospace;">${f2(gst / 2)}</td>
+         </tr>
+         <tr style="border-bottom:1px dashed #ddd;">
+           <td style="padding:6px 10px 6px 28px;border-right:1px solid #000;">To &nbsp;<b>Output SGST A/c</b></td>
+           <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;"></td>
+           <td style="padding:6px 10px;text-align:right;font-family:'Courier New',monospace;">${f2(gst / 2)}</td>
+         </tr>` : ''}`
+      : `<tr style="border-bottom:1px dashed #ddd;">
+           <td style="padding:6px 10px 6px 28px;border-right:1px solid #000;">To &nbsp;<b>${txn.party}</b> (Sundry Creditor)</td>
+           <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;"></td>
+           <td style="padding:6px 10px;text-align:right;font-family:'Courier New',monospace;">${f2(amt)}</td>
+         </tr>`;
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${vType}</title>
+      <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;font-size:13px;color:#000;background:#fff;}
+      .page{width:210mm;margin:0 auto;padding:15mm;} table{width:100%;border-collapse:collapse;}
+      @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}@page{size:A4;margin:10mm;}}</style></head><body>
+      <div class="page">
+        <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:4px;">
+          <div style="font-size:20px;font-weight:bold;">${company.companyName}</div>
+          ${company.address ? `<div style="font-size:11px;margin-top:2px;color:#444;">${company.address}</div>` : ''}
+        </div>
+        <div style="text-align:center;font-size:14px;font-weight:bold;letter-spacing:2px;margin:6px 0 12px;text-transform:uppercase;">${vType}</div>
+        <table style="margin-bottom:12px;font-size:12px;">
+          <tr>
+            <td style="width:40%;"><b>Voucher No.:</b> ${txn.id}</td>
+            <td style="width:30%;text-align:center;"><b>Date:</b> ${txn.date}</td>
+            <td style="width:30%;text-align:right;"><b>Status:</b> ${txn.status.toUpperCase()}</td>
+          </tr>
+        </table>
+        <table style="border:1px solid #000;margin-bottom:0;">
+          <thead>
+            <tr style="background:#e8e8e8;border-bottom:2px solid #000;">
+              <th style="padding:8px 10px;text-align:left;border-right:1px solid #000;width:55%;">Particulars</th>
+              <th style="padding:8px 10px;text-align:right;border-right:1px solid #000;width:22%;">Debit (&#8377;)</th>
+              <th style="padding:8px 10px;text-align:right;width:23%;">Credit (&#8377;)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${drRows}
+            ${crRows}
+            <tr style="border-top:1px solid #bbb;">
+              <td colspan="3" style="padding:7px 10px;font-style:italic;font-size:12px;color:#333;">
+                <b>Narration:</b> Being ${txn.type.toLowerCase()} recorded for ${txn.party} dated ${txn.date}.
+              </td>
+            </tr>
+            <tr style="border-top:2px solid #000;background:#e8e8e8;font-weight:bold;">
+              <td style="padding:8px 10px;border-right:1px solid #000;">Grand Total</td>
+              <td style="padding:8px 10px;text-align:right;border-right:1px solid #000;font-family:'Courier New',monospace;">${f2(amt)}</td>
+              <td style="padding:8px 10px;text-align:right;font-family:'Courier New',monospace;">${f2(amt)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="border:1px solid #000;border-top:none;padding:5px 10px;font-size:12px;margin-bottom:20px;">
+          <b>Amount in Words:</b> INR ${ntw(Math.round(amt))}
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:40px;font-size:12px;">
+          <div style="text-align:center;width:28%;"><div style="border-top:1px solid #000;padding-top:4px;">Prepared By</div></div>
+          <div style="text-align:center;width:28%;"><div style="border-top:1px solid #000;padding-top:4px;">Checked By</div></div>
+          <div style="text-align:center;width:28%;"><div style="border-top:1px solid #000;padding-top:4px;">Authorised Signatory</div></div>
+        </div>
+        <div style="text-align:center;margin-top:12px;font-size:10px;color:#888;border-top:1px dashed #ccc;padding-top:5px;">Computer-generated voucher &nbsp;|&nbsp; ${company.companyName}</div>
+      </div>
+      <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};</script>
+    </body></html>`;
+    const w = window.open('', '_blank', 'width=850,height=1100,scrollbars=yes');
+    if (w) { w.document.write(html); w.document.close(); }
+  };
 
   useEffect(() => {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -233,10 +342,7 @@ export default function Dashboard() {
                     </span>
                   </td>
                   <td data-label="Action">
-                    <button className="btn-action btn-action-ghost" onClick={() => {
-                      setPrintTxn(txn);
-                      setTimeout(() => window.print(), 100);
-                    }}>
+                    <button className="btn-action btn-action-ghost" onClick={() => printVoucher(txn)}>
                       <Printer size={14} /> Print
                     </button>
                   </td>
@@ -246,108 +352,6 @@ export default function Dashboard() {
           </table>
         </div>
       </div>
-
-      {/* Hidden Printable Voucher for Dashboard Recent Txns */}
-      {printTxn && (() => {
-        const amt    = Number(printTxn.amount);
-        const gst    = Number(printTxn.gst);
-        const taxable = amt - gst;
-        const isSales    = printTxn.type.includes('Sales');
-        const isPurchase = printTxn.type.includes('Purchase');
-        const fmt = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-        // Build rows based on voucher type
-        interface LRow { name: string; indent: boolean; debit: number | null; credit: number | null; }
-        const rows: LRow[] = [];
-        if (isSales) {
-          rows.push({ name: `${printTxn.party} (Sundry Debtor)`, indent: false, debit: amt, credit: null });
-          rows.push({ name: 'To  Sales A/c', indent: true, debit: null, credit: taxable });
-          if (gst > 0) {
-            rows.push({ name: 'To  Output CGST A/c', indent: true, debit: null, credit: gst / 2 });
-            rows.push({ name: 'To  Output SGST A/c', indent: true, debit: null, credit: gst / 2 });
-          }
-        } else if (isPurchase) {
-          rows.push({ name: 'Inventory / Purchase A/c', indent: false, debit: taxable, credit: null });
-          if (gst > 0) {
-            rows.push({ name: 'Input CGST A/c', indent: false, debit: gst / 2, credit: null });
-            rows.push({ name: 'Input SGST A/c', indent: false, debit: gst / 2, credit: null });
-          }
-          rows.push({ name: `To  ${printTxn.party} (Sundry Creditor)`, indent: true, debit: null, credit: amt });
-        } else {
-          rows.push({ name: `${printTxn.party}`, indent: false, debit: amt, credit: null });
-          rows.push({ name: 'To  Bank / Cash A/c', indent: true, debit: null, credit: amt });
-        }
-        const totalDr = rows.reduce((s, r) => s + (r.debit ?? 0), 0);
-        const totalCr = rows.reduce((s, r) => s + (r.credit ?? 0), 0);
-
-        return (
-          <div className="print-only-voucher" style={{ display: 'none' }}>
-            <div style={{ padding: '30px 40px', maxWidth: '820px', margin: '0 auto', fontFamily: 'Arial, sans-serif', fontSize: '13px', color: '#000', boxSizing: 'border-box' }}>
-
-              {/* Header */}
-              <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '6px' }}>
-                <div style={{ fontSize: '20px', fontWeight: 'bold' }}>{company.companyName}</div>
-                {company.address && <div style={{ fontSize: '11px', marginTop: '2px' }}>{company.address}</div>}
-              </div>
-              <div style={{ textAlign: 'center', fontSize: '15px', fontWeight: 'bold', letterSpacing: '1px', marginBottom: '14px', textTransform: 'uppercase' }}>
-                {printTxn.type} Voucher
-              </div>
-
-              {/* Meta */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', fontSize: '12px' }}>
-                <div><b>Voucher No.:</b> {printTxn.id}</div>
-                <div><b>Date:</b> {printTxn.date}</div>
-              </div>
-
-              {/* Double-Entry Table */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000' }}>
-                <thead>
-                  <tr style={{ background: '#f0f0f0', borderBottom: '1px solid #000' }}>
-                    <th style={{ padding: '7px 10px', textAlign: 'left', borderRight: '1px solid #000', width: '55%' }}>Particulars</th>
-                    <th style={{ padding: '7px 10px', textAlign: 'right', borderRight: '1px solid #000', width: '22.5%' }}>Debit (₹)</th>
-                    <th style={{ padding: '7px 10px', textAlign: 'right', width: '22.5%' }}>Credit (₹)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, i) => (
-                    <tr key={i} style={{ borderBottom: '1px dashed #ccc' }}>
-                      <td style={{ padding: row.indent ? '5px 10px 5px 30px' : '5px 10px', borderRight: '1px solid #000', fontWeight: row.indent ? 'normal' : 'bold' }}>{row.name}</td>
-                      <td style={{ padding: '5px 10px', textAlign: 'right', borderRight: '1px solid #000', fontFamily: 'monospace' }}>{row.debit !== null ? fmt(row.debit) : ''}</td>
-                      <td style={{ padding: '5px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{row.credit !== null ? fmt(row.credit) : ''}</td>
-                    </tr>
-                  ))}
-                  <tr style={{ borderTop: '1px solid #aaa' }}>
-                    <td colSpan={3} style={{ padding: '8px 10px', fontStyle: 'italic', fontSize: '12px' }}>
-                      <b>Narration:</b> Being {printTxn.type.toLowerCase()} recorded for {printTxn.party} dated {printTxn.date}.
-                    </td>
-                  </tr>
-                  <tr style={{ borderTop: '2px solid #000', background: '#f0f0f0', fontWeight: 'bold' }}>
-                    <td style={{ padding: '8px 10px', borderRight: '1px solid #000' }}>Grand Total</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', borderRight: '1px solid #000', fontFamily: 'monospace' }}>{fmt(totalDr)}</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(totalCr)}</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* Amount in Words */}
-              <div style={{ border: '1px solid #000', borderTop: 'none', padding: '6px 10px', fontSize: '12px', marginBottom: '20px' }}>
-                <b>Amount in Words:</b> INR {numberToWords(Math.round(amt))}
-              </div>
-
-              {/* Signatures */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '50px', fontSize: '12px' }}>
-                <div style={{ textAlign: 'center', minWidth: '150px' }}><div style={{ borderTop: '1px solid #000', paddingTop: '4px' }}>Prepared By</div></div>
-                <div style={{ textAlign: 'center', minWidth: '150px' }}><div style={{ borderTop: '1px solid #000', paddingTop: '4px' }}>Checked By</div></div>
-                <div style={{ textAlign: 'center', minWidth: '150px' }}><div style={{ borderTop: '1px solid #000', paddingTop: '4px' }}>Authorised Signatory</div></div>
-              </div>
-              <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '10px', color: '#666', borderTop: '1px dashed #ccc', paddingTop: '6px' }}>
-                This is a computer-generated voucher. | {company.companyName}
-              </div>
-
-            </div>
-          </div>
-        );
-      })()}
 
     </div>
   );
