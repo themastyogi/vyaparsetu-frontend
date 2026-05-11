@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Printer } from 'lucide-react';
 import './Dashboard.css';
 
 interface TrialBalanceEntry {
   accountId: string;
   accountName: string;
-  accountType: string;
+  accountType: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
   totalDebit: string | number;
   totalCredit: string | number;
   balance: string | number;
@@ -53,14 +53,38 @@ export default function Reports() {
   const totalDebit = data.reduce((sum, item) => sum + Number(item.totalDebit), 0);
   const totalCredit = data.reduce((sum, item) => sum + Number(item.totalCredit), 0);
 
+  // Group data by type
+  const groupedData: Record<string, TrialBalanceEntry[]> = {
+    asset: data.filter(d => d.accountType === 'asset'),
+    liability: data.filter(d => d.accountType === 'liability'),
+    equity: data.filter(d => d.accountType === 'equity'),
+    revenue: data.filter(d => d.accountType === 'revenue'),
+    expense: data.filter(d => d.accountType === 'expense'),
+  };
+
+  const groupLabels: Record<string, string> = {
+    asset: 'Assets',
+    liability: 'Liabilities',
+    equity: 'Equity',
+    revenue: 'Revenue',
+    expense: 'Expenses'
+  };
+
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <header style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>Financial Reports</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>View your live trial balance and ledgers</p>
+      <header style={{ marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>Financial Reports</h1>
+            <p style={{ color: 'var(--text-secondary)' }}>View your live trial balance and ledgers</p>
+          </div>
+          <button className="btn-action btn-action-secondary" onClick={() => window.print()}>
+            <Printer size={16} /> Print Report
+          </button>
+        </div>
       </header>
 
-      <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+      <div className="print-area" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
         <div style={{ padding: '20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <FileText size={20} color="var(--brand-primary)" />
           <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Trial Balance</h2>
@@ -71,37 +95,60 @@ export default function Reports() {
         ) : data.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No accounting entries found yet. Post a purchase to see the impact.</div>
         ) : (
-          <div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '500px' }}>
               <thead>
                 <tr style={{ background: 'var(--bg-elevated)', fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                   <th style={{ padding: '12px 20px', fontWeight: 600 }}>Account Name</th>
-                  <th style={{ padding: '12px 20px', fontWeight: 600 }}>Type</th>
                   <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Debit (₹)</th>
                   <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Credit (₹)</th>
                 </tr>
               </thead>
               <tbody>
-                {data.map((row, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '12px 20px', fontWeight: 500, color: 'var(--text-primary)' }}>{row.accountName}</td>
-                    <td style={{ padding: '12px 20px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{row.accountType}</td>
-                    <td style={{ padding: '12px 20px', textAlign: 'right', color: Number(row.totalDebit) > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                      {Number(row.totalDebit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ padding: '12px 20px', textAlign: 'right', color: Number(row.totalCredit) > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                      {Number(row.totalCredit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                ))}
+                {['asset', 'liability', 'equity', 'revenue', 'expense'].map((type) => {
+                  const group = groupedData[type];
+                  if (group.length === 0) return null;
+                  
+                  const groupDebit = group.reduce((sum, item) => sum + Number(item.totalDebit), 0);
+                  const groupCredit = group.reduce((sum, item) => sum + Number(item.totalCredit), 0);
+
+                  return (
+                    <React.Fragment key={type}>
+                      {/* Group Header */}
+                      <tr style={{ background: 'rgba(0,0,0,0.02)' }}>
+                        <td colSpan={3} style={{ padding: '10px 20px', fontWeight: 700, color: 'var(--brand-secondary)', textTransform: 'uppercase', fontSize: '12px' }}>
+                          {groupLabels[type]}
+                        </td>
+                      </tr>
+                      {/* Group Items */}
+                      {group.map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '10px 20px', fontWeight: 500, color: 'var(--text-primary)', paddingLeft: '32px' }}>{row.accountName}</td>
+                          <td style={{ padding: '10px 20px', textAlign: 'right', color: Number(row.totalDebit) > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                            {Number(row.totalDebit) > 0 ? Number(row.totalDebit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}
+                          </td>
+                          <td style={{ padding: '10px 20px', textAlign: 'right', color: Number(row.totalCredit) > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                            {Number(row.totalCredit) > 0 ? Number(row.totalCredit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                      {/* Group Total (Optional, but good for Trial Balance) */}
+                      <tr style={{ borderBottom: '2px solid var(--border-subtle)' }}>
+                        <td style={{ padding: '8px 20px', textAlign: 'right', fontSize: '12px', color: 'var(--text-muted)' }}>Total {groupLabels[type]}</td>
+                        <td style={{ padding: '8px 20px', textAlign: 'right', fontSize: '13px', fontWeight: 600 }}>{groupDebit > 0 ? groupDebit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : ''}</td>
+                        <td style={{ padding: '8px 20px', textAlign: 'right', fontSize: '13px', fontWeight: 600 }}>{groupCredit > 0 ? groupCredit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : ''}</td>
+                      </tr>
+                    </React.Fragment>
+                  );
+                })}
                 
-                {/* Totals Row */}
-                <tr style={{ background: 'var(--bg-elevated)', fontWeight: 700 }}>
-                  <td colSpan={2} style={{ padding: '16px 20px', textAlign: 'right' }}>TOTAL</td>
-                  <td style={{ padding: '16px 20px', textAlign: 'right', color: Math.abs(totalDebit - totalCredit) < 0.01 ? '#10B981' : '#EF4444' }}>
+                {/* Grand Totals Row */}
+                <tr style={{ background: 'var(--bg-elevated)', fontWeight: 800, fontSize: '15px' }}>
+                  <td style={{ padding: '20px 20px', textAlign: 'right' }}>GRAND TOTAL</td>
+                  <td style={{ padding: '20px 20px', textAlign: 'right', color: Math.abs(totalDebit - totalCredit) < 0.01 ? '#10B981' : '#EF4444' }}>
                     {totalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
-                  <td style={{ padding: '16px 20px', textAlign: 'right', color: Math.abs(totalDebit - totalCredit) < 0.01 ? '#10B981' : '#EF4444' }}>
+                  <td style={{ padding: '20px 20px', textAlign: 'right', color: Math.abs(totalDebit - totalCredit) < 0.01 ? '#10B981' : '#EF4444' }}>
                     {totalCredit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
