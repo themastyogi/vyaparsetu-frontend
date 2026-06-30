@@ -5,19 +5,41 @@ import {
   LayoutDashboard, Users, Package, FileText,
   ShoppingCart, BarChart3, Settings, LogOut,
   Bell, Search, ChevronDown, Building2,
-  HelpCircle, Menu, X,
+  HelpCircle, Menu, X, BookOpen, Zap,
 } from 'lucide-react';
 import './Layout.css';
 import LanguageSwitcher from './LanguageSwitcher';
 
-const NAV_KEYS = [
-  { key: 'nav.dashboard', icon: <LayoutDashboard size={18}/>, path: '/dashboard' },
-  { key: 'nav.parties',   icon: <Users size={18}/>,           path: '/dashboard/parties' },
-  { key: 'nav.items',     icon: <Package size={18}/>,         path: '/dashboard/items' },
-  { key: 'nav.sales',     icon: <ShoppingCart size={18}/>,    path: '/dashboard/sales' },
-  { key: 'nav.purchases', icon: <FileText size={18}/>,        path: '/dashboard/purchases' },
-  { key: 'nav.reports',   icon: <BarChart3 size={18}/>,       path: '/dashboard/reports' },
-  { key: 'nav.settings',  icon: <Settings size={18}/>,        path: '/dashboard/settings' },
+const NAV_SECTIONS = [
+  {
+    label: 'MAIN',
+    items: [
+      { key: 'nav.dashboard', icon: <LayoutDashboard size={18}/>, path: '/dashboard', label: 'Dashboard' },
+      { key: 'nav.parties',   icon: <Users size={18}/>,           path: '/dashboard/parties', label: 'Parties' },
+      { key: 'nav.items',     icon: <Package size={18}/>,         path: '/dashboard/items',   label: 'Items' },
+    ],
+  },
+  {
+    label: 'TRANSACTIONS',
+    items: [
+      { key: 'nav.sales',       icon: <ShoppingCart size={18}/>, path: '/dashboard/sales',       label: 'Sales Invoices' },
+      { key: 'nav.purchases',   icon: <FileText size={18}/>,     path: '/dashboard/purchases',   label: 'Purchase Bills' },
+      { key: 'nav.debit-notes', icon: <Zap size={18}/>,         path: '/dashboard/debit-notes', label: 'Debit Notes' },
+    ],
+  },
+  {
+    label: 'FINANCE',
+    items: [
+      { key: 'nav.coa',     icon: <BookOpen size={18}/>,  path: '/dashboard/chart-of-accounts', label: 'Chart of Accounts' },
+      { key: 'nav.reports', icon: <BarChart3 size={18}/>, path: '/dashboard/reports',           label: 'Reports & Ledger' },
+    ],
+  },
+  {
+    label: 'SYSTEM',
+    items: [
+      { key: 'nav.settings', icon: <Settings size={18}/>, path: '/dashboard/settings', label: 'Settings' },
+    ],
+  },
 ];
 
 export default function Layout() {
@@ -66,21 +88,22 @@ export default function Layout() {
       )}
 
       <nav className="sidebar-nav">
-        <div className="nav-group-label">{(!collapsed || mobile) && t('nav.menu','MENU')}</div>
-        {NAV_KEYS.map(item => (
-          <button
-            key={item.path}
-            id={`nav-${item.key.replace('nav.','')}`}
-            className={`nav-item ${isActive(item.path) ? 'nav-item-active' : ''}`}
-            onClick={() => { navigate(item.path); if (mobile) setMobileOpen(false); }}
-            title={collapsed && !mobile ? t(item.key) : undefined}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            {(!collapsed || mobile) && <span className="nav-label">{t(item.key)}</span>}
-            {item.key === 'nav.reports' && (!collapsed || mobile) && (
-              <span className="nav-badge">New</span>
-            )}
-          </button>
+        {NAV_SECTIONS.map(section => (
+          <div key={section.label}>
+            <div className="nav-group-label">{(!collapsed || mobile) && section.label}</div>
+            {section.items.map(item => (
+              <button
+                key={item.path}
+                id={`nav-${item.key.replace('nav.','')}`}
+                className={`nav-item ${isActive(item.path) ? 'nav-item-active' : ''}`}
+                onClick={() => { navigate(item.path); if (mobile) setMobileOpen(false); }}
+                title={collapsed && !mobile ? item.label : undefined}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {(!collapsed || mobile) && <span className="nav-label">{item.label}</span>}
+              </button>
+            ))}
+          </div>
         ))}
       </nav>
 

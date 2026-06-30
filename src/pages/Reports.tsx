@@ -1,257 +1,320 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Printer, ArrowLeft, Eye } from 'lucide-react';
-import './Dashboard.css';
+import { useState, useMemo } from 'react';
+import { BarChart3, BookOpen, List, Scale, ChevronDown, ChevronUp, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { useAccounting, type JournalEntry } from '../hooks/useAccounting';
 
-interface TrialBalanceEntry {
-  accountId: string;
-  accountName: string;
-  accountType: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
-  totalDebit: string | number;
-  totalCredit: string | number;
-  balance: string | number;
-}
+const f2 = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+type Tab = 'trial-balance' | 'general-ledger' | 'journal-entries';
 
 export default function Reports() {
-  const [data, setData] = useState<TrialBalanceEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { getTrialBalance, getGeneralLedger, getAccountLedger, journalEntries } = useAccounting();
 
-  // General Ledger State
-  const [viewMode, setViewMode] = useState<'trial_balance' | 'general_ledger'>('trial_balance');
-  const [selectedAccount, setSelectedAccount] = useState<TrialBalanceEntry | null>(null);
-  const [glEntries, setGlEntries] = useState<any[]>([]);
-  const [glLoading, setGlLoading] = useState(false);
+  const [tab, setTab]             = useState<Tab>('trial-balance');
+  const [glDrillAccount, setGLDrillAccount]   = useState<string | null>(null);
+  const [expandedJE, setExpandedJE]           = useState<string | null>(null);
+  const [jeTypeFilter, setJETypeFilter]       = useState('All');
 
-  useEffect(() => {
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const tb  = useMemo(() => getTrialBalance(),    [getTrialBalance, journalEntries]);
+  const gl  = useMemo(() => getGeneralLedger(),   [getGeneralLedger, journalEntries]);
 
-    if (!isLocalhost) {
-      // Mock data for Vercel live demo
-      setTimeout(() => {
-        setData([
-          { accountId: 'inventory_asset_ac', accountName: 'Inventory (Asset)', accountType: 'asset', totalDebit: 50000, totalCredit: 0, balance: 50000 },
-          { accountId: 'input_gst_ac', accountName: 'Input GST Receivable', accountType: 'asset', totalDebit: 9000, totalCredit: 0, balance: 9000 },
-          { accountId: 'freight_charges_ac', accountName: 'Freight & Charges', accountType: 'expense', totalDebit: 1500, totalCredit: 0, balance: 1500 },
-          { accountId: 'discount_received_ac', accountName: 'Discount Received', accountType: 'revenue', totalDebit: 0, totalCredit: 500, balance: -500 },
-          { accountId: 'vendor_payable_ac', accountName: 'Vendor Payable', accountType: 'liability', totalDebit: 0, totalCredit: 60000, balance: -60000 }
-        ]);
-        setLoading(false);
-      }, 800);
-      return;
+  const drillRows = useMemo(() =>
+    glDrillAccount ? getAccountLedger(glDrillAccount) : [],
+    [glDrillAccount, getAccountLedger, journalEntries]
+  );
+
+  const jeTypes = ['All', ...Array.from(new Set(journalEntries.map(j => j.entryType)))];
+  const filteredJEs = journalEntries.filter(j => jeTypeFilter === 'All' || j.entryType === jeTypeFilter);
+
+  // Group journal entries by ID (each JE has multiple lines)
+  const jeGroups = useMemo(() => {
+    const groups = new Map<string, JournalEntry>();
+    for (const je of filteredJEs) {
+      if (!groups.has(je.id)) groups.set(je.id, je);
     }
+    return Array.from(groups.values()).sort((a, b) => b.date.localeCompare(a.date));
+  }, [filteredJEs]);
 
-    // In a real app, use the configured Axios instance
-    fetch('http://localhost:3000/finance/trial-balance', {
-      headers: {
-        'tenantId': 'default-tenant' // Usually from auth context
-      }
-    })
-      .then(res => res.json())
-      .then(json => {
-        setData(json);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to fetch trial balance', err);
-        setLoading(false);
-        // Fallback to empty if backend is not running yet
-        setData([]);
-      });
-  }, []);
-
-  const fetchGeneralLedger = (account: TrialBalanceEntry) => {
-    setSelectedAccount(account);
-    setViewMode('general_ledger');
-    setGlLoading(true);
-
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (!isLocalhost) {
-      // Mock GL for Vercel
-      setTimeout(() => {
-        setGlEntries([
-          { voucherNo: 'PUR-001', date: new Date().toISOString(), debit: account.totalDebit, credit: account.totalCredit, voucherType: 'PURCHASE' }
-        ]);
-        setGlLoading(false);
-      }, 500);
-      return;
-    }
-
-    fetch(`http://localhost:3000/finance/general-ledger?accountId=${account.accountId}`, {
-      headers: { 'tenantId': 'default-tenant' }
-    })
-      .then(res => res.json())
-      .then(json => {
-        setGlEntries(json);
-        setGlLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to fetch GL', err);
-        setGlLoading(false);
-        setGlEntries([]);
-      });
-  };
-
-  const totalDebit = data.reduce((sum, item) => sum + Number(item.totalDebit), 0);
-  const totalCredit = data.reduce((sum, item) => sum + Number(item.totalCredit), 0);
-
-  // Group data by type
-  const groupedData: Record<string, TrialBalanceEntry[]> = {
-    asset: data.filter(d => d.accountType === 'asset'),
-    liability: data.filter(d => d.accountType === 'liability'),
-    equity: data.filter(d => d.accountType === 'equity'),
-    revenue: data.filter(d => d.accountType === 'revenue'),
-    expense: data.filter(d => d.accountType === 'expense'),
-  };
-
-  const groupLabels: Record<string, string> = {
-    asset: 'Assets',
-    liability: 'Liabilities',
-    equity: 'Equity',
-    revenue: 'Revenue',
-    expense: 'Expenses'
-  };
+  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: 'trial-balance',  label: 'Trial Balance',  icon: <Scale size={15}/> },
+    { id: 'general-ledger', label: 'General Ledger', icon: <BookOpen size={15}/> },
+    { id: 'journal-entries',label: 'Journal Entries',icon: <List size={15}/> },
+  ];
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <header style={{ marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>Financial Reports</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              {viewMode === 'trial_balance' ? 'View your live trial balance and ledgers' : `General Ledger: ${selectedAccount?.accountName}`}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {viewMode === 'general_ledger' && (
-              <button className="btn-action btn-action-secondary" onClick={() => setViewMode('trial_balance')}>
-                <ArrowLeft size={16} /> Back to Trial Balance
-              </button>
-            )}
-            <button className="btn-action btn-action-secondary" onClick={() => window.print()}>
-              <Printer size={16} /> Print Report
-            </button>
-          </div>
+    <div className="page-root animate-fade-in">
+      {/* Header */}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <BarChart3 size={22} style={{ color: 'var(--brand-primary)' }} /> Financial Reports
+          </h1>
+          <p className="page-sub">Trial Balance · General Ledger · Journal Entries — all live, no hardcoding</p>
         </div>
-      </header>
-
-      {viewMode === 'trial_balance' ? (
-        <div className="print-area" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
-          <div style={{ padding: '20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <FileText size={20} color="var(--brand-primary)" />
-            <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Trial Balance</h2>
-          </div>
-
-        {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading ledgers...</div>
-        ) : data.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No accounting entries found yet. Post a purchase to see the impact.</div>
-        ) : (
-          <div style={{ overflowX: 'auto', width: '100%' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '500px' }}>
-              <thead>
-                <tr style={{ background: 'var(--bg-elevated)', fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                  <th style={{ padding: '12px 20px', fontWeight: 600 }}>Account Name</th>
-                  <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Debit (₹)</th>
-                  <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Credit (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {['asset', 'liability', 'equity', 'revenue', 'expense'].map((type) => {
-                  const group = groupedData[type];
-                  if (group.length === 0) return null;
-                  
-                  const groupDebit = group.reduce((sum, item) => sum + Number(item.totalDebit), 0);
-                  const groupCredit = group.reduce((sum, item) => sum + Number(item.totalCredit), 0);
-
-                  return (
-                    <React.Fragment key={type}>
-                      {/* Group Header */}
-                      <tr style={{ background: 'rgba(0,0,0,0.02)' }}>
-                        <td colSpan={3} style={{ padding: '10px 20px', fontWeight: 700, color: 'var(--brand-secondary)', textTransform: 'uppercase', fontSize: '12px' }}>
-                          {groupLabels[type]}
-                        </td>
-                      </tr>
-                      {/* Group Items */}
-                      {group.map((row, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer' }} onClick={() => fetchGeneralLedger(row)} className="tr-hover">
-                          <td style={{ padding: '10px 20px', fontWeight: 500, color: 'var(--brand-primary)', paddingLeft: '32px', textDecoration: 'underline' }}>{row.accountName}</td>
-                          <td style={{ padding: '10px 20px', textAlign: 'right', color: Number(row.totalDebit) > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                            {Number(row.totalDebit) > 0 ? Number(row.totalDebit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}
-                          </td>
-                          <td style={{ padding: '10px 20px', textAlign: 'right', color: Number(row.totalCredit) > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                            {Number(row.totalCredit) > 0 ? Number(row.totalCredit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                      {/* Group Total (Optional, but good for Trial Balance) */}
-                      <tr style={{ borderBottom: '2px solid var(--border-subtle)' }}>
-                        <td style={{ padding: '8px 20px', textAlign: 'right', fontSize: '12px', color: 'var(--text-muted)' }}>Total {groupLabels[type]}</td>
-                        <td style={{ padding: '8px 20px', textAlign: 'right', fontSize: '13px', fontWeight: 600 }}>{groupDebit > 0 ? groupDebit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : ''}</td>
-                        <td style={{ padding: '8px 20px', textAlign: 'right', fontSize: '13px', fontWeight: 600 }}>{groupCredit > 0 ? groupCredit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : ''}</td>
-                      </tr>
-                    </React.Fragment>
-                  );
-                })}
-                
-                {/* Grand Totals Row */}
-                <tr style={{ background: 'var(--bg-elevated)', fontWeight: 800, fontSize: '15px' }}>
-                  <td style={{ padding: '20px 20px', textAlign: 'right' }}>GRAND TOTAL</td>
-                  <td style={{ padding: '20px 20px', textAlign: 'right', color: Math.abs(totalDebit - totalCredit) < 0.01 ? '#10B981' : '#EF4444' }}>
-                    {totalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td style={{ padding: '20px 20px', textAlign: 'right', color: Math.abs(totalDebit - totalCredit) < 0.01 ? '#10B981' : '#EF4444' }}>
-                    {totalCredit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
-      ) : (
-        <div className="print-area" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
-          <div style={{ padding: '20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <FileText size={20} color="var(--brand-primary)" />
-            <h2 style={{ fontSize: '18px', fontWeight: 600 }}>General Ledger: {selectedAccount?.accountName}</h2>
+
+      {/* Tab bar */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid var(--border-primary)', paddingBottom: 0 }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => { setTab(t.id); setGLDrillAccount(null); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+              background: 'none', color: tab === t.id ? 'var(--brand-primary)' : 'var(--text-muted)',
+              borderBottom: tab === t.id ? '2px solid var(--brand-primary)' : '2px solid transparent',
+              marginBottom: -2,
+            }}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ──────────────── TRIAL BALANCE ──────────────── */}
+      {tab === 'trial-balance' && (
+        <div className="page-card">
+          {/* Balanced indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', marginBottom: 16, borderRadius: 10, background: tb.balanced ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${tb.balanced ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+            {tb.balanced
+              ? <><CheckCircle2 size={18} style={{ color: '#22c55e' }} /><span style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>Trial Balance is BALANCED — Total Debits = Total Credits</span></>
+              : <><AlertCircle size={18} style={{ color: '#ef4444' }} /><span style={{ fontSize: 14, color: '#ef4444', fontWeight: 600 }}>IMBALANCED — Difference: ₹{f2(Math.abs(tb.totalDebit - tb.totalCredit))}</span></>
+            }
           </div>
 
-          {glLoading ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading entries...</div>
-          ) : glEntries.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No journal entries found for this ledger.</div>
+          {tb.rows.length === 0 ? (
+            <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+              No transactions posted yet. Create Sales / Purchase invoices to see the trial balance.
+            </div>
           ) : (
-            <div style={{ overflowX: 'auto', width: '100%' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+            <div className="table-wrap">
+              <table className="data-table">
                 <thead>
-                  <tr style={{ background: 'var(--bg-elevated)', fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                    <th style={{ padding: '12px 20px', fontWeight: 600 }}>Date</th>
-                    <th style={{ padding: '12px 20px', fontWeight: 600 }}>Voucher No</th>
-                    <th style={{ padding: '12px 20px', fontWeight: 600 }}>Voucher Type</th>
-                    <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Debit (₹)</th>
-                    <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Credit (₹)</th>
-                    <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'center' }}>Action</th>
+                  <tr>
+                    <th>Code</th>
+                    <th>Account Name</th>
+                    <th>Type</th>
+                    <th style={{ textAlign: 'right' }}>Debit (₹)</th>
+                    <th style={{ textAlign: 'right' }}>Credit (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {glEntries.map((row, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }} className="tr-hover">
-                      <td style={{ padding: '12px 20px', color: 'var(--text-primary)' }}>{new Date(row.date).toLocaleDateString()}</td>
-                      <td style={{ padding: '12px 20px', fontWeight: 500 }}>{row.voucherNo}</td>
-                      <td style={{ padding: '12px 20px' }}>{row.voucherType}</td>
-                      <td style={{ padding: '12px 20px', textAlign: 'right', color: Number(row.debit) > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                        {Number(row.debit) > 0 ? Number(row.debit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}
-                      </td>
-                      <td style={{ padding: '12px 20px', textAlign: 'right', color: Number(row.credit) > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                        {Number(row.credit) > 0 ? Number(row.credit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}
-                      </td>
-                      <td style={{ padding: '12px 20px', textAlign: 'center' }}>
-                        <button className="row-action-btn" aria-label="View Voucher">
-                          <Eye size={15} />
+                  {tb.rows.map(row => (
+                    <tr key={row.account}>
+                      <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: 12 }}>{row.accountCode}</td>
+                      <td>
+                        <button
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-primary)', fontWeight: 600, fontSize: 13, textAlign: 'left', padding: 0 }}
+                          onClick={() => { setTab('general-ledger'); setGLDrillAccount(row.account); }}
+                          title="Click to see GL drilldown"
+                        >
+                          {row.account} ↗
                         </button>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, fontWeight: 600, background: 'var(--surface-secondary)', color: 'var(--text-muted)' }}>
+                          {row.accountType}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: row.debit > 0 ? 700 : 400, color: row.debit > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        {row.debit > 0 ? f2(row.debit) : '—'}
+                      </td>
+                      <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: row.credit > 0 ? 700 : 400, color: row.credit > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        {row.credit > 0 ? f2(row.credit) : '—'}
                       </td>
                     </tr>
                   ))}
+                  {/* Totals row */}
+                  <tr style={{ borderTop: '2px solid var(--border-primary)', fontWeight: 800, background: 'var(--surface-secondary)' }}>
+                    <td colSpan={3} style={{ padding: '10px 16px', textAlign: 'right' }}>TOTAL</td>
+                    <td style={{ textAlign: 'right', fontFamily: 'monospace', padding: '10px 16px' }}>{f2(tb.totalDebit)}</td>
+                    <td style={{ textAlign: 'right', fontFamily: 'monospace', padding: '10px 16px' }}>{f2(tb.totalCredit)}</td>
+                  </tr>
                 </tbody>
               </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ──────────────── GENERAL LEDGER ──────────────── */}
+      {tab === 'general-ledger' && (
+        <div>
+          {/* Account Selector */}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+            <select value={glDrillAccount ?? ''} onChange={e => setGLDrillAccount(e.target.value || null)}
+              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--surface-primary)', color: 'var(--text-primary)', fontSize: 14, minWidth: 280 }}>
+              <option value="">— Select Account —</option>
+              {gl.map(a => (
+                <option key={a.account} value={a.account}>{a.accountCode} · {a.account}</option>
+              ))}
+            </select>
+            {glDrillAccount && (
+              <button onClick={() => setGLDrillAccount(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18}/></button>
+            )}
+          </div>
+
+          {/* GL Summary Cards */}
+          {gl.length > 0 && !glDrillAccount && (
+            <div className="page-card" style={{ marginBottom: 16 }}>
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Code</th><th>Account</th><th>Type</th>
+                      <th style={{ textAlign: 'right' }}>Total Dr (₹)</th>
+                      <th style={{ textAlign: 'right' }}>Total Cr (₹)</th>
+                      <th style={{ textAlign: 'right' }}>Balance (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gl.map(a => (
+                      <tr key={a.account} style={{ cursor: 'pointer' }} onClick={() => setGLDrillAccount(a.account)}>
+                        <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: 12 }}>{a.accountCode}</td>
+                        <td style={{ color: 'var(--brand-primary)', fontWeight: 600 }}>{a.account} ↗</td>
+                        <td style={{ fontSize: 11 }}>{a.accountType}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{a.totalDebit > 0 ? f2(a.totalDebit) : '—'}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{a.totalCredit > 0 ? f2(a.totalCredit) : '—'}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: a.balance > 0 ? '#16a34a' : a.balance < 0 ? '#ef4444' : 'var(--text-muted)' }}>
+                          {a.balance !== 0 ? (a.balance < 0 ? `(${f2(Math.abs(a.balance))})` : f2(a.balance)) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Drilldown */}
+          {glDrillAccount && (
+            <div className="page-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700 }}>Ledger: {glDrillAccount}</h3>
+                {(() => {
+                  const acct = gl.find(a => a.account === glDrillAccount);
+                  return acct ? (
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                      Total Dr: <b>₹{f2(acct.totalDebit)}</b> · Total Cr: <b>₹{f2(acct.totalCredit)}</b> · Balance: <b style={{ color: acct.balance >= 0 ? '#16a34a' : '#ef4444' }}>₹{f2(acct.balance)}</b>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+              {drillRows.length === 0 ? (
+                <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>No transactions for this account yet.</div>
+              ) : (
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th><th>Voucher Type</th><th>Ref No.</th><th>Party</th>
+                        <th style={{ textAlign: 'right' }}>Dr (₹)</th>
+                        <th style={{ textAlign: 'right' }}>Cr (₹)</th>
+                        <th style={{ textAlign: 'right' }}>Balance (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {drillRows.map((row, i) => (
+                        <tr key={`${row.id}-${i}`}>
+                          <td style={{ fontSize: 12 }}>{row.date}</td>
+                          <td><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 8, background: 'var(--surface-secondary)', color: 'var(--text-secondary)', fontWeight: 600 }}>{row.entryType}</span></td>
+                          <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--brand-primary)' }}>{row.relatedNo}</td>
+                          <td style={{ fontSize: 12 }}>{row.party}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'monospace', color: row.line.debit > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>{row.line.debit > 0 ? f2(row.line.debit) : '—'}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'monospace', color: row.line.credit > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>{row.line.credit > 0 ? f2(row.line.credit) : '—'}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: row.runningBalance >= 0 ? '#16a34a' : '#ef4444' }}>{f2(row.runningBalance)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {gl.length === 0 && !glDrillAccount && (
+            <div className="page-card" style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+              No transactions posted yet.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ──────────────── JOURNAL ENTRIES ──────────────── */}
+      {tab === 'journal-entries' && (
+        <div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            {jeTypes.map(t => (
+              <button key={t} onClick={() => setJETypeFilter(t)}
+                className={`filter-tab ${jeTypeFilter === t ? 'filter-tab-active' : ''}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+
+          {jeGroups.length === 0 ? (
+            <div className="page-card" style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+              No journal entries yet. Post a Sales or Purchase invoice to see entries here.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {jeGroups.map(je => {
+                const isExpanded = expandedJE === je.id;
+                const totalDr = je.lines.reduce((s, l) => s + l.debit, 0);
+                const totalCr = je.lines.reduce((s, l) => s + l.credit, 0);
+                const balanced = Math.abs(totalDr - totalCr) < 0.01;
+                return (
+                  <div key={je.id} className="page-card" style={{ padding: 0, overflow: 'hidden' }}>
+                    {/* JE Header */}
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', cursor: 'pointer', background: isExpanded ? 'var(--surface-secondary)' : 'var(--surface-primary)' }}
+                      onClick={() => setExpandedJE(isExpanded ? null : je.id)}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 12, fontWeight: 600, background: 'var(--surface-secondary)', color: 'var(--brand-primary)', border: '1px solid var(--border-primary)' }}>
+                          {je.entryType}
+                        </span>
+                        <span style={{ fontWeight: 700, fontSize: 13, fontFamily: 'monospace', color: 'var(--brand-primary)' }}>{je.relatedNo}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{je.date}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{je.party}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700 }}>₹{f2(totalDr)}</span>
+                        <span style={{ fontSize: 11, color: balanced ? '#16a34a' : '#ef4444' }}>{balanced ? '✓ Balanced' : '⚠ Check'}</span>
+                        {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                      </div>
+                    </div>
+
+                    {/* JE Lines */}
+                    {isExpanded && (
+                      <div style={{ borderTop: '1px solid var(--border-primary)' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ background: 'var(--surface-secondary)', borderBottom: '1px solid var(--border-primary)' }}>
+                              <th style={{ padding: '7px 16px', textAlign: 'left', width: '55%' }}>Account</th>
+                              <th style={{ padding: '7px 16px', textAlign: 'right', width: '22%' }}>Debit (₹)</th>
+                              <th style={{ padding: '7px 16px', textAlign: 'right', width: '23%' }}>Credit (₹)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {je.lines.map((line, i) => (
+                              <tr key={i} style={{ borderBottom: '1px dashed var(--border-primary)' }}>
+                                <td style={{ padding: '6px 16px', paddingLeft: line.credit > 0 ? 36 : 16, fontWeight: line.debit > 0 ? 600 : 400 }}>{line.credit > 0 ? 'To  ' : ''}{line.account}</td>
+                                <td style={{ padding: '6px 16px', textAlign: 'right', fontFamily: 'monospace', color: line.debit > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>{line.debit > 0 ? f2(line.debit) : '—'}</td>
+                                <td style={{ padding: '6px 16px', textAlign: 'right', fontFamily: 'monospace', color: line.credit > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>{line.credit > 0 ? f2(line.credit) : '—'}</td>
+                              </tr>
+                            ))}
+                            <tr style={{ background: 'var(--surface-secondary)', fontWeight: 700, borderTop: '1px solid var(--border-primary)' }}>
+                              <td style={{ padding: '7px 16px' }}>Total</td>
+                              <td style={{ padding: '7px 16px', textAlign: 'right', fontFamily: 'monospace' }}>{f2(totalDr)}</td>
+                              <td style={{ padding: '7px 16px', textAlign: 'right', fontFamily: 'monospace' }}>{f2(totalCr)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--text-muted)', borderTop: '1px solid var(--border-primary)' }}>
+                          <i>Posted: {new Date(je.createdAt).toLocaleString('en-IN')}</i>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
