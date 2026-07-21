@@ -12,7 +12,7 @@
 import { useState } from 'react';
 import {
   X, Plus, Trash2, CheckCircle2, AlertTriangle, Zap,
-  ArrowRight, AlertCircle, IndianRupee, ChevronUp, ChevronDown,
+  ArrowRight, AlertCircle, IndianRupee,
 } from 'lucide-react';
 import { useAccounting, type SalesInvoice, type DebitNote, type DebitNoteItem } from '../hooks/useAccounting';
 import { useMaster } from '../hooks/useMaster';
@@ -117,19 +117,19 @@ function Typeahead({ value, onChange, onSelect, options, placeholder, hasError }
 function StepQty({ value, onChange, max }: { value?: number; onChange: (v?: number) => void; max: number }) {
   const v = value ?? 0;
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid #cbd5e1', borderRadius: 7, overflow: 'hidden', background: '#fff' }}>
-      <button type="button" onMouseDown={() => onChange(Math.max(0, parseFloat((v - 1).toFixed(3))) || undefined)}
-        style={{ padding: '4px 6px', background: '#f8fafc', border: 'none', borderRight: '1px solid #e2e8f0', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}>
-        <ChevronDown size={11} />
+    <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid #cbd5e1', borderRadius: 7, overflow: 'hidden', background: '#fff', height: 34 }}>
+      <button type="button" onMouseDown={e => { e.preventDefault(); onChange(Math.max(0, parseFloat((v - 1).toFixed(3))) || undefined); }}
+        style={{ width: 28, height: '100%', background: '#f0f4f8', border: 'none', borderRight: '1.5px solid #e2e8f0', cursor: 'pointer', fontSize: 16, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700 }}>
+        −
       </button>
       <input type="number" min={0} max={max} step={0.001}
         value={value ?? ''}
         onChange={e => { const n = parseFloat(e.target.value); onChange(isNaN(n) ? undefined : Math.min(n, max)); }}
-        placeholder="opt."
-        style={{ flex: 1, border: 'none', outline: 'none', textAlign: 'right', fontSize: 11, fontWeight: 600, padding: '5px 6px', width: 0, minWidth: 0, background: 'transparent' }} />
-      <button type="button" onMouseDown={() => onChange(Math.min(max, parseFloat((v + 1).toFixed(3))))}
-        style={{ padding: '4px 6px', background: '#f8fafc', border: 'none', borderLeft: '1px solid #e2e8f0', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}>
-        <ChevronUp size={11} />
+        placeholder="0"
+        style={{ flex: 1, minWidth: 68, border: 'none', outline: 'none', textAlign: 'right', fontSize: 13, fontWeight: 700, padding: '0 8px', height: '100%', background: 'transparent', color: '#0f172a', fontFamily: 'monospace' }} />
+      <button type="button" onMouseDown={e => { e.preventDefault(); onChange(Math.min(max, parseFloat((v + 1).toFixed(3)))); }}
+        style={{ width: 28, height: '100%', background: '#f0f4f8', border: 'none', borderLeft: '1.5px solid #e2e8f0', cursor: 'pointer', fontSize: 16, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700 }}>
+        +
       </button>
     </div>
   );
@@ -138,19 +138,19 @@ function StepQty({ value, onChange, max }: { value?: number; onChange: (v?: numb
 // ── Stepper for Amount ─────────────────────────────────────────────
 function StepAmt({ value, onChange, max }: { value: number; onChange: (v: number) => void; max: number }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid #cbd5e1', borderRadius: 7, overflow: 'hidden', background: '#fff' }}>
-      <button type="button" onMouseDown={() => onChange(Math.max(0, parseFloat((value - 100).toFixed(2))))}
-        style={{ padding: '4px 6px', background: '#f8fafc', border: 'none', borderRight: '1px solid #e2e8f0', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}>
-        <ChevronDown size={11} />
+    <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid #cbd5e1', borderRadius: 7, overflow: 'hidden', background: '#fff', height: 34 }}>
+      <button type="button" onMouseDown={e => { e.preventDefault(); onChange(Math.max(0, parseFloat((value - 100).toFixed(2)))); }}
+        style={{ width: 28, height: '100%', background: '#f0f4f8', border: 'none', borderRight: '1.5px solid #e2e8f0', cursor: 'pointer', fontSize: 16, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700 }}>
+        −
       </button>
       <input type="number" min={0} max={max} step={0.01}
         value={value === 0 ? '' : value}
         onChange={e => { const n = parseFloat(e.target.value); onChange(isNaN(n) ? 0 : Math.min(n, max)); }}
         placeholder="0.00"
-        style={{ flex: 1, border: 'none', outline: 'none', textAlign: 'right', fontSize: 12, fontWeight: 700, padding: '5px 6px', width: 0, minWidth: 0, background: 'transparent', color: '#1a1a2e' }} />
-      <button type="button" onMouseDown={() => onChange(Math.min(max, parseFloat((value + 100).toFixed(2))))}
-        style={{ padding: '4px 6px', background: '#f8fafc', border: 'none', borderLeft: '1px solid #e2e8f0', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}>
-        <ChevronUp size={11} />
+        style={{ flex: 1, minWidth: 80, border: 'none', outline: 'none', textAlign: 'right', fontSize: 13, fontWeight: 700, padding: '0 8px', height: '100%', background: 'transparent', color: '#0f172a', fontFamily: 'monospace' }} />
+      <button type="button" onMouseDown={e => { e.preventDefault(); onChange(Math.min(max, parseFloat((value + 100).toFixed(2)))); }}
+        style={{ width: 28, height: '100%', background: '#f0f4f8', border: 'none', borderLeft: '1.5px solid #e2e8f0', cursor: 'pointer', fontSize: 16, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700 }}>
+        +
       </button>
     </div>
   );
@@ -256,102 +256,157 @@ export default function DebitNoteSlider({ salesInvoice, onClose }: Props) {
     setStep('done');
   };
 
-  // ── Reusable item table ────────────────────────────────────────
+  // ── Reusable item table (HTML <table> — proper column widths) ─────
   const ItemTable = ({
     items, onUpdate, onAdd, onRemove, errs, submitted, amtMax,
   }: {
     items: DNItemExt[]; onUpdate: (i: number, ch: Partial<DNItemExt>) => void;
     onAdd: () => void; onRemove: (i: number) => void;
     errs: Record<string, string>; submitted: boolean; amtMax: number;
-  }) => (
-    <div style={{ border: '1.5px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', marginTop: 8 }}>
-      {/* Header */}
-      <div style={{ background: '#f8fafc', padding: '7px 8px', display: 'grid', gridTemplateColumns: '1.6fr 0.65fr 0.6fr 0.6fr 0.85fr 0.8fr 0.95fr 0.38fr', gap: 5, borderBottom: '1.5px solid #e2e8f0' }}>
-        {['Reason *','HSN','UOM','GST%','Qty','Rate(₹)','Amount(₹) *',''].map((h, i) => (
-          <div key={i} style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: i >= 4 ? 'right' : 'left' }}>{h}</div>
-        ))}
-      </div>
-
-      {items.map((item, idx) => (
-        <div key={item.id} style={{ padding: '9px 8px', display: 'grid', gridTemplateColumns: '1.6fr 0.65fr 0.6fr 0.6fr 0.85fr 0.8fr 0.95fr 0.38fr', gap: 5, borderBottom: '1px solid #f1f5f9', alignItems: 'flex-start' }}>
-          {/* Reason */}
-          <div>
-            <select value={item.reason} onChange={e => onUpdate(idx, { reason: e.target.value })}
-              style={{ ...INP, fontSize: 11 }}>
-              {REASONS.map(r => <option key={r}>{r}</option>)}
-            </select>
-            {item.reason === 'Other / Custom' && (
-              <input value={item.customReason ?? ''} onChange={e => onUpdate(idx, { customReason: e.target.value, reason: e.target.value })}
-                placeholder="Describe…" style={{ ...INP, fontSize: 11, marginTop: 4 }} />
-            )}
-          </div>
-          {/* HSN */}
-          <input value={item.hsnSac} onChange={e => onUpdate(idx, { hsnSac: e.target.value.replace(/\D/g, '').slice(0, 8) })}
-            placeholder="HSN" style={{ ...INP, fontSize: 10, fontFamily: 'monospace' }} />
-          {/* UOM */}
-          <select value={item.uom} onChange={e => onUpdate(idx, { uom: e.target.value })}
-            style={{ ...INP, fontSize: 10, cursor: 'pointer' }}>
-            {UOM_LIST.map(u => <option key={u}>{u}</option>)}
-          </select>
-          {/* GST % */}
-          <select value={item.gstRate} onChange={e => onUpdate(idx, { gstRate: +e.target.value })}
-            style={{ ...INP, fontSize: 10, cursor: 'pointer' }}>
-            {GST_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
-          </select>
-          {/* Qty stepper */}
-          <StepQty value={item.qty} onChange={v => onUpdate(idx, { qty: v })} max={MAX_QTY} />
-          {/* Rate */}
-          <input type="number" min={0} step={0.01}
-            value={item.rate ?? ''}
-            onChange={e => { const n = parseFloat(e.target.value); onUpdate(idx, { rate: isNaN(n) ? undefined : n }); }}
-            placeholder="opt." style={{ ...INP, fontSize: 11, textAlign: 'right' }} />
-          {/* Amount stepper */}
-          <div>
-            <StepAmt value={item.amount} onChange={v => onUpdate(idx, { amount: v, qty: undefined, rate: undefined })} max={amtMax} />
-            <div style={{ textAlign: 'right', fontSize: 10, color: '#64748b', marginTop: 2 }}>
-              GST: ₹{f2(item.gstAmount)} | <b>Total: ₹{f2(item.total)}</b>
-            </div>
-            {submitted && errs[`${idx}`] && <span style={{ fontSize: 10, color: '#ef4444' }}>{errs[`${idx}`]}</span>}
-          </div>
-          {/* Delete */}
-          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 4 }}>
-            {items.length > 1 && (
-              <button onClick={() => onRemove(idx)} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: 4, cursor: 'pointer', color: '#ef4444', display: 'flex' }}>
-                <Trash2 size={11} />
-              </button>
-            )}
-          </div>
+  }) => {
+    const thStyle: React.CSSProperties = {
+      padding: '7px 8px', fontSize: 10, fontWeight: 700, color: '#475569',
+      textTransform: 'uppercase', letterSpacing: '0.05em', background: '#f1f5f9',
+      borderBottom: '1.5px solid #e2e8f0', whiteSpace: 'nowrap',
+    };
+    const tdStyle: React.CSSProperties = { padding: '8px 6px', verticalAlign: 'top', borderBottom: '1px solid #f1f5f9' };
+    return (
+      <div style={{ border: '1.5px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', marginTop: 8 }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: 160 }}/>   {/* Reason */}
+              <col style={{ width: 72 }}/>    {/* HSN */}
+              <col style={{ width: 64 }}/>    {/* UOM */}
+              <col style={{ width: 60 }}/>    {/* GST% */}
+              <col style={{ width: 130 }}/>   {/* Qty stepper */}
+              <col style={{ width: 90 }}/>    {/* Rate */}
+              <col style={{ width: 145 }}/>   {/* Amount stepper */}
+              <col style={{ width: 34 }}/>    {/* Delete */}
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={{ ...thStyle, textAlign: 'left' }}>Reason *</th>
+                <th style={{ ...thStyle, textAlign: 'left' }}>HSN</th>
+                <th style={{ ...thStyle, textAlign: 'left' }}>UOM</th>
+                <th style={{ ...thStyle, textAlign: 'center' }}>GST%</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Qty</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Rate (₹)</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Amount (₹) *</th>
+                <th style={{ ...thStyle }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, idx) => (
+                <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  {/* Reason */}
+                  <td style={tdStyle}>
+                    <select value={item.reason} onChange={e => onUpdate(idx, { reason: e.target.value })}
+                      style={{ ...INP, fontSize: 12 }}>
+                      {REASONS.map(r => <option key={r}>{r}</option>)}
+                    </select>
+                    {item.reason === 'Other / Custom' && (
+                      <input value={item.customReason ?? ''} onChange={e => onUpdate(idx, { customReason: e.target.value, reason: e.target.value })}
+                        placeholder="Describe…" style={{ ...INP, fontSize: 11, marginTop: 4 }} />
+                    )}
+                  </td>
+                  {/* HSN */}
+                  <td style={tdStyle}>
+                    <input value={item.hsnSac} onChange={e => onUpdate(idx, { hsnSac: e.target.value.replace(/\D/g, '').slice(0, 8) })}
+                      placeholder="HSN" style={{ ...INP, fontFamily: 'monospace', fontSize: 11 }} />
+                  </td>
+                  {/* UOM */}
+                  <td style={tdStyle}>
+                    <select value={item.uom} onChange={e => onUpdate(idx, { uom: e.target.value })}
+                      style={{ ...INP, cursor: 'pointer', fontSize: 11 }}>
+                      {UOM_LIST.map(u => <option key={u}>{u}</option>)}
+                    </select>
+                  </td>
+                  {/* GST % */}
+                  <td style={tdStyle}>
+                    <select value={item.gstRate} onChange={e => onUpdate(idx, { gstRate: +e.target.value })}
+                      style={{ ...INP, cursor: 'pointer', fontSize: 11 }}>
+                      {GST_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
+                    </select>
+                  </td>
+                  {/* Qty stepper */}
+                  <td style={tdStyle}>
+                    <StepQty value={item.qty} onChange={v => onUpdate(idx, { qty: v })} max={MAX_QTY} />
+                  </td>
+                  {/* Rate */}
+                  <td style={tdStyle}>
+                    <input type="number" min={0} step={0.01}
+                      value={item.rate ?? ''}
+                      onChange={e => { const n = parseFloat(e.target.value); onUpdate(idx, { rate: isNaN(n) ? undefined : n }); }}
+                      placeholder="0.00"
+                      style={{ ...INP, fontSize: 12, textAlign: 'right', fontFamily: 'monospace', color: '#0f172a' }} />
+                  </td>
+                  {/* Amount stepper */}
+                  <td style={tdStyle}>
+                    <StepAmt value={item.amount} onChange={v => onUpdate(idx, { amount: v, qty: undefined, rate: undefined })} max={amtMax} />
+                    <div style={{ textAlign: 'right', fontSize: 11, color: '#374151', marginTop: 3 }}>
+                      GST: <span style={{ fontFamily: 'monospace', color: '#0f172a', fontWeight: 600 }}>₹{f2(item.gstAmount)}</span>
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#0f172a', marginTop: 1 }}>
+                      Total: <span style={{ fontFamily: 'monospace' }}>₹{f2(item.total)}</span>
+                    </div>
+                    {submitted && errs[`${idx}`] && <div style={{ fontSize: 10, color: '#ef4444', marginTop: 2 }}>{errs[`${idx}`]}</div>}
+                  </td>
+                  {/* Delete */}
+                  <td style={{ ...tdStyle, textAlign: 'center' }}>
+                    {items.length > 1 && (
+                      <button onClick={() => onRemove(idx)} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: 5, cursor: 'pointer', color: '#ef4444', display: 'inline-flex' }}>
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      ))}
-
-      {/* Add row */}
-      <div style={{ padding: '8px 10px', background: '#f8fafc' }}>
-        <button onClick={onAdd} style={{ background: 'none', border: '1.5px dashed #cbd5e1', borderRadius: 7, padding: '5px 12px', cursor: 'pointer', color: '#2563eb', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-          <Plus size={12} /> Add Row
-        </button>
+        {/* Add row */}
+        <div style={{ padding: '8px 12px', background: '#f8fafc', borderTop: '1px solid #f1f5f9' }}>
+          <button onClick={onAdd} style={{ background: 'none', border: '1.5px dashed #cbd5e1', borderRadius: 7, padding: '5px 12px', cursor: 'pointer', color: '#2563eb', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Plus size={12} /> Add Row
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
-  // ── Total summary box ──────────────────────────────────────────
+  // ── Total summary box — HIGH CONTRAST ─────────────────────────
   const TotalBox = ({ t, color, label, warn }: { t: ReturnType<typeof totals>; color: string; label: string; warn?: string }) => (
-    <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '12px 14px', marginTop: 12 }}>
+    <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '14px 16px', marginTop: 12 }}>
       {warn && (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 7, padding: '7px 12px', marginBottom: 10, fontSize: 12, color: '#dc2626', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
           <AlertCircle size={14} /> {warn}
         </div>
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, fontSize: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>Taxable Amount</span><b style={{ fontFamily: 'monospace' }}>₹{f2(t.subtotal)}</b></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, color: '#374151' }}>Taxable Amount</span>
+          <span style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>₹{f2(t.subtotal)}</span>
+        </div>
         {t.igst > 0
-          ? <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>IGST</span><b style={{ fontFamily: 'monospace' }}>₹{f2(t.igst)}</b></div>
+          ? <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: '#374151' }}>IGST</span>
+              <span style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>₹{f2(t.igst)}</span>
+            </div>
           : <>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>CGST</span><b style={{ fontFamily: 'monospace' }}>₹{f2(t.cgst)}</b></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>SGST</span><b style={{ fontFamily: 'monospace' }}>₹{f2(t.sgst)}</b></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: '#374151' }}>CGST</span>
+                <span style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>₹{f2(t.cgst)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: '#374151' }}>SGST</span>
+                <span style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 700, color: '#0f172a' }}>₹{f2(t.sgst)}</span>
+              </div>
             </>
         }
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 900, color: '#fff', background: color, borderRadius: 8, padding: '9px 12px', marginTop: 4, alignItems: 'center' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><IndianRupee size={14} />{label}</span>
+        <div style={{ height: 1, background: '#e2e8f0', margin: '2px 0' }}/>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 900, color: '#fff', background: color, borderRadius: 8, padding: '10px 14px', alignItems: 'center' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><IndianRupee size={14}/>{label}</span>
           <span style={{ fontFamily: 'monospace' }}>{f2(t.net)}</span>
         </div>
       </div>
