@@ -168,6 +168,12 @@ export interface PartyLedgerRow {
   jeId: string;
 }
 
+export interface PartyLedgerResult {
+  openingBalance: number;
+  rows: PartyLedgerRow[];
+  closingBalance: number;
+}
+
 export interface AgeingRow {
   party: string;
   current: number;
@@ -619,7 +625,7 @@ export function useAccounting() {
   }, [getGeneralLedger]);
 
   // ── Party Ledger ──────────────────────────────────────────────
-  const getPartyLedger = useCallback((partyName: string, fromDate?: string, toDate?: string): PartyLedgerRow[] => {
+  const getPartyLedger = useCallback((partyName: string, fromDate?: string, toDate?: string): PartyLedgerResult => {
     const sis  = load<SalesInvoice[]>('vs_sales', []);
     const pis  = load<PurchaseInvoice[]>('vs_purchases', []);
     const dns  = load<DebitNote[]>('vs_debit_notes', []);
@@ -636,11 +642,27 @@ export function useAccounting() {
     });
     pis.filter(pi => pi.vendorName.toLowerCase() === name)
       .forEach(pi => entries.push({ date: pi.date, entryType: 'Purchase Invoice', refNo: pi.invoiceNo, debit: 0, credit: pi.netTotal, jeId: pi.id }));
-    const sorted = entries
-      .filter(e => (!fromDate || e.date >= fromDate) && (!toDate || e.date <= toDate))
-      .sort((a, b) => a.date.localeCompare(b.date) || a.refNo.localeCompare(b.refNo));
-    let running = 0;
-    return sorted.map(e => { running += e.debit - e.credit; return { ...e, runningBalance: running }; });
+    
+    // Sort all entries chronologically
+    const allSorted = [...entries].sort((a, b) => a.date.localeCompare(b.date) || a.refNo.localeCompare(b.refNo));
+
+    let openingBalance = 0;
+    if (fromDate) {
+      for (const e of allSorted) {
+        if (e.date < fromDate) {
+          openingBalance += e.debit - e.credit;
+        }
+      }
+    }
+
+    const rangeEntries = allSorted.filter(e => (!fromDate || e.date >= fromDate) && (!toDate || e.date <= toDate));
+    let running = openingBalance;
+    const rows: PartyLedgerRow[] = rangeEntries.map(e => {
+      running += e.debit - e.credit;
+      return { ...e, runningBalance: running };
+    });
+
+    return { openingBalance, rows, closingBalance: running };
   }, []);
 
   // ── Ageing ────────────────────────────────────────────────────

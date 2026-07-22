@@ -161,11 +161,103 @@ export default function Reports() {
 
   const filteredParties = allParties.filter(p => p.toLowerCase().includes(plInput.toLowerCase())).slice(0, 12);
 
-  const plRows = useMemo(() =>
-    plParty ? getPartyLedger(plParty, plFrom || undefined, plTo || undefined) : [],
+  const plResult = useMemo(() =>
+    plParty ? getPartyLedger(plParty, plFrom || undefined, plTo || undefined) : { openingBalance: 0, rows: [], closingBalance: 0 },
     [plParty, plFrom, plTo, getPartyLedger, salesInvoices, purchaseInvoices, debitNotes]
   );
-  const plClosing = plRows.length > 0 ? plRows[plRows.length - 1].runningBalance : 0;
+  const plRows = plResult.rows;
+  const plOpening = plResult.openingBalance;
+  const plClosing = plResult.closingBalance;
+
+  const isCustomer = useMemo(() => {
+    if (!plParty) return false;
+    const name = plParty.toLowerCase();
+    return salesInvoices.some(s => s.customer.toLowerCase() === name) ||
+           debitNotes.some(d => d.type === 'Sales' && d.party.toLowerCase() === name);
+  }, [plParty, salesInvoices, debitNotes]);
+
+  const isVendor = useMemo(() => {
+    if (!plParty) return false;
+    const name = plParty.toLowerCase();
+    return purchaseInvoices.some(p => p.vendorName.toLowerCase() === name) ||
+           debitNotes.some(d => d.type === 'Purchase' && d.party.toLowerCase() === name);
+  }, [plParty, purchaseInvoices, debitNotes]);
+
+  const plMeaning = useMemo(() => {
+    if (!plParty) return null;
+    const absVal = f2(Math.abs(plClosing));
+    if (plClosing === 0) {
+      return {
+        badge: 'ACCOUNT SETTLED',
+        headline: `Account is fully settled with ${plParty}`,
+        detail: `No amount is pending (₹0.00).`,
+        color: '#10B981',
+        bg: 'rgba(16,185,129,0.12)',
+        borderColor: 'rgba(16,185,129,0.3)',
+      };
+    }
+    if (isCustomer && !isVendor) {
+      if (plClosing > 0) {
+        return {
+          badge: 'YOU WILL GET THIS AMOUNT (RECEIVABLE)',
+          headline: `${plParty} owes your company ₹${absVal}`,
+          detail: `Customer Receivable · Your company will GET / RECEIVE ₹${absVal} from ${plParty}.`,
+          color: '#10B981',
+          bg: 'rgba(16,185,129,0.12)',
+          borderColor: 'rgba(16,185,129,0.3)',
+        };
+      } else {
+        return {
+          badge: 'YOU OWE THIS AMOUNT (ADVANCE RECEIVED)',
+          headline: `Your company owes ${plParty} ₹${absVal}`,
+          detail: `Customer Advance · Your company HAS TO ADJUST / PAY ₹${absVal} to ${plParty}.`,
+          color: '#F87171',
+          bg: 'rgba(239,68,68,0.12)',
+          borderColor: 'rgba(239,68,68,0.3)',
+        };
+      }
+    }
+    if (isVendor && !isCustomer) {
+      if (plClosing < 0) {
+        return {
+          badge: 'YOU OWE THIS AMOUNT (PAYABLE)',
+          headline: `Your company owes ${plParty} ₹${absVal}`,
+          detail: `Vendor Payable · Your company HAS TO PAY ₹${absVal} to ${plParty}.`,
+          color: '#F87171',
+          bg: 'rgba(239,68,68,0.12)',
+          borderColor: 'rgba(239,68,68,0.3)',
+        };
+      } else {
+        return {
+          badge: 'YOU WILL GET THIS AMOUNT (ADVANCE PAID)',
+          headline: `${plParty} owes your company ₹${absVal}`,
+          detail: `Vendor Advance Paid · Your company will GET or ADJUST ₹${absVal} from ${plParty}.`,
+          color: '#10B981',
+          bg: 'rgba(16,185,129,0.12)',
+          borderColor: 'rgba(16,185,129,0.3)',
+        };
+      }
+    }
+    if (plClosing > 0) {
+      return {
+        badge: 'YOU WILL GET THIS AMOUNT (RECEIVABLE)',
+        headline: `${plParty} owes your company ₹${absVal}`,
+        detail: `Debit balance (Dr) · Your company will RECEIVE ₹${absVal} from ${plParty}.`,
+        color: '#10B981',
+        bg: 'rgba(16,185,129,0.12)',
+        borderColor: 'rgba(16,185,129,0.3)',
+      };
+    } else {
+      return {
+        badge: 'YOU OWE THIS AMOUNT (PAYABLE)',
+        headline: `Your company owes ${plParty} ₹${absVal}`,
+        detail: `Credit balance (Cr) · Your company HAS TO PAY ₹${absVal} to ${plParty}.`,
+        color: '#F87171',
+        bg: 'rgba(239,68,68,0.12)',
+        borderColor: 'rgba(239,68,68,0.3)',
+      };
+    }
+  }, [plParty, plClosing, isCustomer, isVendor]);
 
   const ageRows = useMemo(() => getAgeing(ageType, ageAsOf),
     [ageType, ageAsOf, getAgeing, salesInvoices, purchaseInvoices, debitNotes]
@@ -550,60 +642,94 @@ export default function Reports() {
           </div>
 
           {plParty ? (
-            <div style={card}>
-              {/* Summary */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-                <div>
-                  <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{plParty}</h2>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
-                    {plRows.length} transactions{plFrom || plTo ? ` · ${plFrom || '…'} → ${plTo || '…'}` : ' · All dates'}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Meaning banner */}
+              {plMeaning && (
+                <div style={{
+                  background: plMeaning.bg,
+                  border: `1.5px solid ${plMeaning.borderColor}`,
+                  borderRadius: 12,
+                  padding: '16px 20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 14
+                }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: plMeaning.color, letterSpacing: '0.08em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>📌</span> <span>{plMeaning.badge}</span>
+                    </div>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {plMeaning.headline}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3 }}>
+                      {plMeaning.detail}
+                    </div>
+                  </div>
+                  <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 10, padding: '12px 18px', textAlign: 'right' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.06em' }}>Closing Balance</div>
+                    <div style={{ fontSize: 20, fontWeight: 900, fontFamily: 'monospace', color: plClosing >= 0 ? '#10B981' : '#F87171', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                      <IndianRupee size={15}/>{f2(Math.abs(plClosing))} <span style={{ fontSize: 13 }}>{plClosing < 0 ? 'Cr' : 'Dr'}</span>
+                    </div>
                   </div>
                 </div>
-                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 10, padding: '10px 16px', textAlign: 'right' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.06em' }}>Closing Balance</div>
-                  <div style={{ fontSize: 18, fontWeight: 900, fontFamily: 'monospace', color: plClosing >= 0 ? '#10B981' : '#F87171', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                    <IndianRupee size={14}/>{f2(Math.abs(plClosing))} <span style={{ fontSize: 12 }}>{plClosing < 0 ? 'Cr' : 'Dr'}</span>
-                  </div>
-                </div>
-              </div>
+              )}
 
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th><th>Entry Type</th><th>Reference</th>
-                      <th style={{ textAlign: 'right' }}>Debit (₹)</th>
-                      <th style={{ textAlign: 'right' }}>Credit (₹)</th>
-                      <th style={{ textAlign: 'right' }}>Balance (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Opening */}
-                    <tr style={{ background: 'var(--bg-elevated)', fontStyle: 'italic' }}>
-                      <td colSpan={5} style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 12px' }}>Opening Balance</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', padding: '8px 12px' }}>₹0.00 Dr</td>
-                    </tr>
-                    {plRows.length === 0
-                      ? <tr><td colSpan={6} className="empty-cell">No transactions found for this party</td></tr>
-                      : plRows.map((r, i) => (
-                        <tr key={i}>
-                          <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-muted)' }}>{r.date}</td>
-                          <td><EntryBadge type={r.entryType}/></td>
-                          <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--brand-primary)', fontWeight: 700 }}>{r.refNo}</td>
-                          <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: r.debit > 0 ? 700 : 400, color: r.debit > 0 ? '#60A5FA' : 'var(--text-muted)' }}>
-                            {r.debit > 0 ? f2(r.debit) : '—'}
-                          </td>
-                          <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: r.credit > 0 ? 700 : 400, color: r.credit > 0 ? '#34D399' : 'var(--text-muted)' }}>
-                            {r.credit > 0 ? f2(r.credit) : '—'}
-                          </td>
-                          <BalCell v={r.runningBalance}/>
-                        </tr>
-                      ))
-                    }
-                    {/* Closing row */}
-                    {plRows.length > 0 && (
+              <div style={card}>
+                {/* Header info */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+                  <div>
+                    <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{plParty} — Account Ledger</h2>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
+                      {plRows.length} transactions{plFrom || plTo ? ` · Filtered: ${plFrom || 'start'} → ${plTo || 'today'}` : ' · All dates'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th><th>Entry Type</th><th>Reference</th>
+                        <th style={{ textAlign: 'right' }}>Debit (₹)</th>
+                        <th style={{ textAlign: 'right' }}>Credit (₹)</th>
+                        <th style={{ textAlign: 'right' }}>Balance (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Opening Balance Row */}
+                      <tr style={{ background: 'var(--bg-elevated)', fontStyle: 'italic' }}>
+                        <td colSpan={5} style={{ fontSize: 12, color: 'var(--text-muted)', padding: '10px 12px', fontWeight: 600 }}>
+                          Opening Balance {plFrom ? `(prior to ${plFrom})` : ''}
+                        </td>
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 12, fontWeight: 700, padding: '10px 12px', color: plOpening > 0 ? '#10B981' : plOpening < 0 ? '#F87171' : 'var(--text-muted)' }}>
+                          {plOpening !== 0 ? `${f2(Math.abs(plOpening))} ${plOpening < 0 ? 'Cr' : 'Dr'}` : '₹0.00 Dr'}
+                        </td>
+                      </tr>
+
+                      {plRows.length === 0
+                        ? <tr><td colSpan={6} className="empty-cell">No transactions found for this period</td></tr>
+                        : plRows.map((r, i) => (
+                          <tr key={i}>
+                            <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-muted)' }}>{r.date}</td>
+                            <td><EntryBadge type={r.entryType}/></td>
+                            <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--brand-primary)', fontWeight: 700 }}>{r.refNo}</td>
+                            <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: r.debit > 0 ? 700 : 400, color: r.debit > 0 ? '#60A5FA' : 'var(--text-muted)' }}>
+                              {r.debit > 0 ? f2(r.debit) : '—'}
+                            </td>
+                            <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: r.credit > 0 ? 700 : 400, color: r.credit > 0 ? '#34D399' : 'var(--text-muted)' }}>
+                              {r.credit > 0 ? f2(r.credit) : '—'}
+                            </td>
+                            <BalCell v={r.runningBalance}/>
+                          </tr>
+                        ))
+                      }
+                      {/* Closing row */}
                       <tr style={{ background: 'var(--bg-elevated)', borderTop: '2px solid var(--border-default)' }}>
-                        <td colSpan={3} style={{ fontSize: 13, fontWeight: 800, padding: '10px 12px', color: 'var(--text-primary)' }}>Closing Balance</td>
+                        <td colSpan={3} style={{ fontSize: 13, fontWeight: 800, padding: '10px 12px', color: 'var(--text-primary)' }}>
+                          Closing Balance
+                        </td>
                         <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, color: '#60A5FA', padding: '10px 12px' }}>
                           ₹{f2(plRows.reduce((s, r) => s + r.debit, 0))}
                         </td>
@@ -614,9 +740,9 @@ export default function Reports() {
                           ₹{f2(Math.abs(plClosing))} {plClosing < 0 ? 'Cr' : 'Dr'}
                         </td>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           ) : (
