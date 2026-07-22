@@ -1,26 +1,40 @@
 /**
- * useAccounting.ts
+ * useAccounting.ts  v3
  * Central accounting data layer — all data in localStorage, zero hardcoding.
- * Provides: Chart of Accounts, Sales Invoices, Purchase Invoices, Debit Notes,
- *           Journal Entries (auto-generated), General Ledger, Trial Balance.
- * v2 additions:
- *   • PurchaseInvoice type + full CRUD with JE auto-generation
- *   • Sales ↔ Purchase invoice linking (bidirectional)
- *   • getPartyLedger() — running balance per party
- *   • getAgeing() — 0-30/31-60/61-90/90+ day buckets
- *   • getMarginReport() — per SI: revenue, cost, DN, margin
+ *
+ * New in v3:
+ *   • AccountType includes 'Equity'
+ *   • Account has `group` (Balance Sheet / P&L categorisation)
+ *   • Full 60-account Indian COA (1xxx Assets, 2xxx Liabilities, 3xxx Equity, 4xxx Income, 5xxx COGS, 6xxx OpEx, 7xxx Finance)
+ *   • getBalanceSheet()   — Assets / Liabilities / Equity with Net Profit
+ *   • getProfitAndLoss()  — Revenue → Gross Profit → EBITDA → Net Profit
+ *   • getCashFlow()       — Operating / Investing / Financing (indirect method)
  */
 import { useState, useCallback } from 'react';
 
 // ────────────────────────────────────────────────────────────────
 //  Types
 // ────────────────────────────────────────────────────────────────
-export type AccountType = 'Asset' | 'Liability' | 'Income' | 'Expense';
+export type AccountType = 'Asset' | 'Liability' | 'Income' | 'Expense' | 'Equity';
+
+/** Group drives how the account appears in financial statements */
+export type AccountGroup =
+  // Assets
+  | 'Current Assets' | 'Fixed Assets' | 'Other Assets'
+  // Liabilities
+  | 'Current Liabilities' | 'Long-term Liabilities'
+  // Equity
+  | 'Capital & Reserves'
+  // Income
+  | 'Revenue' | 'Other Income'
+  // Expenses
+  | 'Cost of Goods Sold' | 'Operating Expenses' | 'Finance Costs' | 'Depreciation';
 
 export interface Account {
   code: string;
   name: string;
   type: AccountType;
+  group: AccountGroup;
 }
 
 export interface InvoiceItem {
@@ -28,10 +42,10 @@ export interface InvoiceItem {
   description: string;
   qty: number;
   rate: number;
-  amount: number;      // qty * rate
-  gstRate: number;     // percentage e.g. 5
-  gstAmount: number;   // amount * gstRate/100
-  total: number;       // amount + gstAmount
+  amount: number;
+  gstRate: number;
+  gstAmount: number;
+  total: number;
 }
 
 export interface SalesInvoice {
@@ -44,12 +58,11 @@ export interface SalesInvoice {
   totalGst: number;
   netTotal: number;
   remarks?: string;
-  linkedPurchaseInvoiceId?: string;   // ← NEW: link to purchase invoice
+  linkedPurchaseInvoiceId?: string;
   status: 'draft' | 'posted';
   createdAt: string;
 }
 
-// ── Purchase Invoice ─────────────────────────────────────────────
 export interface PurchaseInvoiceItem {
   id: string;
   description: string;
@@ -71,7 +84,7 @@ export interface PurchaseInvoice {
   subtotal: number;
   gstTotal: number;
   netTotal: number;
-  linkedSalesInvoiceId?: string;      // ← link to sales invoice
+  linkedSalesInvoiceId?: string;
   remarks?: string;
   status: 'posted';
   createdAt: string;
@@ -129,6 +142,7 @@ export interface GLAccount {
   account: string;
   accountCode: string;
   accountType: AccountType;
+  accountGroup: AccountGroup;
   totalDebit: number;
   totalCredit: number;
   balance: number;
@@ -138,6 +152,7 @@ export interface TrialBalanceRow {
   account: string;
   accountCode: string;
   accountType: AccountType;
+  accountGroup: AccountGroup;
   debit: number;
   credit: number;
 }
@@ -155,10 +170,10 @@ export interface PartyLedgerRow {
 
 export interface AgeingRow {
   party: string;
-  current: number;   // 0-30 days
-  days31: number;    // 31-60
-  days61: number;    // 61-90
-  days90: number;    // 90+
+  current: number;
+  days31: number;
+  days61: number;
+  days90: number;
   total: number;
   oldestDate: string;
 }
@@ -168,39 +183,155 @@ export interface MarginRow {
   invoiceNo: string;
   date: string;
   customer: string;
-  saleSubtotal: number;      // taxable sale value
-  saleDnDeducted: number;    // sales DN subtotals raised against this SI
-  netRevenue: number;        // saleSubtotal - saleDnDeducted
-  purchaseCost: number;      // linked PI subtotal (0 if not linked)
-  purchaseDnRecovered: number; // purchase DN subtotals linked
-  netCost: number;           // purchaseCost - purchaseDnRecovered
-  grossMargin: number;       // netRevenue - netCost
-  marginPct: number;         // grossMargin / saleSubtotal * 100
+  saleSubtotal: number;
+  saleDnDeducted: number;
+  netRevenue: number;
+  purchaseCost: number;
+  purchaseDnRecovered: number;
+  netCost: number;
+  grossMargin: number;
+  marginPct: number;
   linkedPurchaseInvoiceNo?: string;
 }
 
+// ── Financial Statement types ─────────────────────────────────────
+export interface BSRow { code: string; name: string; group: AccountGroup; balance: number; }
+export interface BSSection { group: AccountGroup; rows: BSRow[]; subtotal: number; }
+export interface BalanceSheet {
+  assetSections: BSSection[];
+  totalAssets: number;
+  liabilitySections: BSSection[];
+  totalLiabilities: number;
+  equitySections: BSSection[];
+  netProfit: number;
+  totalEquity: number;
+  totalLiabilitiesEquity: number;
+  balanced: boolean;
+  asOf: string;
+}
+
+export interface PLRow { code: string; name: string; group: AccountGroup; amount: number; }
+export interface ProfitAndLoss {
+  revenue: PLRow[];
+  totalRevenue: number;
+  cogs: PLRow[];
+  totalCOGS: number;
+  grossProfit: number;
+  grossMarginPct: number;
+  opEx: PLRow[];
+  totalOpEx: number;
+  ebitda: number;
+  otherIncome: PLRow[];
+  totalOtherIncome: number;
+  financeAndDepr: PLRow[];
+  totalFinanceDepr: number;
+  netProfit: number;
+  netMarginPct: number;
+  fromDate: string;
+  toDate: string;
+}
+
+export interface CashFlowSection {
+  label: string;
+  items: { label: string; amount: number }[];
+  total: number;
+}
+export interface CashFlow {
+  operating: CashFlowSection;
+  investing: CashFlowSection;
+  financing: CashFlowSection;
+  netChange: number;
+  openingCash: number;
+  closingCash: number;
+}
+
 // ────────────────────────────────────────────────────────────────
-//  Default Chart of Accounts
+//  Default Chart of Accounts (comprehensive Indian business COA)
 // ────────────────────────────────────────────────────────────────
-const DEFAULT_COA: Account[] = [
-  { code: '1000', name: 'Accounts Receivable', type: 'Asset' },
-  { code: '1100', name: 'Cash & Bank',          type: 'Asset' },
-  { code: '1200', name: 'Input GST 5%',         type: 'Asset' },
-  { code: '1210', name: 'Input GST 12%',        type: 'Asset' },
-  { code: '1220', name: 'Input GST 18%',        type: 'Asset' },
-  { code: '2000', name: 'Sales',                type: 'Income' },
-  { code: '2100', name: 'Sales Returns',        type: 'Income' },
-  { code: '2200', name: 'Output GST 5%',        type: 'Liability' },
-  { code: '2210', name: 'Output GST 12%',       type: 'Liability' },
-  { code: '2220', name: 'Output GST 18%',       type: 'Liability' },
-  { code: '3000', name: 'Purchases',            type: 'Expense' },
-  { code: '3100', name: 'Purchase Returns',     type: 'Expense' },
-  { code: '4000', name: 'Accounts Payable',     type: 'Liability' },
-  { code: '5000', name: 'Freight & Charges',    type: 'Expense' },
-  { code: '6000', name: 'Other Income',         type: 'Income' },
+export const DEFAULT_COA: Account[] = [
+  // ── Current Assets ──────────────────────────────────────────
+  { code: '1001', name: 'Cash in Hand',              type: 'Asset',     group: 'Current Assets' },
+  { code: '1002', name: 'Bank Account',              type: 'Asset',     group: 'Current Assets' },
+  { code: '1010', name: 'Accounts Receivable',       type: 'Asset',     group: 'Current Assets' },
+  { code: '1020', name: 'Advance to Suppliers',      type: 'Asset',     group: 'Current Assets' },
+  { code: '1030', name: 'Inventory / Stock',         type: 'Asset',     group: 'Current Assets' },
+  { code: '1040', name: 'Prepaid Expenses',          type: 'Asset',     group: 'Current Assets' },
+  { code: '1050', name: 'Input GST 5%',              type: 'Asset',     group: 'Current Assets' },
+  { code: '1051', name: 'Input GST 12%',             type: 'Asset',     group: 'Current Assets' },
+  { code: '1052', name: 'Input GST 18%',             type: 'Asset',     group: 'Current Assets' },
+  { code: '1060', name: 'TDS Receivable',            type: 'Asset',     group: 'Current Assets' },
+  { code: '1070', name: 'Security Deposits',         type: 'Asset',     group: 'Current Assets' },
+  // ── Fixed Assets ─────────────────────────────────────────────
+  { code: '1100', name: 'Land & Building',           type: 'Asset',     group: 'Fixed Assets' },
+  { code: '1110', name: 'Plant & Machinery',         type: 'Asset',     group: 'Fixed Assets' },
+  { code: '1120', name: 'Furniture & Fixtures',      type: 'Asset',     group: 'Fixed Assets' },
+  { code: '1130', name: 'Computers & Equipment',     type: 'Asset',     group: 'Fixed Assets' },
+  { code: '1140', name: 'Vehicles',                  type: 'Asset',     group: 'Fixed Assets' },
+  { code: '1150', name: 'Accum. Depreciation',       type: 'Asset',     group: 'Fixed Assets' },
+  // ── Other Assets ─────────────────────────────────────────────
+  { code: '1200', name: 'Loans & Advances (LT)',     type: 'Asset',     group: 'Other Assets' },
+  { code: '1210', name: 'Other Assets',              type: 'Asset',     group: 'Other Assets' },
+
+  // ── Current Liabilities ───────────────────────────────────────
+  { code: '2001', name: 'Accounts Payable',          type: 'Liability', group: 'Current Liabilities' },
+  { code: '2010', name: 'Output GST 5%',             type: 'Liability', group: 'Current Liabilities' },
+  { code: '2011', name: 'Output GST 12%',            type: 'Liability', group: 'Current Liabilities' },
+  { code: '2012', name: 'Output GST 18%',            type: 'Liability', group: 'Current Liabilities' },
+  { code: '2020', name: 'TDS Payable',               type: 'Liability', group: 'Current Liabilities' },
+  { code: '2030', name: 'Advance from Customers',    type: 'Liability', group: 'Current Liabilities' },
+  { code: '2040', name: 'Salary Payable',            type: 'Liability', group: 'Current Liabilities' },
+  { code: '2050', name: 'Other Current Liabilities', type: 'Liability', group: 'Current Liabilities' },
+  // ── Long-term Liabilities ─────────────────────────────────────
+  { code: '2100', name: 'Bank Loan',                 type: 'Liability', group: 'Long-term Liabilities' },
+  { code: '2110', name: 'Term Loan',                 type: 'Liability', group: 'Long-term Liabilities' },
+  { code: '2120', name: 'Loan from Partners',        type: 'Liability', group: 'Long-term Liabilities' },
+
+  // ── Equity / Capital ──────────────────────────────────────────
+  { code: '3001', name: "Owner's Capital",           type: 'Equity',    group: 'Capital & Reserves' },
+  { code: '3010', name: 'Retained Earnings',         type: 'Equity',    group: 'Capital & Reserves' },
+  { code: '3020', name: 'Drawings',                  type: 'Equity',    group: 'Capital & Reserves' },
+  { code: '3030', name: 'Partner Capital A',         type: 'Equity',    group: 'Capital & Reserves' },
+  { code: '3031', name: 'Partner Capital B',         type: 'Equity',    group: 'Capital & Reserves' },
+
+  // ── Revenue ───────────────────────────────────────────────────
+  { code: '4001', name: 'Sales',                     type: 'Income',    group: 'Revenue' },
+  { code: '4010', name: 'Sales Returns',             type: 'Income',    group: 'Revenue' },
+  // ── Other Income ──────────────────────────────────────────────
+  { code: '4100', name: 'Other Income',              type: 'Income',    group: 'Other Income' },
+  { code: '4110', name: 'Interest Income',           type: 'Income',    group: 'Other Income' },
+  { code: '4120', name: 'Commission Income',         type: 'Income',    group: 'Other Income' },
+  { code: '4130', name: 'Discount Received',         type: 'Income',    group: 'Other Income' },
+
+  // ── Cost of Goods Sold ────────────────────────────────────────
+  { code: '5001', name: 'Purchases',                 type: 'Expense',   group: 'Cost of Goods Sold' },
+  { code: '5010', name: 'Purchase Returns',          type: 'Expense',   group: 'Cost of Goods Sold' },
+  { code: '5020', name: 'Freight Inward',            type: 'Expense',   group: 'Cost of Goods Sold' },
+  { code: '5030', name: 'Custom Duty & Levies',      type: 'Expense',   group: 'Cost of Goods Sold' },
+  { code: '5040', name: 'Labour / Job Work',         type: 'Expense',   group: 'Cost of Goods Sold' },
+
+  // ── Operating Expenses ────────────────────────────────────────
+  { code: '6001', name: 'Salaries & Wages',          type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6010', name: 'Rent',                      type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6020', name: 'Electricity & Utilities',   type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6030', name: 'Phone & Internet',          type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6040', name: 'Office Supplies',           type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6050', name: 'Printing & Stationery',     type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6060', name: 'Travel & Conveyance',       type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6070', name: 'Vehicles Expenses',         type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6080', name: 'Repairs & Maintenance',     type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6090', name: 'Insurance',                 type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6100', name: 'Advertisement & Marketing', type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6110', name: 'Audit & Legal Fees',        type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6120', name: 'Discount Allowed',          type: 'Expense',   group: 'Operating Expenses' },
+  { code: '6130', name: 'Miscellaneous Expenses',    type: 'Expense',   group: 'Operating Expenses' },
+
+  // ── Finance Costs & Depreciation ─────────────────────────────
+  { code: '7001', name: 'Bank Charges',              type: 'Expense',   group: 'Finance Costs' },
+  { code: '7010', name: 'Interest Expense',          type: 'Expense',   group: 'Finance Costs' },
+  { code: '7020', name: 'Depreciation',              type: 'Expense',   group: 'Depreciation' },
 ];
 
-// ── Seed purchase invoices (migrate from old mock data on first load) ──
+// ── Seed purchase invoices ────────────────────────────────────────
 const SEED_PURCHASES: PurchaseInvoice[] = [
   {
     id: 'pi-seed-1', invoiceNo: 'INV-2026-042', date: '2026-04-20',
@@ -218,28 +349,15 @@ const SEED_PURCHASES: PurchaseInvoice[] = [
   },
 ];
 
-// ────────────────────────────────────────────────────────────────
-//  Storage helpers
-// ────────────────────────────────────────────────────────────────
+// ── Storage helpers ───────────────────────────────────────────────
 function load<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+  try { const raw = localStorage.getItem(key); return raw ? (JSON.parse(raw) as T) : fallback; }
+  catch { return fallback; }
 }
-function save<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
+function save<T>(key: string, value: T) { localStorage.setItem(key, JSON.stringify(value)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
-
-// ────────────────────────────────────────────────────────────────
-//  GST account name helper
-// ────────────────────────────────────────────────────────────────
+// ── GST account name helper ───────────────────────────────────────
 function gstAccountName(rate: number, side: 'Input' | 'Output'): string {
   return `${side} GST ${rate}%`;
 }
@@ -277,7 +395,6 @@ function buildSalesDNJE(dn: DebitNote): JournalEntry {
 
 function buildPurchaseInvoiceJE(p: PurchaseInvoice): JournalEntry {
   const lines: JournalLine[] = [];
-  // Group by GST rate
   const purchByRate = new Map<number, number>();
   const gstByRate   = new Map<number, number>();
   for (const item of p.items) {
@@ -304,51 +421,69 @@ function buildPurchaseDNJE(dn: DebitNote): JournalEntry {
   return { id: uid(), date: dn.date, entryType: 'Purchase Debit Note', relatedId: dn.id, relatedNo: dn.dnNo, party: dn.party, lines, createdAt: new Date().toISOString() };
 }
 
+// ── Migrate old accounts (add group field if missing) ─────────────
+function migrateCOA(accounts: any[]): Account[] {
+  const groupMap: Record<string, AccountGroup> = {
+    'Accounts Receivable': 'Current Assets', 'Cash & Bank': 'Current Assets',
+    'Input GST 5%': 'Current Assets', 'Input GST 12%': 'Current Assets', 'Input GST 18%': 'Current Assets',
+    'Sales': 'Revenue', 'Sales Returns': 'Revenue',
+    'Output GST 5%': 'Current Liabilities', 'Output GST 12%': 'Current Liabilities', 'Output GST 18%': 'Current Liabilities',
+    'Purchases': 'Cost of Goods Sold', 'Purchase Returns': 'Cost of Goods Sold',
+    'Accounts Payable': 'Current Liabilities',
+    'Freight & Charges': 'Cost of Goods Sold', 'Other Income': 'Other Income',
+  };
+  return accounts.map(a => ({
+    code: a.code,
+    name: a.name,
+    type: (a.type === 'Equity' ? 'Equity' : a.type) as AccountType,
+    group: (a.group ?? groupMap[a.name] ?? (
+      a.type === 'Asset' ? 'Current Assets' :
+      a.type === 'Liability' ? 'Current Liabilities' :
+      a.type === 'Income' ? 'Revenue' :
+      a.type === 'Equity' ? 'Capital & Reserves' :
+      'Operating Expenses'
+    )) as AccountGroup,
+  }));
+}
+
 // ────────────────────────────────────────────────────────────────
 //  Hook
 // ────────────────────────────────────────────────────────────────
 export function useAccounting() {
   const [coa, setCoaState] = useState<Account[]>(() => {
-    const stored = load<Account[]>('vs_coa', []);
+    const stored = load<any[]>('vs_coa', []);
     if (stored.length === 0) { save('vs_coa', DEFAULT_COA); return DEFAULT_COA; }
-    return stored;
+    return migrateCOA(stored);
   });
 
-  const [salesInvoices, setSIState]     = useState<SalesInvoice[]>(() => load('vs_sales', []));
-  const [purchaseInvoices, setPIState]  = useState<PurchaseInvoice[]>(() => {
+  const [salesInvoices, setSIState]    = useState<SalesInvoice[]>(() => load('vs_sales', []));
+  const [purchaseInvoices, setPIState] = useState<PurchaseInvoice[]>(() => {
     const stored = load<PurchaseInvoice[]>('vs_purchases', []);
-    // Seed mock data on first load
-    if (stored.length === 0) {
-      save('vs_purchases', SEED_PURCHASES);
-      return SEED_PURCHASES;
-    }
+    if (stored.length === 0) { save('vs_purchases', SEED_PURCHASES); return SEED_PURCHASES; }
     return stored;
   });
-  const [debitNotes, setDNState]        = useState<DebitNote[]>(() => load('vs_debit_notes', []));
-  const [journalEntries, setJEState]    = useState<JournalEntry[]>(() => load('vs_journal', []));
+  const [debitNotes, setDNState]       = useState<DebitNote[]>(() => load('vs_debit_notes', []));
+  const [journalEntries, setJEState]   = useState<JournalEntry[]>(() => load('vs_journal', []));
 
   // ── COA CRUD ──────────────────────────────────────────────────
   const saveCoa = useCallback((accounts: Account[]) => {
     setCoaState(accounts); save('vs_coa', accounts);
   }, []);
-
-  const addAccount = useCallback((acct: Omit<Account, 'id'>) => {
+  const addAccount = useCallback((acct: Account) => {
     setCoaState(prev => { const next = [...prev, acct]; save('vs_coa', next); return next; });
   }, []);
-
   const updateAccount = useCallback((code: string, updates: Partial<Account>) => {
     setCoaState(prev => { const next = prev.map(a => a.code === code ? { ...a, ...updates } : a); save('vs_coa', next); return next; });
   }, []);
-
   const deleteAccount = useCallback((code: string) => {
     setCoaState(prev => { const next = prev.filter(a => a.code !== code); save('vs_coa', next); return next; });
   }, []);
+  const resetCOA = useCallback(() => { setCoaState(DEFAULT_COA); save('vs_coa', DEFAULT_COA); }, []);
 
-  // ── Journal Entry helpers ─────────────────────────────────────
+  // ── JE helpers ────────────────────────────────────────────────
   const appendJE = useCallback((je: JournalEntry) => {
     setJEState(prev => { const next = [je, ...prev]; save('vs_journal', next); return next; });
   }, []);
-
   const appendJEs = useCallback((jes: JournalEntry[]) => {
     setJEState(prev => { const next = [...jes, ...prev]; save('vs_journal', next); return next; });
   }, []);
@@ -370,10 +505,9 @@ export function useAccounting() {
   const postPurchaseInvoice = useCallback((data: Omit<PurchaseInvoice, 'id' | 'status' | 'createdAt'>): PurchaseInvoice => {
     const inv: PurchaseInvoice = { ...data, id: uid(), status: 'posted', createdAt: new Date().toISOString() };
     setPIState(prev => { const next = [inv, ...prev]; save('vs_purchases', next); return next; });
-    // Auto-generate JE (idempotent — check first)
     setJEState(prev => {
-      const alreadyPosted = prev.some(j => j.relatedId === inv.id && j.entryType === 'Purchase Invoice');
-      if (alreadyPosted) return prev;
+      const already = prev.some(j => j.relatedId === inv.id && j.entryType === 'Purchase Invoice');
+      if (already) return prev;
       const je = buildPurchaseInvoiceJE(inv);
       const next = [je, ...prev]; save('vs_journal', next); return next;
     });
@@ -392,11 +526,8 @@ export function useAccounting() {
       save('vs_sales', next); return next;
     });
     setPIState(prev => {
-      // Unlink any old SI that pointed to this PI
       let next = prev.map(p => p.linkedSalesInvoiceId === salesId ? { ...p, linkedSalesInvoiceId: undefined } : p);
-      if (purchaseId) {
-        next = next.map(p => p.id === purchaseId ? { ...p, linkedSalesInvoiceId: salesId } : p);
-      }
+      if (purchaseId) next = next.map(p => p.id === purchaseId ? { ...p, linkedSalesInvoiceId: salesId } : p);
       save('vs_purchases', next); return next;
     });
   }, []);
@@ -414,12 +545,9 @@ export function useAccounting() {
     salesDN: Omit<DebitNote, 'id' | 'status' | 'createdAt' | 'linkedPurchaseDnId'>,
     purchaseDN?: Omit<DebitNote, 'id' | 'status' | 'createdAt' | 'linkedPurchaseDnId'>,
   ): { salesDn: DebitNote; purchaseDn?: DebitNote } => {
-    const salesId    = uid();
-    const purchaseId = purchaseDN ? uid() : undefined;
+    const salesId = uid(), purchaseId = purchaseDN ? uid() : undefined;
     const salesDnFull: DebitNote    = { ...salesDN, id: salesId, status: 'posted', linkedPurchaseDnId: purchaseId, createdAt: new Date().toISOString() };
-    const purchaseDnFull: DebitNote | undefined = purchaseDN
-      ? { ...purchaseDN, id: purchaseId!, status: 'posted', createdAt: new Date().toISOString() }
-      : undefined;
+    const purchaseDnFull: DebitNote | undefined = purchaseDN ? { ...purchaseDN, id: purchaseId!, status: 'posted', createdAt: new Date().toISOString() } : undefined;
     setDNState(prev => {
       const next = purchaseDnFull ? [salesDnFull, purchaseDnFull, ...prev] : [salesDnFull, ...prev];
       save('vs_debit_notes', next); return next;
@@ -430,20 +558,18 @@ export function useAccounting() {
     return { salesDn: salesDnFull, purchaseDn: purchaseDnFull };
   }, [appendJEs]);
 
-  /** Keep for backward compat with wizard */
   const postPurchaseInvoiceJE = useCallback((p: {
     id: string; invoiceNo: string; date: string; vendorName: string;
     subtotal: number; gstTotal: number; netTotal: number; gstRate?: number;
   }) => {
     setJEState(prev => {
-      const alreadyPosted = prev.some(j => j.relatedId === p.id && j.entryType === 'Purchase Invoice');
-      if (alreadyPosted) return prev;
+      const already = prev.some(j => j.relatedId === p.id && j.entryType === 'Purchase Invoice');
+      if (already) return prev;
       const rate = p.gstRate ?? 5;
       const fakePi: PurchaseInvoice = {
         id: p.id, invoiceNo: p.invoiceNo, date: p.date, vendorName: p.vendorName,
         items: [{ id: 'x', description: 'Purchase', qty: 1, rate: p.subtotal, amount: p.subtotal, gstRate: rate, gstAmount: p.gstTotal, total: p.netTotal }],
-        subtotal: p.subtotal, gstTotal: p.gstTotal, netTotal: p.netTotal,
-        status: 'posted', createdAt: new Date().toISOString(),
+        subtotal: p.subtotal, gstTotal: p.gstTotal, netTotal: p.netTotal, status: 'posted', createdAt: new Date().toISOString(),
       };
       const je = buildPurchaseInvoiceJE(fakePi);
       const next = [je, ...prev]; save('vs_journal', next); return next;
@@ -452,14 +578,18 @@ export function useAccounting() {
 
   // ── General Ledger ────────────────────────────────────────────
   const getGeneralLedger = useCallback((): GLAccount[] => {
-    const currentCoa = load<Account[]>('vs_coa', DEFAULT_COA);
-    const currentJEs = load<JournalEntry[]>('vs_journal', []);
-    return currentCoa.map(acct => {
+    const currentCoa = load<any[]>('vs_coa', DEFAULT_COA);
+    const migratedCoa = migrateCOA(currentCoa.length === 0 ? DEFAULT_COA : currentCoa);
+    const currentJEs  = load<JournalEntry[]>('vs_journal', []);
+    return migratedCoa.map(acct => {
       let totalDebit = 0, totalCredit = 0;
       for (const je of currentJEs)
         for (const line of je.lines)
           if (line.account === acct.name) { totalDebit += line.debit; totalCredit += line.credit; }
-      return { account: acct.name, accountCode: acct.code, accountType: acct.type, totalDebit, totalCredit, balance: totalDebit - totalCredit };
+      return {
+        account: acct.name, accountCode: acct.code, accountType: acct.type,
+        accountGroup: acct.group, totalDebit, totalCredit, balance: totalDebit - totalCredit,
+      };
     }).filter(a => a.totalDebit > 0 || a.totalCredit > 0);
   }, []);
 
@@ -479,7 +609,9 @@ export function useAccounting() {
     const gl = getGeneralLedger();
     const rows: TrialBalanceRow[] = gl.map(a => ({
       account: a.account, accountCode: a.accountCode, accountType: a.accountType,
-      debit: a.balance > 0 ? a.balance : 0, credit: a.balance < 0 ? -a.balance : 0,
+      accountGroup: a.accountGroup,
+      debit:  a.balance > 0 ? a.balance : 0,
+      credit: a.balance < 0 ? -a.balance : 0,
     }));
     const totalDebit  = rows.reduce((s, r) => s + r.debit, 0);
     const totalCredit = rows.reduce((s, r) => s + r.credit, 0);
@@ -487,86 +619,66 @@ export function useAccounting() {
   }, [getGeneralLedger]);
 
   // ── Party Ledger ──────────────────────────────────────────────
-  // Builds a running ledger from actual invoices/DNs for the named party.
-  // For customers: Sales Invoice → Debit (they owe us), Sales DN → Credit (reduces balance)
-  // For vendors:  Purchase Invoice → Credit (we owe them), Purchase DN → Debit (reduces balance)
   const getPartyLedger = useCallback((partyName: string, fromDate?: string, toDate?: string): PartyLedgerRow[] => {
     const sis  = load<SalesInvoice[]>('vs_sales', []);
     const pis  = load<PurchaseInvoice[]>('vs_purchases', []);
     const dns  = load<DebitNote[]>('vs_debit_notes', []);
     const name = partyName.toLowerCase();
-
     type RawEntry = { date: string; entryType: string; refNo: string; debit: number; credit: number; jeId: string };
     const entries: RawEntry[] = [];
-
-    // Sales invoices for this customer
-    sis.filter(si => si.customer.toLowerCase() === name).forEach(si =>
-      entries.push({ date: si.date, entryType: 'Sales Invoice', refNo: si.invoiceNo, debit: si.netTotal, credit: 0, jeId: si.id })
-    );
-    // Debit notes for this party
+    sis.filter(si => si.customer.toLowerCase() === name)
+      .forEach(si => entries.push({ date: si.date, entryType: 'Sales Invoice', refNo: si.invoiceNo, debit: si.netTotal, credit: 0, jeId: si.id }));
     dns.filter(dn => dn.party.toLowerCase() === name).forEach(dn => {
       if (dn.type === 'Sales')
         entries.push({ date: dn.date, entryType: 'Sales Debit Note', refNo: dn.dnNo, debit: 0, credit: dn.netTotal, jeId: dn.id });
       else
         entries.push({ date: dn.date, entryType: 'Purchase Debit Note', refNo: dn.dnNo, debit: dn.netTotal, credit: 0, jeId: dn.id });
     });
-    // Purchase invoices for this vendor
-    pis.filter(pi => pi.vendorName.toLowerCase() === name).forEach(pi =>
-      entries.push({ date: pi.date, entryType: 'Purchase Invoice', refNo: pi.invoiceNo, debit: 0, credit: pi.netTotal, jeId: pi.id })
-    );
-
-    // Filter by date range and sort
+    pis.filter(pi => pi.vendorName.toLowerCase() === name)
+      .forEach(pi => entries.push({ date: pi.date, entryType: 'Purchase Invoice', refNo: pi.invoiceNo, debit: 0, credit: pi.netTotal, jeId: pi.id }));
     const sorted = entries
       .filter(e => (!fromDate || e.date >= fromDate) && (!toDate || e.date <= toDate))
       .sort((a, b) => a.date.localeCompare(b.date) || a.refNo.localeCompare(b.refNo));
-
     let running = 0;
-    return sorted.map(e => {
-      running += e.debit - e.credit;
-      return { ...e, runningBalance: running };
-    });
+    return sorted.map(e => { running += e.debit - e.credit; return { ...e, runningBalance: running }; });
   }, []);
 
-  // ── Ageing Report ─────────────────────────────────────────────
+  // ── Ageing ────────────────────────────────────────────────────
   const getAgeing = useCallback((type: 'customer' | 'vendor', asOf?: string): AgeingRow[] => {
     const today = asOf ? new Date(asOf) : new Date();
     const daysDiff = (dateStr: string) => Math.floor((today.getTime() - new Date(dateStr).getTime()) / 86400000);
-
     if (type === 'customer') {
-      const sis  = load<SalesInvoice[]>('vs_sales', []);
-      const dns  = load<DebitNote[]>('vs_debit_notes', []);
-      const map  = new Map<string, AgeingRow>();
+      const sis = load<SalesInvoice[]>('vs_sales', []);
+      const dns = load<DebitNote[]>('vs_debit_notes', []);
+      const map = new Map<string, AgeingRow>();
       for (const si of sis) {
-        if (!map.has(si.customer))
-          map.set(si.customer, { party: si.customer, current: 0, days31: 0, days61: 0, days90: 0, total: 0, oldestDate: si.date });
-        const row    = map.get(si.customer)!;
-        // Outstanding = net total minus sales DNs raised
-        const dnAmt  = dns.filter(d => d.type === 'Sales' && d.relatedInvoiceId === si.id).reduce((s, d) => s + d.netTotal, 0);
+        if (!map.has(si.customer)) map.set(si.customer, { party: si.customer, current: 0, days31: 0, days61: 0, days90: 0, total: 0, oldestDate: si.date });
+        const row = map.get(si.customer)!;
+        const dnAmt = dns.filter(d => d.type === 'Sales' && d.relatedInvoiceId === si.id).reduce((s, d) => s + d.netTotal, 0);
         const outstanding = Math.max(0, si.netTotal - dnAmt);
         const age = daysDiff(si.date);
-        if (age <= 30)      row.current += outstanding;
-        else if (age <= 60) row.days31  += outstanding;
-        else if (age <= 90) row.days61  += outstanding;
-        else                row.days90  += outstanding;
+        if (age <= 30) row.current += outstanding;
+        else if (age <= 60) row.days31 += outstanding;
+        else if (age <= 90) row.days61 += outstanding;
+        else row.days90 += outstanding;
         row.total += outstanding;
         if (si.date < row.oldestDate) row.oldestDate = si.date;
       }
       return Array.from(map.values()).filter(r => r.total > 0).sort((a, b) => b.total - a.total);
     } else {
-      const pis  = load<PurchaseInvoice[]>('vs_purchases', []);
-      const dns  = load<DebitNote[]>('vs_debit_notes', []);
-      const map  = new Map<string, AgeingRow>();
+      const pis = load<PurchaseInvoice[]>('vs_purchases', []);
+      const dns = load<DebitNote[]>('vs_debit_notes', []);
+      const map = new Map<string, AgeingRow>();
       for (const pi of pis) {
-        if (!map.has(pi.vendorName))
-          map.set(pi.vendorName, { party: pi.vendorName, current: 0, days31: 0, days61: 0, days90: 0, total: 0, oldestDate: pi.date });
-        const row    = map.get(pi.vendorName)!;
-        const dnAmt  = dns.filter(d => d.type === 'Purchase' && d.relatedInvoiceId === pi.id).reduce((s, d) => s + d.netTotal, 0);
+        if (!map.has(pi.vendorName)) map.set(pi.vendorName, { party: pi.vendorName, current: 0, days31: 0, days61: 0, days90: 0, total: 0, oldestDate: pi.date });
+        const row = map.get(pi.vendorName)!;
+        const dnAmt = dns.filter(d => d.type === 'Purchase' && d.relatedInvoiceId === pi.id).reduce((s, d) => s + d.netTotal, 0);
         const outstanding = Math.max(0, pi.netTotal - dnAmt);
         const age = daysDiff(pi.date);
-        if (age <= 30)      row.current += outstanding;
-        else if (age <= 60) row.days31  += outstanding;
-        else if (age <= 90) row.days61  += outstanding;
-        else                row.days90  += outstanding;
+        if (age <= 30) row.current += outstanding;
+        else if (age <= 60) row.days31 += outstanding;
+        else if (age <= 90) row.days61 += outstanding;
+        else row.days90 += outstanding;
         row.total += outstanding;
         if (pi.date < row.oldestDate) row.oldestDate = pi.date;
       }
@@ -576,23 +688,20 @@ export function useAccounting() {
 
   // ── Margin Report ─────────────────────────────────────────────
   const getMarginReport = useCallback((): MarginRow[] => {
-    const sis  = load<SalesInvoice[]>('vs_sales', []);
-    const pis  = load<PurchaseInvoice[]>('vs_purchases', []);
-    const dns  = load<DebitNote[]>('vs_debit_notes', []);
+    const sis = load<SalesInvoice[]>('vs_sales', []);
+    const pis = load<PurchaseInvoice[]>('vs_purchases', []);
+    const dns = load<DebitNote[]>('vs_debit_notes', []);
     return sis.map(si => {
-      // Sales DNs raised against this SI
-      const salesDNs     = dns.filter(d => d.type === 'Sales'    && d.relatedInvoiceId === si.id);
-      const saleDnAmt    = salesDNs.reduce((s, d) => s + d.subtotal, 0);
-      const netRevenue   = si.subtotal - saleDnAmt;
-      // Linked Purchase Invoice
-      const linkedPI     = pis.find(p => p.id === si.linkedPurchaseInvoiceId || p.linkedSalesInvoiceId === si.id);
+      const salesDNs    = dns.filter(d => d.type === 'Sales' && d.relatedInvoiceId === si.id);
+      const saleDnAmt   = salesDNs.reduce((s, d) => s + d.subtotal, 0);
+      const netRevenue  = si.subtotal - saleDnAmt;
+      const linkedPI    = pis.find(p => p.id === si.linkedPurchaseInvoiceId || p.linkedSalesInvoiceId === si.id);
       const purchaseCost = linkedPI ? linkedPI.subtotal : 0;
-      // Purchase DNs for the linked PI
-      const purchDNs     = linkedPI ? dns.filter(d => d.type === 'Purchase' && d.relatedInvoiceId === linkedPI.id) : [];
-      const purchDnAmt   = purchDNs.reduce((s, d) => s + d.subtotal, 0);
-      const netCost      = purchaseCost - purchDnAmt;
-      const grossMargin  = netRevenue - netCost;
-      const marginPct    = si.subtotal > 0 ? (grossMargin / si.subtotal) * 100 : 0;
+      const purchDNs    = linkedPI ? dns.filter(d => d.type === 'Purchase' && d.relatedInvoiceId === linkedPI.id) : [];
+      const purchDnAmt  = purchDNs.reduce((s, d) => s + d.subtotal, 0);
+      const netCost     = purchaseCost - purchDnAmt;
+      const grossMargin = netRevenue - netCost;
+      const marginPct   = si.subtotal > 0 ? (grossMargin / si.subtotal) * 100 : 0;
       return {
         salesInvoiceId: si.id, invoiceNo: si.invoiceNo, date: si.date, customer: si.customer,
         saleSubtotal: si.subtotal, saleDnDeducted: saleDnAmt, netRevenue,
@@ -602,6 +711,164 @@ export function useAccounting() {
       };
     }).sort((a, b) => b.date.localeCompare(a.date));
   }, []);
+
+  // ── Balance Sheet ─────────────────────────────────────────────
+  const getBalanceSheet = useCallback((asOf?: string): BalanceSheet => {
+    const gl = getGeneralLedger();
+    const today = asOf ?? new Date().toISOString().split('T')[0];
+
+    // Helper: get net balance for GL account (positive = Dr, negative = Cr)
+    const glMap = new Map(gl.map(a => [a.account, a]));
+
+    // Build P&L to get net profit
+    const pl = _computePL(gl);
+
+    const buildSection = (type: AccountType, group: AccountGroup): BSSection => {
+      const coaAccounts = load<any[]>('vs_coa', DEFAULT_COA).map(a => migrateCOA([a])[0]);
+      const rows: BSRow[] = coaAccounts
+        .filter(a => a.type === type && a.group === group)
+        .map(a => {
+          const g = glMap.get(a.name);
+          // For assets: Dr balance is positive; for liabilities/equity: Cr balance is positive
+          const raw = g ? g.balance : 0;
+          // Assets: balance > 0 means Dr (good); Liability/Equity: balance < 0 means Cr (good)
+          const display = type === 'Asset' ? raw : -raw;
+          return { code: a.code, name: a.name, group: a.group, balance: display };
+        })
+        .filter(r => r.balance !== 0);
+      const subtotal = rows.reduce((s, r) => s + r.balance, 0);
+      return { group, rows, subtotal };
+    };
+
+    const assetGroups: AccountGroup[]     = ['Current Assets', 'Fixed Assets', 'Other Assets'];
+    const liabilityGroups: AccountGroup[] = ['Current Liabilities', 'Long-term Liabilities'];
+    const equityGroups: AccountGroup[]    = ['Capital & Reserves'];
+
+    const assetSections     = assetGroups.map(g => buildSection('Asset', g)).filter(s => s.rows.length > 0 || true);
+    const liabilitySections = liabilityGroups.map(g => buildSection('Liability', g)).filter(s => s.rows.length > 0 || true);
+    const equitySections    = equityGroups.map(g => buildSection('Equity', g)).filter(s => s.rows.length > 0 || true);
+
+    const totalAssets      = assetSections.reduce((s, sec) => s + sec.subtotal, 0);
+    const totalLiabilities = liabilitySections.reduce((s, sec) => s + sec.subtotal, 0);
+    const totalEquity      = equitySections.reduce((s, sec) => s + sec.subtotal, 0);
+    const netProfit        = pl.netProfit;
+    const totalLiabilitiesEquity = totalLiabilities + totalEquity + netProfit;
+
+    return {
+      assetSections, totalAssets,
+      liabilitySections, totalLiabilities,
+      equitySections, netProfit, totalEquity, totalLiabilitiesEquity,
+      balanced: Math.abs(totalAssets - totalLiabilitiesEquity) < 1,
+      asOf: today,
+    };
+  }, [getGeneralLedger]);
+
+  // ── P&L helper (used internally + exported) ───────────────────
+  function _computePL(gl: GLAccount[]): ProfitAndLoss {
+    const today = new Date().toISOString().split('T')[0];
+    // For Income accounts: Cr balance (negative in our sign convention) = income earned
+    // For Expense accounts: Dr balance (positive in our sign convention) = expense incurred
+    const getAmount = (a: GLAccount): number => {
+      if (a.accountType === 'Income')  return -a.balance; // Cr normal → positive income
+      if (a.accountType === 'Expense') return  a.balance; // Dr normal → positive expense
+      return 0;
+    };
+
+    const revenue   = gl.filter(a => a.accountType === 'Income' && a.accountGroup === 'Revenue')
+                        .map(a => ({ code: a.accountCode, name: a.account, group: a.accountGroup as AccountGroup, amount: getAmount(a) }));
+    const totalRevenue = revenue.reduce((s, r) => s + r.amount, 0);
+
+    const cogs      = gl.filter(a => a.accountType === 'Expense' && a.accountGroup === 'Cost of Goods Sold')
+                        .map(a => ({ code: a.accountCode, name: a.account, group: a.accountGroup as AccountGroup, amount: getAmount(a) }));
+    const totalCOGS = cogs.reduce((s, r) => s + r.amount, 0);
+    const grossProfit = totalRevenue - totalCOGS;
+    const grossMarginPct = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+
+    const opEx      = gl.filter(a => a.accountType === 'Expense' && a.accountGroup === 'Operating Expenses')
+                        .map(a => ({ code: a.accountCode, name: a.account, group: a.accountGroup as AccountGroup, amount: getAmount(a) }));
+    const totalOpEx = opEx.reduce((s, r) => s + r.amount, 0);
+    const ebitda    = grossProfit - totalOpEx;
+
+    const otherIncome = gl.filter(a => a.accountType === 'Income' && a.accountGroup === 'Other Income')
+                          .map(a => ({ code: a.accountCode, name: a.account, group: a.accountGroup as AccountGroup, amount: getAmount(a) }));
+    const totalOtherIncome = otherIncome.reduce((s, r) => s + r.amount, 0);
+
+    const financeAndDepr = gl.filter(a => a.accountType === 'Expense' && (a.accountGroup === 'Finance Costs' || a.accountGroup === 'Depreciation'))
+                             .map(a => ({ code: a.accountCode, name: a.account, group: a.accountGroup as AccountGroup, amount: getAmount(a) }));
+    const totalFinanceDepr = financeAndDepr.reduce((s, r) => s + r.amount, 0);
+
+    const netProfit = ebitda + totalOtherIncome - totalFinanceDepr;
+    const netMarginPct = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+    return {
+      revenue, totalRevenue, cogs, totalCOGS, grossProfit, grossMarginPct,
+      opEx, totalOpEx, ebitda, otherIncome, totalOtherIncome,
+      financeAndDepr, totalFinanceDepr, netProfit, netMarginPct,
+      fromDate: '—', toDate: today,
+    };
+  }
+
+  const getProfitAndLoss = useCallback((fromDate?: string, toDate?: string): ProfitAndLoss => {
+    const gl = getGeneralLedger();
+    // TODO: date-filtered JEs for period P&L (currently all-time)
+    const pl = _computePL(gl);
+    return { ...pl, fromDate: fromDate ?? '(All dates)', toDate: toDate ?? new Date().toISOString().split('T')[0] };
+  }, [getGeneralLedger]);
+
+  // ── Cash Flow (indirect method) ───────────────────────────────
+  const getCashFlow = useCallback((): CashFlow => {
+    const gl     = getGeneralLedger();
+    const pl     = _computePL(gl);
+    const glMap  = new Map(gl.map(a => [a.account, a]));
+
+    const glBal = (name: string) => glMap.get(name)?.balance ?? 0;
+
+    // Operating Activities
+    const netProfit = pl.netProfit;
+    const deprAmt   = gl.filter(a => a.accountGroup === 'Depreciation').reduce((s, a) => s + a.balance, 0);
+    const arChange  = -(glBal('Accounts Receivable'));  // increase in AR = cash outflow
+    const apChange  =  glBal('Accounts Payable');       // increase in AP = cash inflow (we haven't paid yet) — but AP Cr = negative in our balance
+    const invChange = -(glBal('Inventory / Stock'));
+
+    const operating: CashFlowSection = {
+      label: 'Operating Activities',
+      items: [
+        { label: 'Net Profit / (Loss)',           amount: netProfit },
+        { label: 'Add: Depreciation',             amount: deprAmt   },
+        { label: 'Decrease / (Increase) in Trade Receivables', amount: arChange },
+        { label: 'Increase / (Decrease) in Trade Payables',    amount: -apChange },
+        { label: 'Decrease / (Increase) in Inventory',         amount: invChange },
+      ].filter(i => i.amount !== 0),
+      total: 0,
+    };
+    operating.total = operating.items.reduce((s, i) => s + i.amount, 0);
+
+    // Investing Activities (Fixed Asset changes)
+    const fixedAssets = gl.filter(a => a.accountGroup === 'Fixed Assets' && a.account !== 'Accum. Depreciation');
+    const investing: CashFlowSection = {
+      label: 'Investing Activities',
+      items: fixedAssets.map(a => ({ label: `Purchase of ${a.account}`, amount: -a.balance })).filter(i => i.amount !== 0),
+      total: 0,
+    };
+    investing.total = investing.items.reduce((s, i) => s + i.amount, 0);
+
+    // Financing Activities (Loans + Capital + Drawings)
+    const financing: CashFlowSection = {
+      label: 'Financing Activities',
+      items: [
+        ...gl.filter(a => a.accountGroup === 'Long-term Liabilities').map(a => ({ label: `Proceeds from ${a.account}`, amount: -a.balance })),
+        ...gl.filter(a => a.accountGroup === 'Capital & Reserves').map(a => ({ label: a.account, amount: -a.balance })),
+      ].filter(i => i.amount !== 0),
+      total: 0,
+    };
+    financing.total = financing.items.reduce((s, i) => s + i.amount, 0);
+
+    const cashBal    = (glBal('Cash in Hand') + glBal('Bank Account'));
+    const netChange  = operating.total + investing.total + financing.total;
+    const openingCash = cashBal - netChange;
+
+    return { operating, investing, financing, netChange, openingCash, closingCash: cashBal };
+  }, [getGeneralLedger]);
 
   // ── Auto-number helpers ───────────────────────────────────────
   const nextSalesInvoiceNo = useCallback((): string => {
@@ -630,19 +897,19 @@ export function useAccounting() {
     // Data
     coa, salesInvoices, purchaseInvoices, debitNotes, journalEntries,
     // COA
-    saveCoa, addAccount, updateAccount, deleteAccount,
+    saveCoa, addAccount, updateAccount, deleteAccount, resetCOA,
     // Transactions
     postSalesInvoice, deleteSalesInvoice,
     postPurchaseInvoice, deletePurchaseInvoice,
     postDebitNote, postDebitNotePair,
-    postPurchaseInvoiceJE,  // backward compat
+    postPurchaseInvoiceJE,
     linkSalesToPurchase,
     // Reports
     getGeneralLedger, getAccountLedger, getTrialBalance,
     getPartyLedger, getAgeing, getMarginReport,
+    getBalanceSheet, getProfitAndLoss, getCashFlow,
     // Helpers
     nextSalesInvoiceNo, nextPurchaseInvoiceNo, nextDnNo,
-    // Constants
     DEFAULT_COA,
   };
 }

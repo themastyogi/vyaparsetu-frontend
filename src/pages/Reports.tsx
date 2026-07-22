@@ -1,19 +1,24 @@
 /**
- * Reports.tsx  v3
- * Uses only CSS variables → works in both light and dark theme.
- * Tabs: Trial Balance · General Ledger · Journals · Party Ledger · Ageing · Margin
+ * Reports.tsx  v4
+ * Tabs: Trial Balance · GL · Journals · Party Ledger · Ageing · Margin
+ *       Balance Sheet · P&L · Cash Flow
  */
 import { useState, useMemo } from 'react';
 import {
   BarChart3, BookOpen, List, Scale, ChevronDown, ChevronUp,
   AlertCircle, CheckCircle2, Users, Clock, TrendingUp, Search,
-  IndianRupee, Link2,
+  IndianRupee, Link2, Building2, FileBarChart2, Droplets,
 } from 'lucide-react';
-import { useAccounting, type JournalEntry } from '../hooks/useAccounting';
+import {
+  useAccounting, type JournalEntry,
+  type BSSection, type PLRow, type CashFlowSection,
+} from '../hooks/useAccounting';
 
 const f2 = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pct = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
 
-type Tab = 'trial-balance' | 'general-ledger' | 'journal-entries' | 'party-ledger' | 'ageing' | 'margin';
+type Tab = 'trial-balance' | 'general-ledger' | 'journal-entries' | 'party-ledger' | 'ageing' | 'margin'
+         | 'balance-sheet' | 'profit-loss' | 'cash-flow';
 
 // ── Shared inline-style helpers using CSS variables ───────────────
 const card: React.CSSProperties = {
@@ -100,9 +105,10 @@ export default function Reports() {
     getTrialBalance, getGeneralLedger, getAccountLedger,
     journalEntries, getPartyLedger, getAgeing, getMarginReport,
     salesInvoices, purchaseInvoices, debitNotes,
+    getBalanceSheet, getProfitAndLoss, getCashFlow,
   } = useAccounting();
 
-  const [tab, setTab]               = useState<Tab>('trial-balance');
+  const [tab, setTab]               = useState<Tab>('balance-sheet');
   const [glDrill, setGLDrill]       = useState<string | null>(null);
   const [expandedJE, setExpandedJE] = useState<string | null>(null);
   const [jeFilter, setJEFilter]     = useState('All');
@@ -120,6 +126,12 @@ export default function Reports() {
 
   // Margin
   const [mSearch, setMSearch]   = useState('');
+
+  // P&L date range
+  const [plFromDate, setPlFromDate] = useState('');
+  const [plToDate,   setPlToDate]   = useState(new Date().toISOString().split('T')[0]);
+  // Balance Sheet as-of
+  const [bsAsOf, setBsAsOf] = useState(new Date().toISOString().split('T')[0]);
 
   // ── Computed ─────────────────────────────────────────────────
   const tb  = useMemo(() => getTrialBalance(),  [getTrialBalance,  journalEntries]);
@@ -180,15 +192,87 @@ export default function Reports() {
     avgPct:  filtMargin.length ? filtMargin.reduce((s, r) => s + r.marginPct, 0) / filtMargin.length : 0,
   }), [filtMargin]);
 
+  // Financial Statements
+  const bs = useMemo(() => getBalanceSheet(bsAsOf), [getBalanceSheet, bsAsOf, journalEntries]);
+  const pl = useMemo(() => getProfitAndLoss(plFromDate || undefined, plToDate || undefined), [getProfitAndLoss, plFromDate, plToDate, journalEntries]);
+  const cf = useMemo(() => getCashFlow(), [getCashFlow, journalEntries]);
+
   // ── Tab definitions ───────────────────────────────────────────
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'trial-balance',   label: 'Trial Balance',  icon: <Scale size={13}/> },
-    { id: 'general-ledger',  label: 'General Ledger', icon: <BookOpen size={13}/> },
-    { id: 'journal-entries', label: 'Journals',        icon: <List size={13}/> },
-    { id: 'party-ledger',    label: 'Party Ledger',   icon: <Users size={13}/> },
-    { id: 'ageing',          label: 'Ageing',          icon: <Clock size={13}/> },
-    { id: 'margin',          label: 'Margin',          icon: <TrendingUp size={13}/> },
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; group?: string }[] = [
+    // Financial Statements
+    { id: 'balance-sheet',   label: 'Balance Sheet',   icon: <Building2 size={13}/>,     group: 'Statements' },
+    { id: 'profit-loss',     label: 'P & L',           icon: <FileBarChart2 size={13}/>,  group: 'Statements' },
+    { id: 'cash-flow',       label: 'Cash Flow',       icon: <Droplets size={13}/>,       group: 'Statements' },
+    // Books
+    { id: 'trial-balance',   label: 'Trial Balance',   icon: <Scale size={13}/>,          group: 'Books' },
+    { id: 'general-ledger',  label: 'General Ledger',  icon: <BookOpen size={13}/>,       group: 'Books' },
+    { id: 'journal-entries', label: 'Journals',         icon: <List size={13}/>,           group: 'Books' },
+    // Analysis
+    { id: 'party-ledger',    label: 'Party Ledger',    icon: <Users size={13}/>,          group: 'Analysis' },
+    { id: 'ageing',          label: 'Ageing',           icon: <Clock size={13}/>,          group: 'Analysis' },
+    { id: 'margin',          label: 'Margin',           icon: <TrendingUp size={13}/>,     group: 'Analysis' },
   ];
+
+  // Reusable BS section renderer
+  const renderBSSection = (sec: BSSection, color: string) => (
+    sec.rows.length > 0 ? (
+      <div key={sec.group} style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '6px 0', borderBottom: '1px solid var(--border-subtle)', marginBottom: 6 }}>{sec.group}</div>
+        {sec.rows.map(r => (
+          <div key={r.code} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-subtle)', fontSize: 13 }}>
+            <span style={{ color: 'var(--text-secondary)' }}><span style={{ fontFamily:'monospace', fontSize:11, color:'var(--text-muted)', marginRight:8 }}>{r.code}</span>{r.name}</span>
+            <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)' }}>₹{f2(r.balance)}</span>
+          </div>
+        ))}
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', fontWeight: 800, fontSize: 13 }}>
+          <span style={{ color }}>Sub-total: {sec.group}</span>
+          <span style={{ fontFamily: 'monospace', color }}>₹{f2(sec.subtotal)}</span>
+        </div>
+      </div>
+    ) : null
+  );
+
+  // Reusable P&L section
+  const renderPLSection = (rows: PLRow[], color: string, title: string, total: number, isNegative = false) => (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '6px 0', borderBottom: '1px solid var(--border-subtle)', marginBottom: 6 }}>{title}</div>
+      {rows.length === 0
+        ? <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '4px 0' }}>No entries</div>
+        : rows.map(r => (
+          <div key={r.code} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-subtle)', fontSize: 13 }}>
+            <span style={{ color: 'var(--text-secondary)' }}><span style={{ fontFamily:'monospace', fontSize:11, color:'var(--text-muted)', marginRight:8 }}>{r.code}</span>{r.name}</span>
+            <span style={{ fontFamily: 'monospace', color: isNegative ? '#F87171' : 'var(--text-primary)' }}>{isNegative ? '(' : ''}₹{f2(r.amount)}{isNegative ? ')' : ''}</span>
+          </div>
+        ))
+      }
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', fontWeight: 800, fontSize: 13 }}>
+        <span style={{ color }}>Total {title}</span>
+        <span style={{ fontFamily: 'monospace', color }}>₹{f2(total)}</span>
+      </div>
+    </div>
+  );
+
+  // Cash flow section renderer
+  const renderCFSection = (sec: CashFlowSection, color: string) => (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '8px 0', borderBottom: `2px solid ${color}44`, marginBottom: 8 }}>{sec.label}</div>
+      {sec.items.length === 0
+        ? <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '4px 0' }}>No activity</div>
+        : sec.items.map((item, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border-subtle)', fontSize: 13 }}>
+            <span style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
+            <span style={{ fontFamily: 'monospace', fontWeight: 600, color: item.amount >= 0 ? '#10B981' : '#F87171' }}>
+              {item.amount >= 0 ? '' : '('}{item.amount < 0 ? '' : ''}₹{f2(Math.abs(item.amount))}{item.amount < 0 ? ')' : ''}
+            </span>
+          </div>
+        ))
+      }
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontWeight: 800, fontSize: 14, borderTop: '1px solid var(--border-default)', marginTop: 4 }}>
+        <span style={{ color }}>Net {sec.label}</span>
+        <span style={{ fontFamily: 'monospace', color: sec.total >= 0 ? color : '#F87171' }}>₹{f2(Math.abs(sec.total))} {sec.total < 0 ? 'outflow' : 'inflow'}</span>
+      </div>
+    </div>
+  );
 
   return (
     <div className="page-root animate-fade-in">
@@ -198,28 +282,38 @@ export default function Reports() {
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <BarChart3 size={20} style={{ color: 'var(--brand-primary)' }}/> Financial Reports
           </h1>
-          <p className="page-sub">Trial Balance · GL · Party Ledger · Ageing · Margin — live from transactions</p>
+          <p className="page-sub">Balance Sheet · P&amp;L · Cash Flow · GL · Party Ledger · Ageing · Margin</p>
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--border-subtle)', marginBottom: 20, overflowX: 'auto' }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => { setTab(t.id); setGLDrill(null); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '10px 16px', border: 'none', cursor: 'pointer', fontSize: 13,
-              fontWeight: tab === t.id ? 700 : 500, whiteSpace: 'nowrap',
-              borderBottom: `2px solid ${tab === t.id ? 'var(--brand-primary)' : 'transparent'}`,
-              marginBottom: -1,
-              color: tab === t.id ? 'var(--brand-primary)' : 'var(--text-muted)',
-              background: tab === t.id ? 'var(--bg-elevated)' : 'transparent',
-              borderRadius: '6px 6px 0 0',
-              transition: 'all 0.15s',
-            }}>
-            {t.icon}{t.label}
-          </button>
-        ))}
+      {/* Tab bar — grouped */}
+      <div style={{ marginBottom: 20, borderBottom: '1px solid var(--border-subtle)' }}>
+        {/* Group labels */}
+        {(['Statements', 'Books', 'Analysis'] as const).map(group => {
+          const groupTabs = tabs.filter(t => t.group === group);
+          return (
+            <div key={group} style={{ display: 'inline-flex', flexDirection: 'column', marginRight: 2 }}>
+              <div style={{ display: 'flex' }}>
+                {groupTabs.map(t => (
+                  <button key={t.id} onClick={() => { setTab(t.id); setGLDrill(null); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '9px 14px', border: 'none', cursor: 'pointer', fontSize: 12,
+                      fontWeight: tab === t.id ? 700 : 500, whiteSpace: 'nowrap',
+                      borderBottom: `2.5px solid ${tab === t.id ? 'var(--brand-primary)' : 'transparent'}`,
+                      marginBottom: -1,
+                      color: tab === t.id ? 'var(--brand-primary)' : 'var(--text-muted)',
+                      background: tab === t.id ? 'var(--bg-elevated)' : 'transparent',
+                      borderRadius: '6px 6px 0 0',
+                      transition: 'all 0.15s',
+                    }}>
+                    {t.icon}{t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* ══════════════════════════════════════════════════
@@ -771,6 +865,191 @@ export default function Reports() {
           </div>
         </div>
       )}
+      {/* ══════════════════════════════════════════════════
+          BALANCE SHEET
+          ══════════════════════════════════════════════════ */}
+      {tab === 'balance-sheet' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Controls */}
+          <div style={card}>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+              <div>
+                <label style={lbl}>As of Date</label>
+                <input type="date" value={bsAsOf} onChange={e => setBsAsOf(e.target.value)} style={inp}/>
+              </div>
+              <span style={{
+                padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                background: bs.balanced ? 'rgba(16,185,129,0.14)' : 'rgba(239,68,68,0.14)',
+                color: bs.balanced ? '#10B981' : '#F87171', display: 'flex', alignItems: 'center', gap: 5,
+              }}>
+                {bs.balanced ? <><CheckCircle2 size={13}/> Balanced</> : <><AlertCircle size={13}/> Out of Balance</>}
+              </span>
+            </div>
+          </div>
+
+          {/* Two-column layout */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+            {/* ASSETS */}
+            <div style={card}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#60A5FA', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                <span>ASSETS</span>
+                <span style={{ fontFamily: 'monospace', color: '#60A5FA' }}>₹{f2(bs.totalAssets)}</span>
+              </div>
+              {bs.assetSections.map(sec => renderBSSection(sec, '#60A5FA'))}
+              {bs.assetSections.every(s => s.rows.length === 0) && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>No asset balances yet</div>}
+              <div style={{ borderTop: '2px solid #60A5FA44', paddingTop: 10, marginTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 15 }}>
+                <span style={{ color: '#60A5FA' }}>TOTAL ASSETS</span>
+                <span style={{ fontFamily: 'monospace', color: '#60A5FA' }}>₹{f2(bs.totalAssets)}</span>
+              </div>
+            </div>
+
+            {/* LIABILITIES + EQUITY */}
+            <div style={card}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#F87171', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                <span>LIABILITIES</span>
+                <span style={{ fontFamily: 'monospace', color: '#F87171' }}>₹{f2(bs.totalLiabilities)}</span>
+              </div>
+              {bs.liabilitySections.map(sec => renderBSSection(sec, '#F87171'))}
+              {bs.liabilitySections.every(s => s.rows.length === 0) && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>No liability balances yet</div>}
+
+              <div style={{ borderTop: '2px solid var(--border-default)', marginTop: 8, paddingTop: 14, marginBottom: 14 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#C084FC', marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
+                  <span>EQUITY</span>
+                  <span style={{ fontFamily: 'monospace', color: '#C084FC' }}>₹{f2(bs.totalEquity + bs.netProfit)}</span>
+                </div>
+                {bs.equitySections.map(sec => renderBSSection(sec, '#C084FC'))}
+                {/* Net Profit */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-subtle)', fontSize: 13 }}>
+                  <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Net Profit / (Loss) — current year</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: bs.netProfit >= 0 ? '#10B981' : '#F87171' }}>₹{f2(bs.netProfit)}</span>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '2px solid #C084FC44', paddingTop: 10, display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 15 }}>
+                <span style={{ color: '#C084FC' }}>TOTAL L + E</span>
+                <span style={{ fontFamily: 'monospace', color: '#C084FC' }}>₹{f2(bs.totalLiabilitiesEquity)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+          PROFIT & LOSS
+          ══════════════════════════════════════════════════ */}
+      {tab === 'profit-loss' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Date range */}
+          <div style={card}>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div>
+                <label style={lbl}>From Date</label>
+                <input type="date" value={plFromDate} onChange={e => setPlFromDate(e.target.value)} style={inp}/>
+              </div>
+              <div>
+                <label style={lbl}>To Date</label>
+                <input type="date" value={plToDate} onChange={e => setPlToDate(e.target.value)} style={inp}/>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', alignSelf: 'center', paddingBottom: 2 }}>Leave From Date blank for all-time P&amp;L</div>
+            </div>
+          </div>
+
+          {/* KPI strip */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+            {([
+              { label: 'Revenue',       val: pl.totalRevenue,  color: '#60A5FA', bg: 'rgba(59,130,246,0.12)'  },
+              { label: 'Gross Profit',  val: pl.grossProfit,   color: '#34D399', bg: 'rgba(16,185,129,0.12)'  },
+              { label: 'EBITDA',        val: pl.ebitda,        color: '#FBBF24', bg: 'rgba(245,158,11,0.12)'  },
+              { label: 'Net Profit',    val: pl.netProfit,     color: pl.netProfit >= 0 ? '#10B981' : '#F87171', bg: pl.netProfit >= 0 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)' },
+            ] as { label: string; val: number; color: string; bg: string }[]).map(b => (
+              <div key={b.label} style={{ background: b.bg, border: `1.5px solid ${b.color}44`, borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: b.color, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{b.label}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, fontFamily: 'monospace', color: b.color, display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <IndianRupee size={13}/>{f2(Math.abs(b.val))}
+                </div>
+                {b.label === 'Gross Profit' && <div style={{ fontSize: 11, color: b.color, marginTop: 4 }}>{pct(pl.grossMarginPct)} margin</div>}
+                {b.label === 'Net Profit'   && <div style={{ fontSize: 11, color: b.color, marginTop: 4 }}>{pct(pl.netMarginPct)} margin</div>}
+              </div>
+            ))}
+          </div>
+
+          {/* P&L Statement */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+            {/* Revenue side */}
+            <div style={card}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#60A5FA', marginBottom: 14 }}>INCOME</div>
+              {renderPLSection(pl.revenue, '#60A5FA', 'Revenue', pl.totalRevenue)}
+              {renderPLSection(pl.otherIncome, '#34D399', 'Other Income', pl.totalOtherIncome)}
+              <div style={{ borderTop: '2px solid var(--border-default)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 14 }}>
+                <span style={{ color: '#60A5FA' }}>TOTAL INCOME</span>
+                <span style={{ fontFamily: 'monospace', color: '#60A5FA' }}>₹{f2(pl.totalRevenue + pl.totalOtherIncome)}</span>
+              </div>
+            </div>
+
+            {/* Expense side */}
+            <div style={card}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#F87171', marginBottom: 14 }}>EXPENDITURE</div>
+              {renderPLSection(pl.cogs, '#FB923C', 'Cost of Goods Sold', pl.totalCOGS, true)}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontWeight: 800, fontSize: 14, borderTop: '1px solid var(--border-default)', borderBottom: '2px solid var(--border-default)', marginBottom: 12 }}>
+                <span style={{ color: '#34D399' }}>Gross Profit</span>
+                <span style={{ fontFamily: 'monospace', color: pl.grossProfit >= 0 ? '#34D399' : '#F87171' }}>₹{f2(Math.abs(pl.grossProfit))}</span>
+              </div>
+
+              {renderPLSection(pl.opEx, '#FB923C', 'Operating Expenses', pl.totalOpEx, true)}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontWeight: 800, fontSize: 13, borderTop: '1px solid var(--border-default)', borderBottom: '2px solid var(--border-default)', marginBottom: 12 }}>
+                <span style={{ color: '#FBBF24' }}>EBITDA</span>
+                <span style={{ fontFamily: 'monospace', color: pl.ebitda >= 0 ? '#FBBF24' : '#F87171' }}>₹{f2(Math.abs(pl.ebitda))}</span>
+              </div>
+
+              {renderPLSection(pl.financeAndDepr, '#94A3B8', 'Finance & Depreciation', pl.totalFinanceDepr, true)}
+
+              <div style={{ borderTop: '2px solid var(--border-default)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 14 }}>
+                <span style={{ color: pl.netProfit >= 0 ? '#10B981' : '#F87171' }}>NET PROFIT / (LOSS)</span>
+                <span style={{ fontFamily: 'monospace', color: pl.netProfit >= 0 ? '#10B981' : '#F87171' }}>₹{f2(Math.abs(pl.netProfit))}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+          CASH FLOW
+          ══════════════════════════════════════════════════ */}
+      {tab === 'cash-flow' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Summary strip */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+            {([
+              { label: 'Opening Cash',    val: cf.openingCash,  color: '#94A3B8', bg: 'var(--bg-elevated)' },
+              { label: 'Operating',       val: cf.operating.total, color: cf.operating.total >= 0 ? '#10B981' : '#F87171', bg: cf.operating.total >= 0 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)' },
+              { label: 'Net Change',      val: cf.netChange,    color: cf.netChange >= 0 ? '#34D399' : '#F87171', bg: cf.netChange >= 0 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)' },
+              { label: 'Closing Cash',    val: cf.closingCash,  color: '#60A5FA', bg: 'rgba(59,130,246,0.12)' },
+            ] as { label: string; val: number; color: string; bg: string }[]).map(b => (
+              <div key={b.label} style={{ background: b.bg, border: `1.5px solid ${b.color}44`, borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: b.color, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{b.label}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, fontFamily: 'monospace', color: b.color, display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <IndianRupee size={13}/>{f2(Math.abs(b.val))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Three sections */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, alignItems: 'start' }}>
+            <div style={card}>{renderCFSection(cf.operating, '#10B981')}</div>
+            <div style={card}>{renderCFSection(cf.investing, '#FBBF24')}</div>
+            <div style={card}>{renderCFSection(cf.financing, '#C084FC')}</div>
+          </div>
+
+          <div style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: 700, color: 'var(--text-secondary)' }}>Closing Cash &amp; Bank Balance</span>
+            <span style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: 20, color: '#60A5FA' }}>₹{f2(cf.closingCash)}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
