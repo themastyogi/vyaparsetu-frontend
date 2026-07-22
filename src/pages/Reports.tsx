@@ -3,7 +3,7 @@
  * Uses only CSS variables → works in both light and dark theme.
  * Tabs: Trial Balance · General Ledger · Journals · Party Ledger · Ageing · Margin
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import {
   BarChart3, BookOpen, List, Scale, ChevronDown, ChevronUp,
   AlertCircle, CheckCircle2, Users, Clock, TrendingUp, Search,
@@ -35,12 +35,6 @@ const inp: React.CSSProperties = {
 const lbl: React.CSSProperties = {
   fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', display: 'block',
   marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em',
-};
-const th: React.CSSProperties = {
-  padding: '9px 12px', fontSize: 11, fontWeight: 700,
-  color: 'var(--text-muted)', background: 'var(--bg-elevated)',
-  borderBottom: '1px solid var(--border-subtle)', whiteSpace: 'nowrap',
-  textAlign: 'left',
 };
 const td: React.CSSProperties = {
   padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)',
