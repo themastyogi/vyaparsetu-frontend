@@ -487,22 +487,44 @@ export function useAccounting() {
   }, [getGeneralLedger]);
 
   // ── Party Ledger ──────────────────────────────────────────────
+  // Builds a running ledger from actual invoices/DNs for the named party.
+  // For customers: Sales Invoice → Debit (they owe us), Sales DN → Credit (reduces balance)
+  // For vendors:  Purchase Invoice → Credit (we owe them), Purchase DN → Debit (reduces balance)
   const getPartyLedger = useCallback((partyName: string, fromDate?: string, toDate?: string): PartyLedgerRow[] => {
-    const currentJEs = load<JournalEntry[]>('vs_journal', []);
-    const rows: PartyLedgerRow[] = [];
+    const sis  = load<SalesInvoice[]>('vs_sales', []);
+    const pis  = load<PurchaseInvoice[]>('vs_purchases', []);
+    const dns  = load<DebitNote[]>('vs_debit_notes', []);
+    const name = partyName.toLowerCase();
+
+    type RawEntry = { date: string; entryType: string; refNo: string; debit: number; credit: number; jeId: string };
+    const entries: RawEntry[] = [];
+
+    // Sales invoices for this customer
+    sis.filter(si => si.customer.toLowerCase() === name).forEach(si =>
+      entries.push({ date: si.date, entryType: 'Sales Invoice', refNo: si.invoiceNo, debit: si.netTotal, credit: 0, jeId: si.id })
+    );
+    // Debit notes for this party
+    dns.filter(dn => dn.party.toLowerCase() === name).forEach(dn => {
+      if (dn.type === 'Sales')
+        entries.push({ date: dn.date, entryType: 'Sales Debit Note', refNo: dn.dnNo, debit: 0, credit: dn.netTotal, jeId: dn.id });
+      else
+        entries.push({ date: dn.date, entryType: 'Purchase Debit Note', refNo: dn.dnNo, debit: dn.netTotal, credit: 0, jeId: dn.id });
+    });
+    // Purchase invoices for this vendor
+    pis.filter(pi => pi.vendorName.toLowerCase() === name).forEach(pi =>
+      entries.push({ date: pi.date, entryType: 'Purchase Invoice', refNo: pi.invoiceNo, debit: 0, credit: pi.netTotal, jeId: pi.id })
+    );
+
+    // Filter by date range and sort
+    const sorted = entries
+      .filter(e => (!fromDate || e.date >= fromDate) && (!toDate || e.date <= toDate))
+      .sort((a, b) => a.date.localeCompare(b.date) || a.refNo.localeCompare(b.refNo));
+
     let running = 0;
-    const sorted = [...currentJEs]
-      .filter(je => je.party.toLowerCase() === partyName.toLowerCase())
-      .filter(je => (!fromDate || je.date >= fromDate) && (!toDate || je.date <= toDate))
-      .sort((a, b) => a.date.localeCompare(b.date));
-    for (const je of sorted) {
-      // Net debit / credit for this party in this JE
-      let debit = 0, credit = 0;
-      for (const line of je.lines) { debit += line.debit; credit += line.credit; }
-      running += debit - credit;
-      rows.push({ date: je.date, entryType: je.entryType, refNo: je.relatedNo, debit, credit, runningBalance: running, jeId: je.id });
-    }
-    return rows;
+    return sorted.map(e => {
+      running += e.debit - e.credit;
+      return { ...e, runningBalance: running };
+    });
   }, []);
 
   // ── Ageing Report ─────────────────────────────────────────────
