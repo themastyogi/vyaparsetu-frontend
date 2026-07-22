@@ -161,7 +161,7 @@ type Step = 'sales-dn' | 'vendor-prompt' | 'purchase-dn' | 'done';
 interface Props { salesInvoice: SalesInvoice; onClose: () => void; }
 
 export default function DebitNoteSlider({ salesInvoice, onClose }: Props) {
-  const { postDebitNotePair, nextDnNo } = useAccounting();
+  const { postDebitNotePair, nextDnNo, purchaseInvoices } = useAccounting();
   const { vendors, getPartyByName } = useMaster();
 
   const [step, setStep] = useState<Step>('sales-dn');
@@ -180,7 +180,8 @@ export default function DebitNoteSlider({ salesInvoice, onClose }: Props) {
   const [purchDate,    setPurchDate]    = useState(new Date().toISOString().split('T')[0]);
   const [purchVendor,  setPurchVendor]  = useState('');
   const [purchGstin,   setPurchGstin]   = useState('');
-  const [purchInvNo,   setPurchInvNo]   = useState('');
+  const [purchInvNo,   setPurchInvNo]   = useState('');   // display text in typeahead
+  const [purchLinkedPI, setPurchLinkedPI] = useState<string>(''); // id of selected PI
   const [purchRemarks, setPurchRemarks] = useState('');
   const [purchErrs,    setPurchErrs]    = useState<Record<string, string>>({});
   const [purchSubmit,  setPurchSubmit]  = useState(false);
@@ -247,7 +248,8 @@ export default function DebitNoteSlider({ salesInvoice, onClose }: Props) {
     };
     const purchDN = withVendor ? {
       type: 'Purchase' as const, dnNo: nextDnNo('Purchase'), date: purchDate,
-      relatedInvoiceId: purchInvNo || 'na', relatedInvoiceNo: purchInvNo || 'N/A',
+      relatedInvoiceId: purchLinkedPI || purchInvNo || 'na',
+      relatedInvoiceNo: purchInvNo || 'N/A',
       party: purchVendor, items: buildItems(purchItems),
       subtotal: pT.subtotal, totalGst: pT.gst, netTotal: pT.net,
       remarks: purchRemarks || `Purchase deduction linked to ${salesInvoice.invoiceNo}`,
@@ -548,11 +550,14 @@ export default function DebitNoteSlider({ salesInvoice, onClose }: Props) {
                 <div>
                   <label style={LBL}>Vendor Name * <span style={{ fontWeight: 400, color: '#2563eb' }}>← Parties</span></label>
                   <Typeahead value={purchVendor}
-                    onChange={v => setPurchVendor(v)}
+                    onChange={v => { setPurchVendor(v); setPurchLinkedPI(''); setPurchInvNo(''); }}
                     onSelect={name => {
                       const p = getPartyByName(name);
                       setPurchVendor(name);
                       setPurchGstin(p?.gstin ?? '');
+                      // Reset PI when vendor changes
+                      setPurchLinkedPI('');
+                      setPurchInvNo('');
                     }}
                     options={vendors.map(v => ({ label: v.name, sub: v.gstin }))}
                     placeholder="Search vendors…"
@@ -573,9 +578,44 @@ export default function DebitNoteSlider({ salesInvoice, onClose }: Props) {
                 </div>
               </div>
 
+              {/* ── Related Purchase Invoice — typeahead filtered by vendor ── */}
               <div>
-                <label style={LBL}>Related Purchase Invoice No.</label>
-                <input value={purchInvNo} onChange={e => setPurchInvNo(e.target.value)} placeholder="e.g. PI-2026-001" style={{ ...INP, fontFamily: 'monospace' }} />
+                <label style={LBL}>
+                  Related Purchase Invoice
+                  {purchVendor.trim() && (
+                    <span style={{ fontWeight: 400, color: '#2563eb', marginLeft: 6 }}>
+                      — showing {purchaseInvoices.filter(p => p.vendorName.toLowerCase() === purchVendor.toLowerCase()).length} for {purchVendor}
+                    </span>
+                  )}
+                </label>
+                <Typeahead
+                  value={purchInvNo}
+                  onChange={v => { setPurchInvNo(v); if (!v) setPurchLinkedPI(''); }}
+                  onSelect={invNo => {
+                    const pi = purchaseInvoices.find(p => p.invoiceNo === invNo);
+                    if (pi) {
+                      setPurchInvNo(pi.invoiceNo);
+                      setPurchLinkedPI(pi.id);
+                      // Auto-fill vendor if not yet set
+                      if (!purchVendor.trim()) {
+                        setPurchVendor(pi.vendorName);
+                        setPurchGstin(pi.vendorGstin ?? '');
+                      }
+                    }
+                  }}
+                  options={purchaseInvoices
+                    .filter(p => !purchVendor.trim() || p.vendorName.toLowerCase() === purchVendor.toLowerCase())
+                    .map(p => ({
+                      label: p.invoiceNo,
+                      sub: `${p.vendorName} · ₹${p.netTotal.toLocaleString('en-IN')} · ${p.date}`,
+                    }))}
+                  placeholder={purchVendor.trim() ? `Search ${purchVendor}'s invoices…` : 'Select vendor first or search all…'}
+                />
+                {purchLinkedPI && (
+                  <div style={{ fontSize: 11, color: '#16a34a', marginTop: 4, fontWeight: 600 }}>
+                    ✓ Linked to posted invoice
+                  </div>
+                )}
               </div>
 
               {purchSubmit && Object.keys(purchErrs).filter(k => k !== 'vendor').length > 0 && (
