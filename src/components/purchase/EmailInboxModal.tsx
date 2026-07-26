@@ -365,6 +365,14 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
                       <span>Date: <strong>{draft.date}</strong></span>
                       <span>From: <strong style={{ color: 'var(--brand-primary)' }}>{draft.senderEmail || companySettings.inboundEmail}</strong></span>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(59,130,246,0.12)', color: '#2563EB', fontWeight: 700 }}>
+                        CGST 9% (₹{f2(draft.gstTotal / 2)}) + SGST 9% (₹{f2(draft.gstTotal / 2)})
+                      </span>
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                        Payment Terms: Net 30 Days
+                      </span>
+                    </div>
                     {draft.attachedFileName && (
                       <div style={{ fontSize: 11, color: '#2563EB', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700 }}>
                         <FileText size={13}/> PDF Attachment: {draft.attachedFileName}
