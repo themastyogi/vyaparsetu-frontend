@@ -115,6 +115,33 @@ export interface CompanySettings {
   autoDraft: boolean;
 }
 
+export interface BankAccount {
+  id: string;
+  bankName: string;
+  accountNo: string;
+  ifsc: string;
+  branch: string;
+  accountType: 'Current' | 'Savings' | 'Overdraft' | 'Cash Credit';
+  openingBalance: number;
+  glAccountName: string;
+  active: boolean;
+}
+
+export interface BankReconciliationRecord {
+  id: string;
+  bankAccountId: string;
+  jeId: string;
+  date: string;
+  refNo: string;
+  entryType: string;
+  party: string;
+  debit: number;
+  credit: number;
+  isCleared: boolean;
+  clearedDate?: string;
+  notes?: string;
+}
+
 export interface DebitNoteItem {
   id: string;
   reason: string;
@@ -282,7 +309,8 @@ export interface CashFlow {
 export const DEFAULT_COA: Account[] = [
   // ── Current Assets ──────────────────────────────────────────
   { code: '1001', name: 'Cash in Hand',              type: 'Asset',     group: 'Current Assets' },
-  { code: '1002', name: 'Bank Account',              type: 'Asset',     group: 'Current Assets' },
+  { code: '1002', name: 'HDFC Bank - A/C 8234',       type: 'Asset',     group: 'Current Assets' },
+  { code: '1003', name: 'ICICI Bank - A/C 7411',      type: 'Asset',     group: 'Current Assets' },
   { code: '1010', name: 'Accounts Receivable',       type: 'Asset',     group: 'Current Assets' },
   { code: '1020', name: 'Advance to Suppliers',      type: 'Asset',     group: 'Current Assets' },
   { code: '1030', name: 'Inventory / Stock',         type: 'Asset',     group: 'Current Assets' },
@@ -534,6 +562,31 @@ const SEED_DRAFT_PURCHASES: PurchaseInvoice[] = [
   }
 ];
 
+const SEED_BANK_ACCOUNTS: BankAccount[] = [
+  {
+    id: 'ba-hdfc-1',
+    bankName: 'HDFC Bank',
+    accountNo: '50100234918234',
+    ifsc: 'HDFC0001234',
+    branch: 'Koramangala, Bangalore',
+    accountType: 'Current',
+    openingBalance: 250000,
+    glAccountName: 'HDFC Bank - A/C 8234',
+    active: true,
+  },
+  {
+    id: 'ba-icici-1',
+    bankName: 'ICICI Bank',
+    accountNo: '00110592837411',
+    ifsc: 'ICIC0000011',
+    branch: 'MG Road, Bangalore',
+    accountType: 'Current',
+    openingBalance: 120000,
+    glAccountName: 'ICICI Bank - A/C 7411',
+    active: true,
+  }
+];
+
 // ────────────────────────────────────────────────────────────────
 //  Hook
 // ────────────────────────────────────────────────────────────────
@@ -545,6 +598,14 @@ export function useAccounting() {
   });
 
   const [companySettings, setCompanySettingsState] = useState<CompanySettings>(() => load('vs_company_settings', DEFAULT_COMPANY_SETTINGS));
+  const [bankAccounts, setBankAccountsState]       = useState<BankAccount[]>(() => {
+    const stored = load<BankAccount[]>('vs_bank_accounts', []);
+    if (stored.length === 0) { save('vs_bank_accounts', SEED_BANK_ACCOUNTS); return SEED_BANK_ACCOUNTS; }
+    return stored;
+  });
+  const [reconciliationRecords, setReconciliationState] = useState<BankReconciliationRecord[]>(() =>
+    load<BankReconciliationRecord[]>('vs_brs_records', [])
+  );
   const [salesInvoices, setSIState]    = useState<SalesInvoice[]>(() => load('vs_sales', []));
   const [purchaseInvoices, setPIState] = useState<PurchaseInvoice[]>(() => {
     const stored = load<PurchaseInvoice[]>('vs_purchases', []);
@@ -604,6 +665,67 @@ export function useAccounting() {
     setCompanySettingsState(prev => {
       const next = { ...prev, ...updates };
       save('vs_company_settings', next);
+      return next;
+    });
+  }, []);
+
+  // ── Bank Accounts CRUD ────────────────────────────────────────
+  const addBankAccount = useCallback((acct: Omit<BankAccount, 'id'>) => {
+    const full: BankAccount = { ...acct, id: 'ba_' + Date.now().toString(36) };
+    setBankAccountsState(prev => {
+      const next = [...prev, full];
+      save('vs_bank_accounts', next);
+      return next;
+    });
+    setCoaState(prev => {
+      if (prev.some(a => a.name.toLowerCase() === full.glAccountName.toLowerCase())) return prev;
+      const newCode = String(1000 + prev.length + 1);
+      const nextCoa: Account[] = [...prev, { code: newCode, name: full.glAccountName, type: 'Asset', group: 'Current Assets' }];
+      save('vs_coa', nextCoa);
+      return nextCoa;
+    });
+  }, []);
+
+  const updateBankAccount = useCallback((id: string, updates: Partial<BankAccount>) => {
+    setBankAccountsState(prev => {
+      const next = prev.map(b => b.id === id ? { ...b, ...updates } : b);
+      save('vs_bank_accounts', next);
+      return next;
+    });
+  }, []);
+
+  const deleteBankAccount = useCallback((id: string) => {
+    setBankAccountsState(prev => {
+      const next = prev.filter(b => b.id !== id);
+      save('vs_bank_accounts', next);
+      return next;
+    });
+  }, []);
+
+  // ── BRS Clearance Toggle ──────────────────────────────────────
+  const toggleBRSClearance = useCallback((jeId: string, bankAccountId: string, details?: Partial<BankReconciliationRecord>) => {
+    setReconciliationState(prev => {
+      const existing = prev.find(r => r.jeId === jeId && r.bankAccountId === bankAccountId);
+      let next: BankReconciliationRecord[];
+      if (existing) {
+        next = prev.map(r => r.id === existing.id ? { ...r, isCleared: !r.isCleared, clearedDate: !r.isCleared ? new Date().toISOString().split('T')[0] : undefined } : r);
+      } else {
+        const created: BankReconciliationRecord = {
+          id: 'brs_' + Date.now().toString(36),
+          bankAccountId,
+          jeId,
+          date: details?.date || new Date().toISOString().split('T')[0],
+          refNo: details?.refNo || 'JE-' + jeId.slice(-4),
+          entryType: details?.entryType || 'Bank Transaction',
+          party: details?.party || 'General',
+          debit: details?.debit || 0,
+          credit: details?.credit || 0,
+          isCleared: true,
+          clearedDate: new Date().toISOString().split('T')[0],
+        };
+        next = [...prev, created];
+      }
+      save('vs_brs_records', next);
       return next;
     });
   }, []);
@@ -1060,7 +1182,11 @@ export function useAccounting() {
     };
     financing.total = financing.items.reduce((s, i) => s + i.amount, 0);
 
-    const cashBal    = (glBal('Cash in Hand') + glBal('Bank Account'));
+    const cashAndBankAccounts = gl.filter(a =>
+      a.accountGroup === 'Current Assets' &&
+      (a.account.toLowerCase().includes('bank') || a.account.toLowerCase().includes('cash'))
+    );
+    const cashBal = cashAndBankAccounts.reduce((s, a) => s + a.balance, 0);
     const netChange  = operating.total + investing.total + financing.total;
     const openingCash = cashBal - netChange;
 
@@ -1098,11 +1224,77 @@ export function useAccounting() {
     return `${prefix}-${y}-${String(seq).padStart(3, '0')}`;
   }, []);
 
+  // ── Bank Reconciliation Statement (BRS) Helper ─────────────────
+  const getBankReconciliationSummary = useCallback((bankAccountId: string, statementAsOf?: string, statementBalance: number = 0) => {
+    const banks = load<BankAccount[]>('vs_bank_accounts', SEED_BANK_ACCOUNTS);
+    const targetBank = banks.find(b => b.id === bankAccountId);
+    const bankGlName = targetBank?.glAccountName || 'HDFC Bank - A/C 8234';
+
+    const currentJEs = load<JournalEntry[]>('vs_journal', []);
+    const brsRecords = load<BankReconciliationRecord[]>('vs_brs_records', []);
+
+    type BRSItem = {
+      jeId: string;
+      date: string;
+      refNo: string;
+      entryType: string;
+      party: string;
+      debit: number;
+      credit: number;
+      isCleared: boolean;
+      clearedDate?: string;
+    };
+
+    const items: BRSItem[] = [];
+    let bookBalance = targetBank ? targetBank.openingBalance : 0;
+
+    for (const je of currentJEs) {
+      if (statementAsOf && je.date > statementAsOf) continue;
+      for (const line of je.lines) {
+        if (line.account.toLowerCase() === bankGlName.toLowerCase() || line.account.toLowerCase().includes('bank')) {
+          bookBalance += line.debit - line.credit;
+          const rec = brsRecords.find(r => r.jeId === je.id && r.bankAccountId === bankAccountId);
+          items.push({
+            jeId: je.id,
+            date: je.date,
+            refNo: je.relatedNo,
+            entryType: je.entryType,
+            party: je.party,
+            debit: line.debit,
+            credit: line.credit,
+            isCleared: rec ? rec.isCleared : false,
+            clearedDate: rec?.clearedDate,
+          });
+        }
+      }
+    }
+
+    const unclearedDeposits = items.filter(i => !i.isCleared && i.debit > 0).reduce((s, i) => s + i.debit, 0);
+    const unclearedCheques = items.filter(i => !i.isCleared && i.credit > 0).reduce((s, i) => s + i.credit, 0);
+
+    const calculatedBankBalance = bookBalance - unclearedDeposits + unclearedCheques;
+    const difference = calculatedBankBalance - statementBalance;
+
+    return {
+      targetBank,
+      bookBalance,
+      unclearedDeposits,
+      unclearedCheques,
+      calculatedBankBalance,
+      statementBalance,
+      difference,
+      isReconciled: Math.abs(difference) < 0.01,
+      items,
+    };
+  }, []);
+
   // ── Smart Payment Advisor ─────────────────────────────────────
   const getSmartPaymentSuggestions = useCallback(() => {
     const gl = getGeneralLedger();
-    const glMap = new Map(gl.map(a => [a.account, a]));
-    const bankBal = (glMap.get('Bank Account')?.balance ?? 0) + (glMap.get('Cash in Hand')?.balance ?? 0);
+    const bankBal = gl.filter(a =>
+      a.accountGroup === 'Current Assets' &&
+      (a.account.toLowerCase().includes('bank') || a.account.toLowerCase().includes('cash'))
+    ).reduce((s, a) => s + a.balance, 0);
     const availableFunds = Math.max(0, bankBal);
 
     const pis = load<PurchaseInvoice[]>('vs_purchases', []).filter(p => p.status === 'posted');
@@ -1217,7 +1409,8 @@ export function useAccounting() {
 
   return {
     // Data & Settings
-    coa, companySettings, updateCompanySettings, salesInvoices, purchaseInvoices, debitNotes, payments, journalEntries,
+    coa, companySettings, updateCompanySettings, bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount,
+    salesInvoices, purchaseInvoices, debitNotes, payments, journalEntries, reconciliationRecords, toggleBRSClearance,
     // COA
     saveCoa, addAccount, updateAccount, deleteAccount, resetCOA,
     // Transactions
@@ -1225,11 +1418,11 @@ export function useAccounting() {
     saveDraftPurchaseInvoice, postDraftPurchaseInvoice, postPurchaseInvoice, deletePurchaseInvoice,
     postDebitNote, postDebitNotePair, postPurchaseInvoiceJE, linkSalesToPurchase,
     recordPayment, deletePayment,
-    // Reports
+    // Reports & BRS
     getGeneralLedger, getAccountLedger, getTrialBalance,
     getPartyLedger, getAgeing, getMarginReport,
     getBalanceSheet, getProfitAndLoss, getCashFlow,
-    getSmartPaymentSuggestions,
+    getSmartPaymentSuggestions, getBankReconciliationSummary,
     // Helpers
     nextSalesInvoiceNo, nextPurchaseInvoiceNo, nextDnNo, nextPaymentVoucherNo,
     DEFAULT_COA,
