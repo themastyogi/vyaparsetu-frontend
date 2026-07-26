@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Search, Plus, Camera, Mail,
-  Trash2, Link2, X
+  Trash2, Link2, X, FileUp
 } from 'lucide-react';
 import { usePurchaseWizard } from '../components/purchase/usePurchaseWizard';
 import PurchaseWizard from '../components/purchase/PurchaseWizard';
 import EmailInboxModal from '../components/purchase/EmailInboxModal';
 import { useAccounting, type PurchaseInvoice, type SalesInvoice } from '../hooks/useAccounting';
 import { useMaster } from '../hooks/useMaster';
+import { extractInvoiceFromPDF } from '../utils/pdfExtractor';
 import './Parties.css';
 
 // Kept for backward-compat (purchase wizard may still call it)
@@ -22,7 +23,7 @@ const f2 = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, 
 export default function Purchases() {
   const { t } = useTranslation();
   const wizard = usePurchaseWizard();
-  const { getPartyByName } = useMaster();
+  const { getPartyByName, vendors } = useMaster();
   const {
     companySettings, updateCompanySettings, purchaseInvoices, salesInvoices,
     deletePurchaseInvoice, postDraftPurchaseInvoice, linkSalesToPurchase,
@@ -35,6 +36,36 @@ export default function Purchases() {
   const [showEditCompanyEmail, setShowEditCompanyEmail] = useState(false);
   const [companyEmailInput, setCompanyEmailInput] = useState(companySettings.inboundEmail);
   const [emailAckToast, setEmailAckToast]   = useState<{ party: string; email: string; invNo: string; amount: number } | null>(null);
+
+  const handleDirectPDFUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      const file = files[0];
+      const extracted = await extractInvoiceFromPDF(file);
+
+      wizard.clearDraft();
+      wizard.updateData({
+        source: 'ocr',
+        vendorName: extracted.vendorName !== 'Vendor' ? extracted.vendorName : (vendors[0]?.name || 'Vendor'),
+        vendorGstin: extracted.vendorGstin || '',
+        invoiceNo: extracted.invoiceNo,
+        invoiceDate: extracted.date,
+        items: extracted.items.map(i => ({
+          id: 'item_' + Date.now().toString(36),
+          name: i.description,
+          qty: i.qty,
+          rate: i.rate,
+          gstRate: i.gstRate,
+        })),
+        remarks: `Extracted text from PDF file: ${file.name}`,
+      });
+      wizard.openWizardAtStep('preview');
+    } catch (err) {
+      console.error('Direct PDF upload parsing error:', err);
+    }
+  };
 
   const handleSaveCompanyEmail = (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +157,10 @@ export default function Purchases() {
           <p className="page-sub">Linked to accounting ledger · Email Ingestion · Auto-posted</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <label className="btn-action btn-action-secondary" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileUp size={15} style={{ color: 'var(--brand-primary)' }}/> Upload PDF Invoice
+            <input type="file" accept=".pdf" onChange={handleDirectPDFUpload} style={{ display: 'none' }}/>
+          </label>
           <button className="btn-action btn-action-secondary" onClick={() => setShowEmailInbox(true)} style={{ position: 'relative' }}>
             <Mail size={15} style={{ color: 'var(--brand-primary)' }}/> Email Inbox
             {draftCount > 0 && (

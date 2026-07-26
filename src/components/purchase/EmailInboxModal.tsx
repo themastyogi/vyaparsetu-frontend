@@ -18,9 +18,10 @@ interface EmailInboxModalProps {
 }
 
 export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }: EmailInboxModalProps) {
-  const { companySettings, purchaseInvoices, saveDraftPurchaseInvoice, deletePurchaseInvoice } = useAccounting();
+  const { companySettings, purchaseInvoices, saveDraftPurchaseInvoice, deletePurchaseInvoice, clearAllDrafts } = useAccounting();
   const { vendors, parties } = useMaster();
 
+  const [isSyncing, setIsSyncing] = useState(false);
   const [syncToast, setSyncToast] = useState<string | null>(null);
   const [showSimModal, setShowSimModal] = useState(false);
   const [editingDraft, setEditingDraft] = useState<PurchaseInvoice | null>(null);
@@ -256,8 +257,14 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
             <Sparkles size={14}/> Read text &amp; totals directly from actual PDF invoice files or email attachments.
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <label className="btn-action btn-action-secondary" style={{ padding: '6px 12px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-              <FileUp size={14} style={{ color: 'var(--brand-primary)' }}/> Upload &amp; Parse Real PDF
+            {draftBills.length > 0 && (
+              <button onClick={() => { clearAllDrafts(); setSyncToast('Cleared all sample & pending draft bills!'); setTimeout(() => setSyncToast(null), 3000); }}
+                className="btn-action btn-action-ghost" style={{ padding: '6px 10px', fontSize: 12, color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8 }}>
+                <Trash2 size={13}/> Clear All Drafts
+              </button>
+            )}
+            <label className="btn-action btn-action-secondary" style={{ padding: '6px 12px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, opacity: isSyncing ? 0.7 : 1 }}>
+              <FileUp size={14} style={{ color: 'var(--brand-primary)' }}/> {isSyncing ? 'Parsing PDF...' : 'Upload & Parse Real PDF'}
               <input type="file" accept=".pdf" multiple onChange={handleFileUploadPDF} style={{ display: 'none' }}/>
             </label>
             <button onClick={() => {

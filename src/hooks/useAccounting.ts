@@ -568,11 +568,16 @@ export function useAccounting() {
   const [salesInvoices, setSIState]    = useState<SalesInvoice[]>(() => load('vs_sales', []));
   const [purchaseInvoices, setPIState] = useState<PurchaseInvoice[]>(() => {
     const stored = load<PurchaseInvoice[]>('vs_purchases', []);
-    if (stored.length === 0) {
+    // Clean out any legacy sample draft bills from localStorage!
+    const cleaned = stored.filter(p => p.status !== 'draft' || (!p.id.includes('pi-draft') && !p.id.includes('sample')));
+    if (stored.length !== cleaned.length) {
+      save('vs_purchases', cleaned);
+    }
+    if (cleaned.length === 0) {
       save('vs_purchases', SEED_PURCHASES);
       return SEED_PURCHASES;
     }
-    return stored;
+    return cleaned;
   });
   const [debitNotes, setDNState]       = useState<DebitNote[]>(() => load('vs_debit_notes', []));
   const [payments, setPaymentsState]   = useState<PaymentVoucher[]>(() => {
@@ -743,6 +748,14 @@ export function useAccounting() {
   const deletePurchaseInvoice = useCallback((id: string) => {
     setPIState(prev => { const next = prev.filter(p => p.id !== id); save('vs_purchases', next); return next; });
     setJEState(prev => { const next = prev.filter(je => !(je.relatedId === id && je.entryType === 'Purchase Invoice')); save('vs_journal', next); return next; });
+  }, []);
+
+  const clearAllDrafts = useCallback(() => {
+    setPIState(prev => {
+      const next = prev.filter(p => p.status !== 'draft');
+      save('vs_purchases', next);
+      return next;
+    });
   }, []);
 
   // ── Payment Vouchers (Customer Receipt / Vendor Payment) ────────
@@ -1373,7 +1386,7 @@ export function useAccounting() {
     saveCoa, addAccount, updateAccount, deleteAccount, resetCOA,
     // Transactions
     postSalesInvoice, deleteSalesInvoice,
-    saveDraftPurchaseInvoice, postDraftPurchaseInvoice, postPurchaseInvoice, deletePurchaseInvoice,
+    saveDraftPurchaseInvoice, postDraftPurchaseInvoice, postPurchaseInvoice, deletePurchaseInvoice, clearAllDrafts,
     postDebitNote, postDebitNotePair, postPurchaseInvoiceJE, linkSalesToPurchase,
     recordPayment, deletePayment,
     // Reports & BRS
