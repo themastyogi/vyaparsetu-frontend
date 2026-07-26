@@ -4,7 +4,7 @@
  * Parses REAL vendor PDF files using pdfjs-dist OCR text extraction.
  */
 import { useState } from 'react';
-import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Edit2, Upload, FileUp } from 'lucide-react';
+import { Mail, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Edit2, Upload, FileUp } from 'lucide-react';
 import { useAccounting, type PurchaseInvoice } from '../../hooks/useAccounting';
 import { useMaster } from '../../hooks/useMaster';
 import { extractInvoiceFromPDF } from '../../utils/pdfExtractor';
@@ -21,7 +21,6 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
   const { companySettings, purchaseInvoices, saveDraftPurchaseInvoice, deletePurchaseInvoice } = useAccounting();
   const { vendors, parties } = useMaster();
 
-  const [isSyncing, setIsSyncing] = useState(false);
   const [syncToast, setSyncToast] = useState<string | null>(null);
   const [showSimModal, setShowSimModal] = useState(false);
   const [editingDraft, setEditingDraft] = useState<PurchaseInvoice | null>(null);
