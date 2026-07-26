@@ -10,16 +10,8 @@ import SalesInvoices from './pages/SalesInvoices';
 import ChartOfAccounts from './pages/ChartOfAccounts';
 import DebitNotes from './pages/DebitNotes';
 import Payments from './pages/Payments';
+import Settings from './pages/Settings';
 import './index.css';
-
-const ComingSoon = ({ title }: { title: string }) => (
-  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-    height:'60vh', gap:'12px', color:'var(--text-muted)', fontFamily:'Inter,sans-serif' }}>
-    <div style={{ fontSize:'48px' }}>🚧</div>
-    <h2 style={{ fontSize:'20px', fontWeight:700, color:'var(--text-secondary)' }}>{title}</h2>
-    <p style={{ fontSize:'13px' }}>This module is coming soon</p>
-  </div>
-);
 
 export default function App() {
   return (
@@ -36,7 +28,7 @@ export default function App() {
           <Route path="payments"          element={<Payments />} />
           <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
           <Route path="reports"           element={<Reports />} />
-          <Route path="settings"          element={<ComingSoon title="Settings" />} />
+          <Route path="settings"          element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
