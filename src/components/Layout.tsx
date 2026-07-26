@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, Package, FileText,
   ShoppingCart, BarChart3, Settings, LogOut,
   Bell, Search, ChevronDown, Building2,
-  HelpCircle, Menu, X, BookOpen, Zap, CreditCard
+  HelpCircle, Menu, X, BookOpen, Zap, CreditCard, Sun, Moon
 } from 'lucide-react';
 import './Layout.css';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -49,6 +49,19 @@ export default function Layout() {
   const location  = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('vs_theme') as 'light' | 'dark') || 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('vs_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+  };
 
   const logout = () => navigate('/');
 
@@ -184,6 +197,17 @@ export default function Layout() {
               <span className="gst-label">{t('common.gst_active','GST Active')}</span>
             </div>
             <LanguageSwitcher />
+            <button
+              onClick={toggleTheme}
+              className="topbar-icon-btn"
+              title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '6px 10px', borderRadius: 8 }}
+            >
+              {theme === 'light' ? <Moon size={16} style={{ color: '#6C47FF' }}/> : <Sun size={16} style={{ color: '#FBBF24' }}/>}
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                {theme === 'light' ? 'Dark' : 'Light'}
+              </span>
+            </button>
             <button id="notifications-btn" className="topbar-icon-btn" aria-label="Notifications">
               <Bell size={17}/>
               <span className="notif-dot"/>

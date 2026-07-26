@@ -151,15 +151,19 @@
   flex-shrink: 0;
 }
 
-.type-tag {
+.type-tag, .party-tag {
   display: inline-block;
   padding: 3px 10px;
   border-radius: var(--radius-full);
-  font-size: 11px; font-weight: 600;
+  font-size: 11px; font-weight: 700;
 }
-.tag-customer { background: rgba(59,130,246,0.12); color: #60A5FA; }
-.tag-vendor   { background: rgba(245,158,11,0.12); color: #FBBF24; }
-.tag-both     { background: rgba(108,71,255,0.12); color: var(--brand-secondary); }
+.tag-customer, .party-tag.tag-customer { background: #DBEAFE; color: #1D4ED8; }
+.tag-vendor,   .party-tag.tag-vendor   { background: #FEF3C7; color: #B45309; }
+.tag-both,     .party-tag.tag-both     { background: #EDE9FE; color: #6D28D9; }
+
+[data-theme="dark"] .tag-customer, [data-theme="dark"] .party-tag.tag-customer { background: rgba(59,130,246,0.2); color: #60A5FA; }
+[data-theme="dark"] .tag-vendor,   [data-theme="dark"] .party-tag.tag-vendor   { background: rgba(245,158,11,0.2); color: #FBBF24; }
+[data-theme="dark"] .tag-both,     [data-theme="dark"] .party-tag.tag-both     { background: rgba(108,71,255,0.2); color: #A78BFA; }
 
 .mono {
   font-family: 'Courier New', monospace;
