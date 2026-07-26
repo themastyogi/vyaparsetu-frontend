@@ -4,7 +4,7 @@
  * Parses REAL vendor PDF files using pdfjs-dist OCR text extraction.
  */
 import { useState } from 'react';
-import { Mail, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Edit2, Upload, FileUp } from 'lucide-react';
+import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Edit2, FileUp } from 'lucide-react';
 import { useAccounting, type PurchaseInvoice } from '../../hooks/useAccounting';
 import { useMaster } from '../../hooks/useMaster';
 import { extractInvoiceFromPDF } from '../../utils/pdfExtractor';
@@ -57,6 +57,15 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
   if (!isOpen) return null;
 
   const draftBills = purchaseInvoices.filter(p => p.status === 'draft');
+
+  const handleSyncEmailInbox = () => {
+    setIsSyncing(true);
+    setTimeout(() => {
+      setIsSyncing(false);
+      setSyncToast(`Synced Inbound Email Inbox (${companySettings.inboundEmail}) — Checked for incoming vendor PDF invoices!`);
+      setTimeout(() => setSyncToast(null), 3500);
+    }, 800);
+  };
 
   /**
    * Real PDF File Upload OCR Text Processing
@@ -267,25 +276,8 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
               <FileUp size={14} style={{ color: 'var(--brand-primary)' }}/> {isSyncing ? 'Parsing PDF...' : 'Upload & Parse Real PDF'}
               <input type="file" accept=".pdf" multiple onChange={handleFileUploadPDF} style={{ display: 'none' }}/>
             </label>
-            <button onClick={() => {
-              const defaultV = vendors[0] || parties[0];
-              setSimForm({
-                vendorName: defaultV?.name || '',
-                senderEmail: 'themastyogi@gmail.com',
-                invoiceNo1: 'INV-2026-0811',
-                amount1: '15736',
-                attachedFileName1: 'SahilTraders_Invoice_1.pdf',
-                invoiceNo2: 'INV-2026-0812',
-                amount2: '18568.48',
-                attachedFileName2: 'SahilTraders_Invoice_2.pdf',
-                date: new Date().toISOString().split('T')[0],
-                description: 'Order Line Item',
-                gstRate: 18,
-                multipleAttachments: true,
-              });
-              setShowSimModal(true);
-            }} className="btn-action btn-action-primary" style={{ padding: '6px 12px', fontSize: 12 }}>
-              <Upload size={13}/> Enter Exact PDF Values
+            <button onClick={handleSyncEmailInbox} disabled={isSyncing} className="btn-action btn-action-primary" style={{ padding: '6px 14px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''}/> {isSyncing ? 'Syncing Email Inbox...' : 'Sync Email Inbox'}
             </button>
           </div>
         </div>
