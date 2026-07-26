@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Save, CheckCircle, Clock } from 'lucide-react';
 import { usePurchaseWizard } from '../usePurchaseWizard';
 
-import { useCompany } from '../../../hooks/useCompany';
+
 
 interface Props {
   wizard: ReturnType<typeof usePurchaseWizard>;
@@ -12,7 +12,6 @@ interface Props {
 export default function PreviewStep({ wizard }: Props) {
   const { t } = useTranslation();
   const { data } = wizard.state;
-  const company = useCompany();
 
   // --- Calculation Engine ---
   const subtotal = data.items.reduce((sum, item) => sum + ((item.qty || 0) * (item.rate || 0)), 0);
@@ -47,10 +46,7 @@ export default function PreviewStep({ wizard }: Props) {
   });
 
   const totalTaxableValue = subtotal - safeDiscount + totalTaxableCharges;
-  const vendorStateCode = (data.vendorGstin && data.vendorGstin.length >= 2 && !data.vendorGstin.includes('UNREGISTERED')) 
-    ? data.vendorGstin.substring(0, 2) 
-    : company.stateCode;
-  const isInterState = vendorStateCode !== company.stateCode;
+  const isInterState = data.taxMode === 'inter';
   const total = totalTaxableValue + totalGst + totalNonTaxableCharges;
 
   const handleSave = async () => {
@@ -76,7 +72,6 @@ export default function PreviewStep({ wizard }: Props) {
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
       if (isLocalhost) {
-        // Ensure your NestJS app is running on 3000 and has CORS enabled
         const response = await fetch('http://localhost:3000/purchase/ingestion/manual', {
           method: 'POST',
           headers: {
@@ -90,7 +85,6 @@ export default function PreviewStep({ wizard }: Props) {
           throw new Error('Failed to save invoice to backend');
         }
       } else {
-        // Fallback for Vercel live demo (cannot hit localhost backend)
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
 
@@ -111,8 +105,16 @@ export default function PreviewStep({ wizard }: Props) {
       
       {/* Summary Card */}
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
-        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t('purchase.vendor', 'Vendor')}</div>
-        <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>{data.vendorName}</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600 }}>{t('purchase.vendor', 'Vendor Name')} *</div>
+        <input
+          type="text"
+          required
+          value={data.vendorName}
+          onChange={e => wizard.updateData({ vendorName: e.target.value })}
+          placeholder="Enter Vendor Name (e.g. Bharat Packaging, Sahil Traders)"
+          className="field-input"
+          style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '16px' }}
+        />
         
         <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--border-subtle)', paddingTop: '16px' }}>
           <div>
@@ -123,6 +125,47 @@ export default function PreviewStep({ wizard }: Props) {
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('purchase.invoice_date', 'Invoice Date')}</div>
             <div style={{ fontSize: '14px', fontWeight: 600 }}>{data.invoiceDate}</div>
           </div>
+        </div>
+      </div>
+
+      {/* Tax Mode Switcher Card */}
+      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '12px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+          GST Tax Treatment:
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            type="button"
+            onClick={() => wizard.updateData({ taxMode: 'intra' })}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 8,
+              border: 'none',
+              fontWeight: 800,
+              fontSize: 12,
+              cursor: 'pointer',
+              background: !isInterState ? 'var(--brand-primary)' : 'var(--bg-card)',
+              color: !isInterState ? '#FFF' : 'var(--text-muted)',
+            }}
+          >
+            Intra-State (CGST 9% + SGST 9%)
+          </button>
+          <button
+            type="button"
+            onClick={() => wizard.updateData({ taxMode: 'inter' })}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 8,
+              border: 'none',
+              fontWeight: 800,
+              fontSize: 12,
+              cursor: 'pointer',
+              background: isInterState ? 'var(--brand-primary)' : 'var(--bg-card)',
+              color: isInterState ? '#FFF' : 'var(--text-muted)',
+            }}
+          >
+            Inter-State (IGST 18%)
+          </button>
         </div>
       </div>
 
@@ -156,17 +199,17 @@ export default function PreviewStep({ wizard }: Props) {
 
         {isInterState ? (
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-            <span>IGST</span>
+            <span>IGST (18%)</span>
             <span>₹ {totalGst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
           </div>
         ) : (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-              <span>CGST</span>
+              <span>CGST (9%)</span>
               <span>₹ {(totalGst / 2).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-              <span>SGST</span>
+              <span>SGST (9%)</span>
               <span>₹ {(totalGst / 2).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
             </div>
           </>

@@ -28,6 +28,7 @@ export interface PurchaseDraftData {
   items: PurchaseLineItem[];
   discount: { type: 'percentage' | 'fixed'; value: number };
   charges: Array<{ id: string; name: string; amount: number; isTaxable: boolean; taxRate?: number }>;
+  taxMode?: 'intra' | 'inter';
   remarks?: string;
   // Validation flags (specifically for OCR mock simulation)
   needsChecking?: {
