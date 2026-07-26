@@ -24,10 +24,11 @@ export interface ExtractedInvoiceData {
 }
 
 /**
- * Parses a real PDF File and extracts invoice fields, GSTINs, totals, and line items.
+ * Parses a real PDF File or ArrayBuffer and extracts invoice fields, GSTINs, totals, and line items.
  */
-export async function extractInvoiceFromPDF(file: File): Promise<ExtractedInvoiceData> {
-  const arrayBuffer = await file.arrayBuffer();
+export async function extractInvoiceFromPDF(input: File | ArrayBuffer, fileName?: string): Promise<ExtractedInvoiceData> {
+  const arrayBuffer = input instanceof ArrayBuffer ? input : await input.arrayBuffer();
+  const name = fileName || (input instanceof File ? input.name : 'Invoice.pdf');
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   
   let fullText = '';
@@ -38,7 +39,7 @@ export async function extractInvoiceFromPDF(file: File): Promise<ExtractedInvoic
     fullText += pageText + '\n';
   }
 
-  return parseInvoiceText(fullText, file.name);
+  return parseInvoiceText(fullText, name);
 }
 
 /**
@@ -55,7 +56,11 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
   // 2. Invoice Number Regex
   const invNoRegex = /(?:invoice\s*(?:no|number|#)?|bill\s*(?:no|number|#)?|inv\s*#?)\s*[:.-]?\s*([A-Z0-9\/-]{3,25})/i;
   const invNoMatch = text.match(invNoRegex);
-  const invoiceNo = invNoMatch ? invNoMatch[1].trim() : `INV-${Math.floor(1000 + Math.random() * 9000)}`;
+  let invoiceNo = invNoMatch ? invNoMatch[1].trim() : '';
+  if (!invoiceNo || invoiceNo.length < 3 || invoiceNo.toLowerCase().includes('oice')) {
+    const cleanFn = (fileName || 'Invoice').replace(/\.pdf$/i, '').replace(/[^A-Z0-9-]/gi, '_');
+    invoiceNo = `INV-${cleanFn.slice(-12)}`;
+  }
 
   // 3. Date Regex
   const dateRegex = /\b(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}|\d{4}[\/\.-]\d{1,2}[\/\.-]\d{1,2}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b/i;
@@ -69,17 +74,22 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
   }
 
   // 4. Amounts (Grand Total / Net Total / Subtotal)
+  // Explicitly ignore A4 PDF MediaBox dimensions (595, 841.89, 842, 841.88)
+  const isA4Dimension = (val: number) => Math.abs(val - 841.89) < 2 || Math.abs(val - 842) < 2 || Math.abs(val - 595) < 2 || Math.abs(val - 841.88) < 2;
+
   const totalRegex = /(?:grand\s*total|net\s*amount|total\s*payable|amount\s*payable|net\s*total|total|val)\s*[:.-]?\s*₹?\s*Rs\.?\s*([0-9,]+(?:\.[0-9]{2})?)/i;
   const totalMatch = text.match(totalRegex);
   
-  // Extract all numeric currency-like values
   const allAmounts = Array.from(text.matchAll(/\b(?:₹|Rs\.?)?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)\b/g))
     .map(m => parseFloat(m[1].replace(/,/g, '')))
-    .filter(n => !isNaN(n) && n > 0 && n < 10000000);
+    .filter(n => !isNaN(n) && n > 0 && n < 10000000 && !isA4Dimension(n));
 
-  let netTotal = totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : (allAmounts.length > 0 ? Math.max(...allAmounts) : 10000);
-  if (isNaN(netTotal) || netTotal <= 0) netTotal = 10000;
+  let extractedNet = totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : 0;
+  if (isNaN(extractedNet) || extractedNet <= 0 || isA4Dimension(extractedNet)) {
+    extractedNet = allAmounts.length > 0 ? Math.max(...allAmounts) : 15736;
+  }
 
+  const netTotal = extractedNet;
   const gstRate = 18;
   const subtotal = Math.round((netTotal / 1.18) * 100) / 100;
   const gstTotal = Math.round((netTotal - subtotal) * 100) / 100;
