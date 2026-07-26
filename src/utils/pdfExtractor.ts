@@ -132,25 +132,77 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
   }
 
   // 7. Vendor Name Extraction
-  let vendorName = 'Vendor';
-  for (const l of lines) {
-    const cleanL = l.replace(/tax invoice|invoice|bill of supply|original for recipient|duplicate|triplicate|D:\d+/gi, '').trim();
-    if (cleanL.length > 3 && cleanL.length < 50 && !cleanL.match(/^[0-9\/\.\s:-]+$/) && !cleanL.toLowerCase().startsWith('date') && !cleanL.toLowerCase().startsWith('gstin')) {
-      vendorName = cleanL;
-      break;
+  let vendorName = '';
+  const vendorLabelMatch = text.match(/(?:vendor\s*name|vendor|billed\s*by|supplier|seller|from)\s*[:.-]?\s*([^\n,]{3,50})/i);
+  if (vendorLabelMatch && vendorLabelMatch[1].trim().length > 2 && !vendorLabelMatch[1].toLowerCase().includes('invoice')) {
+    vendorName = vendorLabelMatch[1].trim();
+  }
+
+  if (!vendorName) {
+    for (const l of lines) {
+      const cleanL = l.replace(/tax invoice|invoice|bill of supply|original for recipient|duplicate|triplicate|D:\d+|page\s*\d+/gi, '').trim();
+      if (cleanL.length > 3 && cleanL.length < 50 && !cleanL.match(/^[0-9\/\.\s:-]+$/) && !cleanL.toLowerCase().startsWith('date') && !cleanL.toLowerCase().startsWith('gstin') && !cleanL.toLowerCase().startsWith('to:') && !cleanL.toLowerCase().startsWith('bill to')) {
+        vendorName = cleanL;
+        break;
+      }
     }
   }
 
-  if (fileName && (vendorName === 'Vendor' || vendorName.length < 3)) {
-    const cleanFn = fileName
-      .replace(/\.pdf$/i, '')
-      .replace(/Sample_Purchase_Invoice_/i, '')
-      .replace(/[-_]/g, ' ')
-      .trim();
-    if (cleanFn.length > 2) {
-      vendorName = cleanFn;
+  if (!vendorName || vendorName === 'Vendor' || vendorName.length < 3) {
+    if (fileName) {
+      const cleanFn = fileName
+        .replace(/\.pdf$/i, '')
+        .replace(/Sample_Purchase_Invoice_/i, '')
+        .replace(/[-_]/g, ' ')
+        .trim();
+      if (cleanFn.length > 2) {
+        vendorName = cleanFn;
+      }
     }
   }
+
+  // 8. Line Items Extraction
+  const itemRows: Array<{ description: string; qty: number; rate: number; amount: number; gstRate: number; gstAmount: number; cgstAmount?: number; sgstAmount?: number; igstAmount?: number; total: number }> = [];
+
+  for (const line of lines) {
+    const itemMatch = line.match(/^([A-Za-z0-9\s-]{3,40})\s+(\d+)\s+([0-9,]+(?:\.[0-9]{2})?)\s+([0-9,]+(?:\.[0-9]{2})?)$/);
+    if (itemMatch) {
+      const desc = itemMatch[1].trim();
+      const qty = parseInt(itemMatch[2], 10) || 1;
+      const rate = parseFloat(itemMatch[3].replace(/,/g, '')) || 0;
+      const amt = parseFloat(itemMatch[4].replace(/,/g, '')) || (qty * rate);
+      const itemGst = Math.round(amt * 0.18);
+      const itemNet = amt + itemGst;
+
+      itemRows.push({
+        description: desc,
+        qty,
+        rate,
+        amount: amt,
+        gstRate: 18,
+        gstAmount: itemGst,
+        cgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
+        sgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
+        igstAmount: taxType === 'inter_state' ? itemGst : 0,
+        total: itemNet,
+      });
+    }
+  }
+
+  const finalItems = itemRows.length > 0 ? itemRows : [
+    {
+      description: `Items & Goods as per Invoice PDF (${invoiceNo})`,
+      qty: 1,
+      rate: subtotal,
+      amount: subtotal,
+      gstRate,
+      gstAmount: gstTotal,
+      cgstAmount: cgstTotal,
+      sgstAmount: sgstTotal,
+      igstAmount: igstTotal,
+      total: netTotal,
+    }
+  ];
 
   return {
     vendorName,
@@ -166,20 +218,7 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
     cgstTotal,
     sgstTotal,
     igstTotal,
-    items: [
-      {
-        description: `Items & Goods as per Invoice PDF (${invoiceNo})`,
-        qty: 1,
-        rate: subtotal,
-        amount: subtotal,
-        gstRate,
-        gstAmount: gstTotal,
-        cgstAmount: cgstTotal,
-        sgstAmount: sgstTotal,
-        igstAmount: igstTotal,
-        total: netTotal,
-      }
-    ],
+    items: finalItems,
     rawText: text,
   };
 }

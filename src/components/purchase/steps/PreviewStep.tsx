@@ -47,8 +47,10 @@ export default function PreviewStep({ wizard }: Props) {
   });
 
   const totalTaxableValue = subtotal - safeDiscount + totalTaxableCharges;
-  const vendorStateCode = data.vendorGstin ? data.vendorGstin.substring(0, 2) : 'unknown';
-  const isInterState = vendorStateCode !== 'unknown' && vendorStateCode !== company.stateCode;
+  const vendorStateCode = (data.vendorGstin && data.vendorGstin.length >= 2 && !data.vendorGstin.includes('UNREGISTERED')) 
+    ? data.vendorGstin.substring(0, 2) 
+    : company.stateCode;
+  const isInterState = vendorStateCode !== company.stateCode;
   const total = totalTaxableValue + totalGst + totalNonTaxableCharges;
 
   const handleSave = async () => {
