@@ -111,7 +111,13 @@ export interface PaymentVoucher {
 export interface CompanySettings {
   companyName: string;
   companyGstin: string;
-  inboundEmail: string; // Email to receive vendor invoices e.g. invoices.company@vyaparsetu.in
+  inboundEmail: string; // Purchase booking email configured by user
+  email?: string;        // Official company email
+  phone?: string;        // Contact phone number
+  address?: string;      // Full street address
+  city?: string;         // City
+  state?: string;        // State
+  pincode?: string;      // Pincode
   autoDraft: boolean;
 }
 
@@ -509,6 +515,12 @@ const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
   companyName: 'VyaparSetu Enterprises',
   companyGstin: '29AABCV1234F1Z5',
   inboundEmail: 'themastyogi@gmail.com',
+  email: 'themastyogi@gmail.com',
+  phone: '+91 98765 43210',
+  address: 'Plot 42, Industrial Area, Phase II',
+  city: 'Bangalore',
+  state: 'Karnataka',
+  pincode: '560001',
   autoDraft: true,
 };
 

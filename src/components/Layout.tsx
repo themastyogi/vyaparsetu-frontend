@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, Package, FileText,
   ShoppingCart, BarChart3, Settings, LogOut,
@@ -9,6 +8,8 @@ import {
 } from 'lucide-react';
 import './Layout.css';
 import LanguageSwitcher from './LanguageSwitcher';
+import CompanyProfileModal from './company/CompanyProfileModal';
+import { useAccounting } from '../hooks/useAccounting';
 
 const NAV_SECTIONS = [
   {
@@ -44,11 +45,12 @@ const NAV_SECTIONS = [
 ];
 
 export default function Layout() {
-  const { t } = useTranslation();
   const navigate  = useNavigate();
   const location  = useLocation();
+  const { companySettings } = useAccounting();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showCompanyModal, setShowCompanyModal] = useState(false);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('vs_theme') as 'light' | 'dark') || 'light';
@@ -192,9 +194,17 @@ export default function Layout() {
           </div>
 
           <div className="topbar-right">
+            <button
+              onClick={() => setShowCompanyModal(true)}
+              className="topbar-icon-btn"
+              title="Configure Company Profile & Inbound Email"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(108,71,255,0.1)', border: '1px solid rgba(108,71,255,0.25)', color: 'var(--brand-primary)', cursor: 'pointer', fontWeight: 700, fontSize: 12 }}
+            >
+              <Building2 size={15}/> {companySettings.companyName || 'Company Profile'}
+            </button>
             <div className="gst-status">
               <span className="gst-dot"/>
-              <span className="gst-label">{t('common.gst_active','GST Active')}</span>
+              <span className="gst-label">{companySettings.companyGstin || 'GST Active'}</span>
             </div>
             <LanguageSwitcher />
             <button
@@ -212,9 +222,13 @@ export default function Layout() {
               <Bell size={17}/>
               <span className="notif-dot"/>
             </button>
-            <div className="topbar-avatar">VK</div>
+            <div className="topbar-avatar" onClick={() => setShowCompanyModal(true)} style={{ cursor: 'pointer' }} title="Configure Company Profile">
+              {companySettings.companyName.substring(0, 2).toUpperCase()}
+            </div>
           </div>
         </header>
+
+        <CompanyProfileModal isOpen={showCompanyModal} onClose={() => setShowCompanyModal(false)}/>
 
         {/* Page content */}
         <main className="layout-content">
