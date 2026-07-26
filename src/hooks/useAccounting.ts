@@ -111,15 +111,19 @@ export interface PaymentVoucher {
 export interface CompanySettings {
   companyName: string;
   companyGstin: string;
-  inboundEmail: string;  // Purchase booking email configured by user
-  gmailAppPassword?: string; // Google 16-char App Password
-  imapHost?: string;         // imap.gmail.com
-  email?: string;        // Official company email
-  phone?: string;        // Contact phone number
-  address?: string;      // Full street address
-  city?: string;         // City
-  state?: string;        // State
-  pincode?: string;      // Pincode
+  inboundEmail: string;        // Purchase booking email configured by user
+  googleConnected?: boolean;   // Official Google OAuth2 Connected Status
+  googleConnectedEmail?: string; // Connected Google Account Email
+  googleAccessToken?: string;  // OAuth2 Access Token
+  googleRefreshToken?: string; // OAuth2 Refresh Token
+  gmailAppPassword?: string;   // Google 16-char App Password (legacy fallback)
+  imapHost?: string;           // imap.gmail.com
+  email?: string;              // Official company email
+  phone?: string;              // Contact phone number
+  address?: string;            // Full street address
+  city?: string;               // City
+  state?: string;              // State
+  pincode?: string;            // Pincode
   autoDraft: boolean;
 }
 
