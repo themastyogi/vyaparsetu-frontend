@@ -111,7 +111,9 @@ export interface PaymentVoucher {
 export interface CompanySettings {
   companyName: string;
   companyGstin: string;
-  inboundEmail: string; // Purchase booking email configured by user
+  inboundEmail: string;  // Purchase booking email configured by user
+  gmailAppPassword?: string; // Google 16-char App Password
+  imapHost?: string;         // imap.gmail.com
   email?: string;        // Official company email
   phone?: string;        // Contact phone number
   address?: string;      // Full street address

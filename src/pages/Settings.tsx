@@ -23,6 +23,8 @@ export default function Settings() {
     companyName: companySettings.companyName || '',
     companyGstin: companySettings.companyGstin || '',
     inboundEmail: companySettings.inboundEmail || 'themastyogi@gmail.com',
+    gmailAppPassword: companySettings.gmailAppPassword || '',
+    imapHost: companySettings.imapHost || 'imap.gmail.com',
     email: companySettings.email || 'themastyogi@gmail.com',
     phone: companySettings.phone || '+91 98765 43210',
     address: companySettings.address || 'Plot 42, Industrial Area, Phase II',
@@ -51,6 +53,8 @@ export default function Settings() {
       companyName: form.companyName,
       companyGstin: form.companyGstin,
       inboundEmail: form.inboundEmail,
+      gmailAppPassword: form.gmailAppPassword,
+      imapHost: form.imapHost,
       email: form.email,
       phone: form.phone,
       address: form.address,
@@ -167,8 +171,8 @@ export default function Settings() {
             <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
               <Mail size={20} style={{ color: 'var(--brand-primary)' }}/>
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Inbound Email Ingestion Settings</h3>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Configure the dedicated email address where vendors send PDF invoices.</p>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Inbound Email Ingestion &amp; Gmail API Settings</h3>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Configure the dedicated email address and Google App Password for live email reading.</p>
               </div>
             </div>
 
@@ -179,6 +183,26 @@ export default function Settings() {
                 <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
                   Vendors send bills to this address. Incoming PDF attachments auto-ingest into your Email Inbox as Drafts.
                 </span>
+              </div>
+
+              <div style={{ background: 'rgba(108,71,255,0.06)', border: '1px solid rgba(108,71,255,0.2)', padding: 16, borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Key size={16}/> Gmail App Password (16-Character) &amp; IMAP Credentials
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                  Generate in Google Account → Security → 2-Step Verification → App Passwords. Allows VyaparSetu to query UNREAD emails with PDF attachments.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 12 }}>
+                  <div>
+                    <label className="field-label">Google 16-Char App Password</label>
+                    <input type="password" value={form.gmailAppPassword || ''} onChange={e => setForm(f => ({ ...f, gmailAppPassword: e.target.value }))} placeholder="e.g. abcd efgh ijkl mnop" className="field-input" style={{ letterSpacing: '0.1em' }}/>
+                  </div>
+                  <div>
+                    <label className="field-label">IMAP Server Host</label>
+                    <input value={form.imapHost || 'imap.gmail.com'} onChange={e => setForm(f => ({ ...f, imapHost: e.target.value }))} placeholder="imap.gmail.com" className="field-input"/>
+                  </div>
+                </div>
               </div>
 
               <div>
