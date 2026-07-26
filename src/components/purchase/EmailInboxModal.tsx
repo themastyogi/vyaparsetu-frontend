@@ -4,7 +4,7 @@
  * Handles multiple PDF attachments per email and allows direct amount editing before booking.
  */
 import { useState } from 'react';
-import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Plus, Edit2, Layers } from 'lucide-react';
+import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Edit2, Layers } from 'lucide-react';
 import { useAccounting, type PurchaseInvoice } from '../../hooks/useAccounting';
 import { useMaster } from '../../hooks/useMaster';
 
