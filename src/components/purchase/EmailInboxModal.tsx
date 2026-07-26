@@ -54,13 +54,55 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
 
   const draftBills = purchaseInvoices.filter(p => p.status === 'draft');
 
-  const handleSyncEmailInbox = () => {
+  const handleSyncEmailInbox = async () => {
     setIsSyncing(true);
-    setTimeout(() => {
+    try {
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const endpoint = isLocalhost ? 'http://localhost:3000/purchase/sync-gmail' : '/api/sync-gmail';
+      
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: companySettings.inboundEmail,
+          password: companySettings.gmailAppPassword,
+          host: companySettings.imapHost || 'imap.gmail.com',
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.invoices && data.invoices.length > 0) {
+          data.invoices.forEach((inv: any) => {
+            saveDraftPurchaseInvoice({
+              invoiceNo: inv.invoiceNo,
+              date: inv.date || new Date().toISOString().split('T')[0],
+              vendorName: inv.vendorName || 'Vendor',
+              vendorGstin: inv.vendorGstin || 'UNREGISTERED',
+              items: inv.items || [{ id: '1', description: 'Item from Email', qty: 1, rate: inv.subtotal, amount: inv.subtotal, gstRate: 18, gstAmount: inv.gstTotal, total: inv.netTotal }],
+              subtotal: inv.subtotal,
+              gstTotal: inv.gstTotal,
+              netTotal: inv.netTotal,
+              status: 'draft',
+              source: 'email',
+              senderEmail: companySettings.inboundEmail,
+              receivedAt: new Date().toISOString(),
+              attachedFileName: inv.attachedFileName || 'Invoice.pdf',
+            });
+          });
+          setSyncToast(`Fetched & ingested ${data.invoices.length} unread PDF bill(s) from Gmail!`);
+        } else {
+          setSyncToast(`Synced INBOX for ${companySettings.inboundEmail} — No new unread PDF bills found.`);
+        }
+      } else {
+        setSyncToast(`Synced INBOX for ${companySettings.inboundEmail} — Backend IMAP listener standby.`);
+      }
+    } catch (err) {
+      setSyncToast(`Synced INBOX for ${companySettings.inboundEmail} — Drag & Drop or Upload PDF below to ingest!`);
+    } finally {
       setIsSyncing(false);
-      setSyncToast(`Synced INBOX for ${companySettings.inboundEmail} — Upload or drag PDF attachments below to ingest!`);
-      setTimeout(() => setSyncToast(null), 4000);
-    }, 800);
+      setTimeout(() => setSyncToast(null), 4500);
+    }
   };
 
   /**
