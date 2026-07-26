@@ -11,6 +11,9 @@ export interface MasterParty {
   type: string;        // 'customer' | 'vendor' | 'both'
   gstin: string;
   state: string;
+  email?: string;
+  paymentTerms?: string; // e.g. 'Net 15', 'Net 30', 'Due on Receipt'
+  priority?: 'High' | 'Medium' | 'Low';
 }
 
 export interface MasterItem {
@@ -24,13 +27,13 @@ export interface MasterItem {
 
 // ── Fallback/seed data (matches Parties.tsx SAMPLE and Items.tsx ITEMS) ──
 const SEED_PARTIES: MasterParty[] = [
-  { id: 'p1', name: 'Ravi Enterprises',  type: 'customer', gstin: '29AABCR1234F1ZS', state: 'Karnataka'   },
-  { id: 'p2', name: 'Sahil Traders',     type: 'vendor',   gstin: '27AAACS2222B1Z5', state: 'Maharashtra' },
-  { id: 'p3', name: 'Metro Retail Co.',  type: 'both',     gstin: '07AAACM5678K1ZP', state: 'Delhi'       },
-  { id: 'p4', name: 'Alpha Supplies',    type: 'vendor',   gstin: '24AAACA7890L1Z3', state: 'Gujarat'     },
-  { id: 'p5', name: 'Kumar & Sons',      type: 'vendor',   gstin: '09AAACK4567N1Z1', state: 'UP'          },
-  { id: 'p6', name: 'Priya Medical Hub', type: 'customer', gstin: '33AAACP1111M1ZQ', state: 'Tamil Nadu'  },
-  { id: 'p7', name: 'Bharat Logistics',  type: 'both',     gstin: '06AAACB5432F1Z7', state: 'Haryana'     },
+  { id: 'p1', name: 'Ravi Enterprises',  type: 'customer', gstin: '29AABCR1234F1ZS', state: 'Karnataka',   email: 'billing@ravienterprises.com', paymentTerms: 'Net 30', priority: 'High' },
+  { id: 'p2', name: 'Sahil Traders',     type: 'vendor',   gstin: '27AAACS2222B1Z5', state: 'Maharashtra', email: 'accounts@sahiltraders.in',    paymentTerms: 'Net 15', priority: 'High' },
+  { id: 'p3', name: 'Metro Retail Co.',  type: 'both',     gstin: '07AAACM5678K1ZP', state: 'Delhi',       email: 'info@metroretail.com',       paymentTerms: 'Net 30', priority: 'Medium' },
+  { id: 'p4', name: 'Alpha Supplies',    type: 'vendor',   gstin: '24AAACA7890L1Z3', state: 'Gujarat',     email: 'sales@alphasupplies.com',    paymentTerms: 'Due on Receipt', priority: 'High' },
+  { id: 'p5', name: 'Kumar & Sons',      type: 'vendor',   gstin: '09AAACK4567N1Z1', state: 'UP',          email: 'contact@kumarsons.in',       paymentTerms: 'Net 45', priority: 'Low' },
+  { id: 'p6', name: 'Priya Medical Hub', type: 'customer', gstin: '33AAACP1111M1ZQ', state: 'Tamil Nadu',  email: 'orders@priyamedical.org',    paymentTerms: 'Net 15', priority: 'Medium' },
+  { id: 'p7', name: 'Bharat Logistics',  type: 'both',     gstin: '06AAACB5432F1Z7', state: 'Haryana',     email: 'billing@bharatlogistics.in', paymentTerms: 'Net 30', priority: 'Medium' },
 ];
 
 const SEED_ITEMS: MasterItem[] = [

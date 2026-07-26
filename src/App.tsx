@@ -9,6 +9,7 @@ import Reports from './pages/Reports';
 import SalesInvoices from './pages/SalesInvoices';
 import ChartOfAccounts from './pages/ChartOfAccounts';
 import DebitNotes from './pages/DebitNotes';
+import Payments from './pages/Payments';
 import './index.css';
 
 const ComingSoon = ({ title }: { title: string }) => (
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="sales"             element={<SalesInvoices />} />
           <Route path="purchases"         element={<Purchases />} />
           <Route path="debit-notes"       element={<DebitNotes />} />
+          <Route path="payments"          element={<Payments />} />
           <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
           <Route path="reports"           element={<Reports />} />
           <Route path="settings"          element={<ComingSoon title="Settings" />} />

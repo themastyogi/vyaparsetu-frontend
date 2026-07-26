@@ -86,8 +86,33 @@ export interface PurchaseInvoice {
   netTotal: number;
   linkedSalesInvoiceId?: string;
   remarks?: string;
+  status: 'draft' | 'posted';
+  source?: 'manual' | 'email';
+  senderEmail?: string;
+  receivedAt?: string;
+  attachedFileName?: string;
+  createdAt: string;
+}
+
+export interface PaymentVoucher {
+  id: string;
+  voucherNo: string;
+  date: string;
+  type: 'Receipt' | 'Payment'; // Receipt = Customer Payment, Payment = Vendor Payment
+  party: string;
+  amount: number;
+  bankAccount: string; // e.g. 'Bank Account' or 'Cash in Hand'
+  reference?: string;   // Cheque no / UTR / Reference
+  remarks?: string;
   status: 'posted';
   createdAt: string;
+}
+
+export interface CompanySettings {
+  companyName: string;
+  companyGstin: string;
+  inboundEmail: string; // Email to receive vendor invoices e.g. invoices.company@vyaparsetu.in
+  autoDraft: boolean;
 }
 
 export interface DebitNoteItem {
@@ -452,6 +477,63 @@ function migrateCOA(accounts: any[]): Account[] {
   }));
 }
 
+const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
+  companyName: 'VyaparSetu Enterprises',
+  companyGstin: '29AABCV1234F1Z5',
+  inboundEmail: 'invoices.company@vyaparsetu.in',
+  autoDraft: true,
+};
+
+const SEED_PAYMENTS: PaymentVoucher[] = [
+  {
+    id: 'pay-seed-1', voucherNo: 'REC-2026-001', date: '2026-07-21',
+    type: 'Receipt', party: 'Ravi Enterprises', amount: 50000,
+    bankAccount: 'Bank Account', reference: 'UTR9823412',
+    remarks: 'Advance customer collection', status: 'posted', createdAt: '2026-07-21T10:00:00Z'
+  }
+];
+
+const SEED_DRAFT_PURCHASES: PurchaseInvoice[] = [
+  {
+    id: 'pi-draft-email-1',
+    invoiceNo: 'INV-ST-8819',
+    date: '2026-07-25',
+    vendorName: 'Sahil Traders',
+    vendorGstin: '27AAACS2222B1Z5',
+    items: [
+      { id: 'item-d1', description: 'Raw Material Batch A', qty: 10, rate: 3500, amount: 35000, gstRate: 18, gstAmount: 6300, total: 41300 }
+    ],
+    subtotal: 35000,
+    gstTotal: 6300,
+    netTotal: 41300,
+    status: 'draft',
+    source: 'email',
+    senderEmail: 'accounts@sahiltraders.in',
+    receivedAt: '2026-07-25T14:30:00Z',
+    attachedFileName: 'SahilTraders_Invoice_8819.pdf',
+    createdAt: '2026-07-25T14:30:00Z',
+  },
+  {
+    id: 'pi-draft-email-2',
+    invoiceNo: 'AS-2026-901',
+    date: '2026-07-24',
+    vendorName: 'Alpha Supplies',
+    vendorGstin: '24AAACA7890L1Z3',
+    items: [
+      { id: 'item-d2', description: 'Packaging Boxes & Tape', qty: 50, rate: 420, amount: 21000, gstRate: 12, gstAmount: 2520, total: 23520 }
+    ],
+    subtotal: 21000,
+    gstTotal: 2520,
+    netTotal: 23520,
+    status: 'draft',
+    source: 'email',
+    senderEmail: 'sales@alphasupplies.com',
+    receivedAt: '2026-07-24T09:15:00Z',
+    attachedFileName: 'AlphaSupplies_Bill_901.pdf',
+    createdAt: '2026-07-24T09:15:00Z',
+  }
+];
+
 // ────────────────────────────────────────────────────────────────
 //  Hook
 // ────────────────────────────────────────────────────────────────
@@ -462,13 +544,23 @@ export function useAccounting() {
     return migrateCOA(stored);
   });
 
+  const [companySettings, setCompanySettingsState] = useState<CompanySettings>(() => load('vs_company_settings', DEFAULT_COMPANY_SETTINGS));
   const [salesInvoices, setSIState]    = useState<SalesInvoice[]>(() => load('vs_sales', []));
   const [purchaseInvoices, setPIState] = useState<PurchaseInvoice[]>(() => {
     const stored = load<PurchaseInvoice[]>('vs_purchases', []);
-    if (stored.length === 0) { save('vs_purchases', SEED_PURCHASES); return SEED_PURCHASES; }
+    if (stored.length === 0) {
+      const combined = [...SEED_PURCHASES, ...SEED_DRAFT_PURCHASES];
+      save('vs_purchases', combined);
+      return combined;
+    }
     return stored;
   });
   const [debitNotes, setDNState]       = useState<DebitNote[]>(() => load('vs_debit_notes', []));
+  const [payments, setPaymentsState]   = useState<PaymentVoucher[]>(() => {
+    const stored = load<PaymentVoucher[]>('vs_payments', []);
+    if (stored.length === 0) { save('vs_payments', SEED_PAYMENTS); return SEED_PAYMENTS; }
+    return stored;
+  });
   const [journalEntries, setJEState]   = useState<JournalEntry[]>(() => load('vs_journal', []));
 
   // ── COA CRUD ──────────────────────────────────────────────────
@@ -507,7 +599,55 @@ export function useAccounting() {
     setJEState(prev => { const next = prev.filter(je => !(je.relatedId === id && je.entryType === 'Sales Invoice')); save('vs_journal', next); return next; });
   }, []);
 
+  // ── Company Settings ──────────────────────────────────────────
+  const updateCompanySettings = useCallback((updates: Partial<CompanySettings>) => {
+    setCompanySettingsState(prev => {
+      const next = { ...prev, ...updates };
+      save('vs_company_settings', next);
+      return next;
+    });
+  }, []);
+
   // ── Purchase Invoice CRUD ─────────────────────────────────────
+  const saveDraftPurchaseInvoice = useCallback((data: Omit<PurchaseInvoice, 'id' | 'createdAt'> & { id?: string }): PurchaseInvoice => {
+    const draftId = data.id || uid();
+    const inv: PurchaseInvoice = {
+      ...data,
+      id: draftId,
+      status: 'draft',
+      createdAt: new Date().toISOString(),
+    };
+    setPIState(prev => {
+      const exists = prev.some(p => p.id === draftId);
+      const next = exists ? prev.map(p => p.id === draftId ? inv : p) : [inv, ...prev];
+      save('vs_purchases', next);
+      return next;
+    });
+    return inv;
+  }, []);
+
+  const postDraftPurchaseInvoice = useCallback((id: string): PurchaseInvoice | undefined => {
+    let postedInv: PurchaseInvoice | undefined;
+    setPIState(prev => {
+      const target = prev.find(p => p.id === id);
+      if (!target) return prev;
+      postedInv = { ...target, status: 'posted' };
+      const next = prev.map(p => p.id === id ? postedInv! : p);
+      save('vs_purchases', next);
+      return next;
+    });
+    if (postedInv) {
+      const invToPost = postedInv;
+      setJEState(prev => {
+        const already = prev.some(j => j.relatedId === id && j.entryType === 'Purchase Invoice');
+        if (already) return prev;
+        const je = buildPurchaseInvoiceJE(invToPost);
+        const next = [je, ...prev]; save('vs_journal', next); return next;
+      });
+    }
+    return postedInv;
+  }, []);
+
   const postPurchaseInvoice = useCallback((data: Omit<PurchaseInvoice, 'id' | 'status' | 'createdAt'>): PurchaseInvoice => {
     const inv: PurchaseInvoice = { ...data, id: uid(), status: 'posted', createdAt: new Date().toISOString() };
     setPIState(prev => { const next = [inv, ...prev]; save('vs_purchases', next); return next; });
@@ -523,6 +663,41 @@ export function useAccounting() {
   const deletePurchaseInvoice = useCallback((id: string) => {
     setPIState(prev => { const next = prev.filter(p => p.id !== id); save('vs_purchases', next); return next; });
     setJEState(prev => { const next = prev.filter(je => !(je.relatedId === id && je.entryType === 'Purchase Invoice')); save('vs_journal', next); return next; });
+  }, []);
+
+  // ── Payment Vouchers (Customer Receipt / Vendor Payment) ────────
+  const recordPayment = useCallback((data: Omit<PaymentVoucher, 'id' | 'status' | 'createdAt'>): PaymentVoucher => {
+    const voucher: PaymentVoucher = { ...data, id: uid(), status: 'posted', createdAt: new Date().toISOString() };
+    setPaymentsState(prev => { const next = [voucher, ...prev]; save('vs_payments', next); return next; });
+    
+    // Create Journal Entry
+    // Receipt (Customer Collection): Dr Bank/Cash Account, Cr Accounts Receivable (party)
+    // Payment (Vendor Disbursement): Dr Accounts Payable (party), Cr Bank/Cash Account
+    const lines: JournalLine[] = [];
+    if (voucher.type === 'Receipt') {
+      lines.push({ account: voucher.bankAccount || 'Bank Account', debit: voucher.amount, credit: 0 });
+      lines.push({ account: 'Accounts Receivable', debit: 0, credit: voucher.amount });
+    } else {
+      lines.push({ account: 'Accounts Payable', debit: voucher.amount, credit: 0 });
+      lines.push({ account: voucher.bankAccount || 'Bank Account', debit: 0, credit: voucher.amount });
+    }
+    const je: JournalEntry = {
+      id: uid(),
+      date: voucher.date,
+      entryType: voucher.type === 'Receipt' ? 'Customer Receipt' : 'Vendor Payment',
+      relatedId: voucher.id,
+      relatedNo: voucher.voucherNo,
+      party: voucher.party,
+      lines,
+      createdAt: new Date().toISOString(),
+    };
+    appendJE(je);
+    return voucher;
+  }, [appendJE]);
+
+  const deletePayment = useCallback((id: string) => {
+    setPaymentsState(prev => { const next = prev.filter(p => p.id !== id); save('vs_payments', next); return next; });
+    setJEState(prev => { const next = prev.filter(je => !(je.relatedId === id && (je.entryType === 'Customer Receipt' || je.entryType === 'Vendor Payment'))); save('vs_journal', next); return next; });
   }, []);
 
   // ── Sales ↔ Purchase Linking ──────────────────────────────────
@@ -915,23 +1090,149 @@ export function useAccounting() {
     return `${prefix}-${y}-${String(seq).padStart(3, '0')}`;
   }, []);
 
+  const nextPaymentVoucherNo = useCallback((type: 'Receipt' | 'Payment'): string => {
+    const pmts = load<PaymentVoucher[]>('vs_payments', []);
+    const prefix = type === 'Receipt' ? 'REC' : 'PAY';
+    const y = new Date().getFullYear();
+    const seq = pmts.filter(p => p.voucherNo.startsWith(`${prefix}-${y}`)).length + 1;
+    return `${prefix}-${y}-${String(seq).padStart(3, '0')}`;
+  }, []);
+
+  // ── Smart Payment Advisor ─────────────────────────────────────
+  const getSmartPaymentSuggestions = useCallback(() => {
+    const gl = getGeneralLedger();
+    const glMap = new Map(gl.map(a => [a.account, a]));
+    const bankBal = (glMap.get('Bank Account')?.balance ?? 0) + (glMap.get('Cash in Hand')?.balance ?? 0);
+    const availableFunds = Math.max(0, bankBal);
+
+    const pis = load<PurchaseInvoice[]>('vs_purchases', []).filter(p => p.status === 'posted');
+    const dns = load<DebitNote[]>('vs_debit_notes', []).filter(d => d.type === 'Purchase');
+    const pmts = load<PaymentVoucher[]>('vs_payments', []).filter(p => p.type === 'Payment');
+    const parties = load<any[]>('vs_parties', []);
+    const today = new Date();
+
+    type Suggestion = {
+      vendorName: string;
+      invoiceNo: string;
+      invoiceDate: string;
+      dueDate: string;
+      netTotal: number;
+      paidAmount: number;
+      dnDeduction: number;
+      pendingAmount: number;
+      paymentTerms: string;
+      priority: 'High' | 'Medium' | 'Low';
+      daysOverdue: number;
+      urgencyScore: number;
+      recommendedPayment: number;
+      reason: string;
+    };
+
+    const suggestions: Suggestion[] = [];
+
+    for (const pi of pis) {
+      const party = parties.find(p => p.name.toLowerCase() === pi.vendorName.toLowerCase());
+      const termsStr = party?.paymentTerms ?? 'Net 30';
+      const priority = party?.priority ?? 'Medium';
+
+      let termsDays = 30;
+      if (termsStr.includes('15')) termsDays = 15;
+      else if (termsStr.includes('45')) termsDays = 45;
+      else if (termsStr.includes('60')) termsDays = 60;
+      else if (termsStr.toLowerCase().includes('receipt')) termsDays = 0;
+
+      const invDateObj = new Date(pi.date);
+      const dueDateObj = new Date(invDateObj.getTime() + termsDays * 86400000);
+      const dueDateStr = dueDateObj.toISOString().split('T')[0];
+      const daysOverdue = Math.floor((today.getTime() - dueDateObj.getTime()) / 86400000);
+
+      // Debit notes for this invoice
+      const dnTotal = dns.filter(d => d.relatedInvoiceId === pi.id).reduce((s, d) => s + d.netTotal, 0);
+      // Payments for this vendor
+      const vendorPmtsTotal = pmts.filter(p => p.party.toLowerCase() === pi.vendorName.toLowerCase()).reduce((s, p) => s + p.amount, 0);
+      
+      const pending = Math.max(0, pi.netTotal - dnTotal - vendorPmtsTotal);
+      if (pending <= 0) continue;
+
+      let score = 0;
+      if (daysOverdue > 0) score += 1000 + daysOverdue * 10;
+      else score += (30 - Math.abs(daysOverdue));
+
+      if (priority === 'High') score += 500;
+      else if (priority === 'Medium') score += 200;
+
+      let reason = '';
+      if (daysOverdue > 0) reason = `Overdue by ${daysOverdue} days!`;
+      else if (daysOverdue === 0) reason = `Due today!`;
+      else reason = `Due in ${Math.abs(daysOverdue)} days`;
+
+      if (priority === 'High') reason += ` · High Priority Vendor`;
+
+      suggestions.push({
+        vendorName: pi.vendorName,
+        invoiceNo: pi.invoiceNo,
+        invoiceDate: pi.date,
+        dueDate: dueDateStr,
+        netTotal: pi.netTotal,
+        paidAmount: vendorPmtsTotal,
+        dnDeduction: dnTotal,
+        pendingAmount: pending,
+        paymentTerms: termsStr,
+        priority,
+        daysOverdue,
+        urgencyScore: score,
+        recommendedPayment: 0,
+        reason,
+      });
+    }
+
+    suggestions.sort((a, b) => b.urgencyScore - a.urgencyScore);
+
+    // Allocate available funds to top suggestions
+    let remainingFund = availableFunds;
+    let totalRecommended = 0;
+
+    for (const s of suggestions) {
+      if (remainingFund <= 0) {
+        s.recommendedPayment = 0;
+      } else if (remainingFund >= s.pendingAmount) {
+        s.recommendedPayment = s.pendingAmount;
+        remainingFund -= s.pendingAmount;
+        totalRecommended += s.pendingAmount;
+      } else {
+        s.recommendedPayment = remainingFund;
+        totalRecommended += remainingFund;
+        remainingFund = 0;
+      }
+    }
+
+    return {
+      availableFunds,
+      totalPendingPayables: suggestions.reduce((s, i) => s + i.pendingAmount, 0),
+      totalRecommended,
+      unallocatedFunds: remainingFund,
+      suggestions,
+    };
+  }, [getGeneralLedger]);
+
   return {
-    // Data
-    coa, salesInvoices, purchaseInvoices, debitNotes, journalEntries,
+    // Data & Settings
+    coa, companySettings, updateCompanySettings, salesInvoices, purchaseInvoices, debitNotes, payments, journalEntries,
     // COA
     saveCoa, addAccount, updateAccount, deleteAccount, resetCOA,
     // Transactions
     postSalesInvoice, deleteSalesInvoice,
-    postPurchaseInvoice, deletePurchaseInvoice,
-    postDebitNote, postDebitNotePair,
-    postPurchaseInvoiceJE,
-    linkSalesToPurchase,
+    saveDraftPurchaseInvoice, postDraftPurchaseInvoice, postPurchaseInvoice, deletePurchaseInvoice,
+    postDebitNote, postDebitNotePair, postPurchaseInvoiceJE, linkSalesToPurchase,
+    recordPayment, deletePayment,
     // Reports
     getGeneralLedger, getAccountLedger, getTrialBalance,
     getPartyLedger, getAgeing, getMarginReport,
     getBalanceSheet, getProfitAndLoss, getCashFlow,
+    getSmartPaymentSuggestions,
     // Helpers
-    nextSalesInvoiceNo, nextPurchaseInvoiceNo, nextDnNo,
+    nextSalesInvoiceNo, nextPurchaseInvoiceNo, nextDnNo, nextPaymentVoucherNo,
     DEFAULT_COA,
   };
 }
+

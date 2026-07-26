@@ -1,22 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Download, Users, ChevronRight, CheckCircle } from 'lucide-react';
+import { Plus, Search, ChevronRight, CheckCircle, Mail, Clock } from 'lucide-react';
+import { useMaster, type MasterParty } from '../hooks/useMaster';
 import './Parties.css';
-
-type Party = {
-  id: string; name: string; type: string; gstin: string;
-  state: string; balance: number; balType: string; active: boolean;
-};
-
-const SAMPLE: Party[] = [
-  { id: 'p1', name: 'Ravi Enterprises',   type: 'customer', gstin: '29AABCR1234F1ZS', state: 'Karnataka',    balance: 42000,  balType: 'receivable', active: true },
-  { id: 'p2', name: 'Sahil Traders',      type: 'vendor',   gstin: '27AAACS2222B1Z5', state: 'Maharashtra',  balance: 18500,  balType: 'payable',    active: true },
-  { id: 'p3', name: 'Metro Retail Co.',   type: 'both',     gstin: '07AAACM5678K1ZP', state: 'Delhi',        balance: 95000,  balType: 'receivable', active: true },
-  { id: 'p4', name: 'Alpha Supplies',     type: 'vendor',   gstin: '24AAACA7890L1Z3', state: 'Gujarat',      balance: 0,      balType: 'nil',        active: true },
-  { id: 'p5', name: 'Kumar & Sons',       type: 'vendor',   gstin: '09AAACK4567N1Z1', state: 'UP',           balance: 31000,  balType: 'payable',    active: false },
-  { id: 'p6', name: 'Priya Medical Hub',  type: 'customer', gstin: '33AAACP1111M1ZQ', state: 'Tamil Nadu',   balance: 12400,  balType: 'receivable', active: true },
-  { id: 'p7', name: 'Bharat Logistics',   type: 'both',     gstin: '06AAACB5432F1Z7', state: 'Haryana',      balance: 7800,   balType: 'payable',    active: true },
-];
 
 const TYPE_MAP: Record<string, { label: string; cls: string }> = {
   customer: { label: 'Customer', cls: 'tag-customer' },
@@ -24,134 +10,146 @@ const TYPE_MAP: Record<string, { label: string; cls: string }> = {
   both:     { label: 'Both',     cls: 'tag-both' },
 };
 
-const BAL_MAP: Record<string, string> = {
-  receivable: 'bal-recv',
-  payable:    'bal-pay',
-  nil:        'bal-nil',
-};
-
 export default function Parties() {
   const { t } = useTranslation();
+  const { parties } = useMaster();
+  const [partyList, setPartyList] = useState<MasterParty[]>(parties);
   const [search, setSearch]   = useState('');
   const [filter, setFilter]   = useState<'all'|'customer'|'vendor'|'both'>('all');
   const [showAdd, setShowAdd] = useState(false);
-  const [newParty, setNewParty] = useState({ name: '', gstin: '', type: 'customer', state: '' });
+  const [newParty, setNewParty] = useState({
+    name: '', gstin: '', type: 'customer', state: '',
+    email: '', paymentTerms: 'Net 30', priority: 'Medium' as 'High' | 'Medium' | 'Low'
+  });
   const [saved, setSaved]     = useState(false);
 
-  const filtered = SAMPLE
-    .filter(p => filter === 'all' || p.type === filter)
+  const filtered = partyList
+    .filter(p => filter === 'all' || p.type === filter || p.type === 'both')
     .filter(p => p.name.toLowerCase().includes(search.toLowerCase()) ||
-                 p.gstin.toLowerCase().includes(search.toLowerCase()));
+                 p.gstin.toLowerCase().includes(search.toLowerCase()) ||
+                 (p.email && p.email.toLowerCase().includes(search.toLowerCase())));
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const created: MasterParty = {
+      id: 'p_' + Date.now().toString(36),
+      name: newParty.name,
+      type: newParty.type,
+      gstin: newParty.gstin,
+      state: newParty.state,
+      email: newParty.email,
+      paymentTerms: newParty.paymentTerms,
+      priority: newParty.priority,
+    };
+    const nextList = [created, ...partyList];
+    setPartyList(nextList);
+    localStorage.setItem('vs_parties', JSON.stringify(nextList));
     setSaved(true);
-    setTimeout(() => { setShowAdd(false); setSaved(false); setNewParty({ name:'', gstin:'', type:'customer', state:'' }); }, 1200);
+    setTimeout(() => {
+      setShowAdd(false);
+      setSaved(false);
+      setNewParty({ name: '', gstin: '', type: 'customer', state: '', email: '', paymentTerms: 'Net 30', priority: 'Medium' });
+    }, 1200);
   };
-
-  const totalRec = SAMPLE.filter(p => p.balType === 'receivable').reduce((s,p) => s+p.balance, 0);
-  const totalPay = SAMPLE.filter(p => p.balType === 'payable').reduce((s,p) => s+p.balance, 0);
 
   return (
     <div className="page-root animate-fade-in">
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t('parties.title')}</h1>
-          <p className="page-sub">{t('parties.subtitle')}</p>
+          <h1 className="page-title">{t('parties.title', 'Parties Master')}</h1>
+          <p className="page-sub">Manage Customers & Vendors · Inbound Email & Payment Terms</p>
         </div>
         <button id="add-party-btn" className="btn-action btn-action-primary" onClick={() => setShowAdd(true)}>
-          <Plus size={15}/> {t('parties.add')}
+          <Plus size={15}/> {t('parties.add', 'Add Party')}
         </button>
       </div>
 
       {/* Summary cards */}
       <div className="party-summary">
         <div id="summary-total" className="summary-card">
-          <Users size={18} className="summary-icon"/>
-          <div className="summary-val">{SAMPLE.length}</div>
-          <div className="summary-lbl">{t('parties.total')}</div>
+          <div className="summary-val">{partyList.length}</div>
+          <div className="summary-lbl">Total Parties</div>
         </div>
-        <div id="summary-receivable" className="summary-card summary-recv">
-          <div className="summary-val">₹ {(totalRec/100000).toFixed(1)}L</div>
-          <div className="summary-lbl">{t('parties.receivable')}</div>
+        <div id="summary-recv" className="summary-card">
+          <div className="summary-val">{partyList.filter(p => p.type === 'customer' || p.type === 'both').length}</div>
+          <div className="summary-lbl">Customers</div>
         </div>
-        <div id="summary-payable" className="summary-card summary-pay">
-          <div className="summary-val">₹ {(totalPay/1000).toFixed(0)}K</div>
-          <div className="summary-lbl">{t('parties.payable')}</div>
+        <div id="summary-pay" className="summary-card">
+          <div className="summary-val">{partyList.filter(p => p.type === 'vendor' || p.type === 'both').length}</div>
+          <div className="summary-lbl">Vendors</div>
         </div>
       </div>
 
       {/* Toolbar */}
       <div className="page-toolbar">
         <div className="toolbar-search">
-          <Search size={14} className="toolbar-search-icon"/>
-          <input
-            id="party-search"
-            type="text"
-            placeholder={t('parties.search')}
-            className="toolbar-search-input"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+          <Search size={15} className="toolbar-search-icon"/>
+          <input id="party-search" type="text" placeholder="Search by name, GSTIN, or email…"
+            className="toolbar-search-input" value={search} onChange={e => setSearch(e.target.value)}/>
         </div>
         <div className="filter-tabs">
-          {(['all','customer','vendor','both'] as const).map(f => (
-            <button
-              key={f}
-              id={`filter-${f}`}
-              className={`filter-tab ${filter === f ? 'filter-tab-active' : ''}`}
-              onClick={() => setFilter(f)}
-            >
-              {t(`parties.${f}`, f.charAt(0).toUpperCase() + f.slice(1))}
+          {(['all', 'customer', 'vendor', 'both'] as const).map(f => (
+            <button key={f} className={`filter-tab ${filter === f ? 'filter-tab-active' : ''}`} onClick={() => setFilter(f)}>
+              {f === 'all' ? 'All' : f === 'customer' ? 'Customers' : f === 'vendor' ? 'Vendors' : 'Both'}
             </button>
           ))}
         </div>
-        <button id="export-parties" className="icon-btn">
-          <Download size={15}/> {t('parties.export')}
-        </button>
       </div>
 
       {/* Table */}
       <div className="page-card">
         <div className="table-wrap">
-          <table className="data-table" id="parties-table">
+          <table id="parties-table" className="data-table">
             <thead>
               <tr>
-                <th>{t('parties.col_name')}</th>
-                <th>{t('parties.col_type')}</th>
-                <th>{t('parties.col_gstin')}</th>
-                <th>{t('parties.col_state')}</th>
-                <th>{t('parties.col_balance')}</th>
-                <th>{t('parties.col_status')}</th>
-                <th></th>
+                <th>Party Name</th>
+                <th>Type</th>
+                <th>Email</th>
+                <th>Payment Terms</th>
+                <th>Priority</th>
+                <th>GSTIN</th>
+                <th>State</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={7} className="empty-cell">{t('parties.empty')}</td></tr>
-              ) : filtered.map(p => (
-              <tr key={p.id} id={p.id}>
-                  <td data-label={t('parties.col_name')}>
-                    <div className="party-name-cell">
-                      <div className="party-avatar">{p.name.charAt(0)}</div>
-                      <span className="txn-party">{p.name}</span>
-                    </div>
+              {filtered.map(p => (
+                <tr key={p.id}>
+                  <td data-label="Party Name">
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.name}</div>
                   </td>
-                  <td data-label={t('parties.col_type')}><span className={`type-tag ${TYPE_MAP[p.type].cls}`}>{t(`parties.${p.type}`, TYPE_MAP[p.type].label)}</span></td>
-                  <td data-label={t('parties.col_gstin')} className="col-mobile-hide"><span className="mono">{p.gstin}</span></td>
-                  <td data-label={t('parties.col_state')} className="col-mobile-hide"><span className="txn-date">{p.state}</span></td>
-                  <td data-label={t('parties.col_balance')}>
-                    <span className={`balance-cell ${BAL_MAP[p.balType]}`}>
-                      {p.balance === 0 ? '—' : `₹ ${p.balance.toLocaleString('en-IN')}`}
-                      {p.balance > 0 && <span className="bal-suffix">{p.balType === 'receivable' ? 'Dr' : 'Cr'}</span>}
+                  <td data-label="Type">
+                    <span className={`party-tag ${TYPE_MAP[p.type]?.cls ?? ''}`}>
+                      {TYPE_MAP[p.type]?.label ?? p.type}
                     </span>
                   </td>
-                  <td data-label={t('parties.col_status')}>
-                    {p.active
-                      ? <span className="status-pill status-paid">{t('parties.active')}</span>
-                      : <span className="status-pill status-overdue">{t('parties.inactive')}</span>
-                    }
+                  <td data-label="Email">
+                    {p.email ? (
+                      <span style={{ fontSize: 12, color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Mail size={12}/>{p.email}
+                      </span>
+                    ) : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>}
+                  </td>
+                  <td data-label="Payment Terms">
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Clock size={12}/>{p.paymentTerms ?? 'Net 30'}
+                    </span>
+                  </td>
+                  <td data-label="Priority">
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12,
+                      background: p.priority === 'High' ? 'rgba(239,68,68,0.14)' : p.priority === 'Low' ? 'rgba(100,116,139,0.14)' : 'rgba(245,158,11,0.14)',
+                      color: p.priority === 'High' ? '#F87171' : p.priority === 'Low' ? '#94A3B8' : '#FBBF24',
+                    }}>
+                      {p.priority ?? 'Medium'}
+                    </span>
+                  </td>
+                  <td data-label="GSTIN" style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-muted)' }}>
+                    {p.gstin || 'UNREGISTERED'}
+                  </td>
+                  <td data-label="State" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    {p.state}
                   </td>
                   <td>
                     <button className="row-action-btn" id={`view-${p.id}`} aria-label="View">
@@ -170,46 +168,80 @@ export default function Parties() {
         <div className="modal-overlay" onClick={() => setShowAdd(false)}>
           <div className="modal animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">{t('parties.modal_title')}</h3>
+              <h3 className="modal-title">Add New Party</h3>
               <button id="close-add-party" className="modal-close" onClick={() => setShowAdd(false)}>✕</button>
             </div>
             {saved ? (
               <div className="modal-success">
                 <CheckCircle size={36} className="success-ico"/>
-                <p>{t('parties.saved')}</p>
+                <p>Party Saved Successfully!</p>
               </div>
             ) : (
               <form className="modal-form" onSubmit={handleSave}>
                 <div className="field-group">
-                  <label className="field-label">{t('parties.name_label')}</label>
+                  <label className="field-label">Party Name *</label>
                   <input id="new-party-name" className="field-input" required value={newParty.name}
-                    onChange={e => setNewParty(v => ({...v, name: e.target.value}))} placeholder={t('parties.name_ph')}/>
+                    onChange={e => setNewParty(v => ({...v, name: e.target.value}))} placeholder="e.g. Acme Corporation"/>
                 </div>
+
                 <div className="modal-row">
                   <div className="field-group" style={{ flex: 1 }}>
-                    <label className="field-label">{t('parties.gstin_label')}</label>
-                    <input id="new-party-gstin" className="field-input" value={newParty.gstin}
-                      onChange={e => setNewParty(v => ({...v, gstin: e.target.value.toUpperCase()}))}
-                      placeholder={t('parties.gstin_ph')} maxLength={15}/>
+                    <label className="field-label">Email Address (for Invoices &amp; Receipts)</label>
+                    <input type="email" className="field-input" value={newParty.email}
+                      onChange={e => setNewParty(v => ({...v, email: e.target.value}))}
+                      placeholder="e.g. accounts@acme.com"/>
                   </div>
                   <div className="field-group" style={{ flex: 1 }}>
-                    <label className="field-label">{t('parties.type_label')}</label>
+                    <label className="field-label">Party Type *</label>
                     <select id="new-party-type" className="field-input" value={newParty.type}
                       onChange={e => setNewParty(v => ({...v, type: e.target.value}))}>
-                      <option value="customer">{t('parties.customer')}</option>
-                      <option value="vendor">{t('parties.vendor')}</option>
-                      <option value="both">{t('parties.both')}</option>
+                      <option value="customer">Customer</option>
+                      <option value="vendor">Vendor</option>
+                      <option value="both">Both (Customer &amp; Vendor)</option>
                     </select>
                   </div>
                 </div>
-                <div className="field-group">
-                  <label className="field-label">{t('parties.state_label')}</label>
-                  <input id="new-party-state" className="field-input" value={newParty.state}
-                    onChange={e => setNewParty(v => ({...v, state: e.target.value}))} placeholder={t('parties.state_ph')}/>
+
+                <div className="modal-row">
+                  <div className="field-group" style={{ flex: 1 }}>
+                    <label className="field-label">Payment Terms</label>
+                    <select className="field-input" value={newParty.paymentTerms}
+                      onChange={e => setNewParty(v => ({...v, paymentTerms: e.target.value}))}>
+                      <option value="Due on Receipt">Due on Receipt</option>
+                      <option value="Net 15">Net 15 Days</option>
+                      <option value="Net 30">Net 30 Days</option>
+                      <option value="Net 45">Net 45 Days</option>
+                      <option value="Net 60">Net 60 Days</option>
+                    </select>
+                  </div>
+                  <div className="field-group" style={{ flex: 1 }}>
+                    <label className="field-label">Priority Level (for Smart Payments)</label>
+                    <select className="field-input" value={newParty.priority}
+                      onChange={e => setNewParty(v => ({...v, priority: e.target.value as any}))}>
+                      <option value="High">🔴 High Priority</option>
+                      <option value="Medium">🟡 Medium Priority</option>
+                      <option value="Low">⚪ Low Priority</option>
+                    </select>
+                  </div>
                 </div>
+
+                <div className="modal-row">
+                  <div className="field-group" style={{ flex: 1 }}>
+                    <label className="field-label">GSTIN</label>
+                    <input id="new-party-gstin" className="field-input" value={newParty.gstin}
+                      onChange={e => setNewParty(v => ({...v, gstin: e.target.value.toUpperCase()}))}
+                      placeholder="15-digit GSTIN" maxLength={15}/>
+                  </div>
+                  <div className="field-group" style={{ flex: 1 }}>
+                    <label className="field-label">State</label>
+                    <input id="new-party-state" className="field-input" value={newParty.state}
+                      onChange={e => setNewParty(v => ({...v, state: e.target.value}))} placeholder="State name"/>
+                  </div>
+                </div>
+
                 <div className="modal-actions">
-                  <button type="button" className="btn-action btn-action-secondary" onClick={() => setShowAdd(false)}>{t('parties.cancel')}</button>
-                  <button id="save-party-btn" type="submit" className="btn-action btn-action-primary">{t('parties.save')}</button>
+                  <button type="button" className="btn-action btn-action-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
+                  <button id="save-party-btn" type="submit" className="btn-action btn-action-primary">Save Party</button>
                 </div>
               </form>
             )}

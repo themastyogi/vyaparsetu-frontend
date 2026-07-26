@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Package, FileText,
   ShoppingCart, BarChart3, Settings, LogOut,
   Bell, Search, ChevronDown, Building2,
-  HelpCircle, Menu, X, BookOpen, Zap,
+  HelpCircle, Menu, X, BookOpen, Zap, CreditCard
 } from 'lucide-react';
 import './Layout.css';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -25,6 +25,7 @@ const NAV_SECTIONS = [
       { key: 'nav.sales',       icon: <ShoppingCart size={18}/>, path: '/dashboard/sales',       label: 'Sales Invoices' },
       { key: 'nav.purchases',   icon: <FileText size={18}/>,     path: '/dashboard/purchases',   label: 'Purchase Bills' },
       { key: 'nav.debit-notes', icon: <Zap size={18}/>,         path: '/dashboard/debit-notes', label: 'Debit Notes' },
+      { key: 'nav.payments',    icon: <CreditCard size={18}/>,  path: '/dashboard/payments',    label: 'Payments & Advisor' },
     ],
   },
   {
