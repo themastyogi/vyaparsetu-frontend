@@ -24,7 +24,7 @@ export default function Purchases() {
   const wizard = usePurchaseWizard();
   const { getPartyByName } = useMaster();
   const {
-    companySettings, purchaseInvoices, salesInvoices,
+    companySettings, updateCompanySettings, purchaseInvoices, salesInvoices,
     deletePurchaseInvoice, postDraftPurchaseInvoice, linkSalesToPurchase,
   } = useAccounting();
 
@@ -32,7 +32,15 @@ export default function Purchases() {
   const [search,      setSearch]      = useState('');
   const [linkModal,   setLinkModal]   = useState<PurchaseInvoice | null>(null);
   const [showEmailInbox, setShowEmailInbox] = useState(false);
+  const [showEditCompanyEmail, setShowEditCompanyEmail] = useState(false);
+  const [companyEmailInput, setCompanyEmailInput] = useState(companySettings.inboundEmail);
   const [emailAckToast, setEmailAckToast]   = useState<{ party: string; email: string; invNo: string; amount: number } | null>(null);
+
+  const handleSaveCompanyEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateCompanySettings({ inboundEmail: companyEmailInput });
+    setShowEditCompanyEmail(false);
+  };
 
   const draftCount = purchaseInvoices.filter(p => p.status === 'draft').length;
 
@@ -142,8 +150,11 @@ export default function Purchases() {
             <Mail size={20}/>
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
-              Dedicated Booking Email: <span style={{ fontFamily: 'monospace', color: 'var(--brand-primary)' }}>{companySettings.inboundEmail}</span>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>Dedicated Booking Email: <strong style={{ fontFamily: 'monospace', color: 'var(--brand-primary)' }}>{companySettings.inboundEmail}</strong></span>
+              <button onClick={() => setShowEditCompanyEmail(true)} style={{ background: 'rgba(108,71,255,0.15)', border: 'none', color: 'var(--brand-primary)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                ✏ Edit Email
+              </button>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
               Ask vendors to send PDF/Image invoices to this address. Bills auto-ingest into your Email Inbox as Drafts.
@@ -295,6 +306,33 @@ export default function Purchases() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="btn-action btn-action-secondary" onClick={() => setLinkModal(null)}>Cancel</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Company Inbound Email Modal */}
+      {showEditCompanyEmail && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 440, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Mail size={18} style={{ color: 'var(--brand-primary)' }}/> Configure Inbound Booking Email
+              </h3>
+              <button onClick={() => setShowEditCompanyEmail(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
+            <form onSubmit={handleSaveCompanyEmail} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label className="field-label">Company Purchase Booking Email *</label>
+                <input type="email" required value={companyEmailInput} onChange={e => setCompanyEmailInput(e.target.value)} placeholder="e.g. invoices.mycompany@vyaparsetu.in" className="field-input" style={{ fontWeight: 700, fontFamily: 'monospace' }}/>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+                  Vendors send bills to this email. Invoices sent here auto-ingest into your Email Inbox as Drafts.
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 12 }}>
+                <button type="button" className="btn-action btn-action-secondary" onClick={() => setShowEditCompanyEmail(false)}>Cancel</button>
+                <button type="submit" className="btn-action btn-action-primary">Save Email Settings</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

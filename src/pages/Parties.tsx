@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, ChevronRight, CheckCircle, Mail, Clock } from 'lucide-react';
+import { Plus, Search, CheckCircle, Mail, Clock, Edit2 } from 'lucide-react';
 import { useMaster, type MasterParty } from '../hooks/useMaster';
 import './Parties.css';
 
@@ -17,7 +17,9 @@ export default function Parties() {
   const [search, setSearch]   = useState('');
   const [filter, setFilter]   = useState<'all'|'customer'|'vendor'|'both'>('all');
   const [showAdd, setShowAdd] = useState(false);
-  const [newParty, setNewParty] = useState({
+  const [editingParty, setEditingParty] = useState<MasterParty | null>(null);
+
+  const [formParty, setFormParty] = useState({
     name: '', gstin: '', type: 'customer', state: '',
     email: '', paymentTerms: 'Net 30', priority: 'Medium' as 'High' | 'Medium' | 'Low'
   });
@@ -29,27 +31,55 @@ export default function Parties() {
                  p.gstin.toLowerCase().includes(search.toLowerCase()) ||
                  (p.email && p.email.toLowerCase().includes(search.toLowerCase())));
 
+  const handleOpenAdd = () => {
+    setEditingParty(null);
+    setFormParty({ name: '', gstin: '', type: 'customer', state: '', email: '', paymentTerms: 'Net 30', priority: 'Medium' });
+    setShowAdd(true);
+  };
+
+  const handleOpenEdit = (p: MasterParty) => {
+    setEditingParty(p);
+    setFormParty({
+      name: p.name,
+      gstin: p.gstin,
+      type: p.type,
+      state: p.state,
+      email: p.email || '',
+      paymentTerms: p.paymentTerms || 'Net 30',
+      priority: p.priority || 'Medium',
+    });
+    setShowAdd(true);
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    const created: MasterParty = {
-      id: 'p_' + Date.now().toString(36),
-      name: newParty.name,
-      type: newParty.type,
-      gstin: newParty.gstin,
-      state: newParty.state,
-      email: newParty.email,
-      paymentTerms: newParty.paymentTerms,
-      priority: newParty.priority,
-    };
-    const nextList = [created, ...partyList];
+    let nextList: MasterParty[];
+
+    if (editingParty) {
+      nextList = partyList.map(p => p.id === editingParty.id ? { ...p, ...formParty } : p);
+    } else {
+      const created: MasterParty = {
+        id: 'p_' + Date.now().toString(36),
+        name: formParty.name,
+        type: formParty.type,
+        gstin: formParty.gstin,
+        state: formParty.state,
+        email: formParty.email,
+        paymentTerms: formParty.paymentTerms,
+        priority: formParty.priority,
+      };
+      nextList = [created, ...partyList];
+    }
+
     setPartyList(nextList);
     localStorage.setItem('vs_parties', JSON.stringify(nextList));
     setSaved(true);
     setTimeout(() => {
       setShowAdd(false);
       setSaved(false);
-      setNewParty({ name: '', gstin: '', type: 'customer', state: '', email: '', paymentTerms: 'Net 30', priority: 'Medium' });
-    }, 1200);
+      setEditingParty(null);
+      setFormParty({ name: '', gstin: '', type: 'customer', state: '', email: '', paymentTerms: 'Net 30', priority: 'Medium' });
+    }, 1000);
   };
 
   return (
@@ -58,9 +88,9 @@ export default function Parties() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('parties.title', 'Parties Master')}</h1>
-          <p className="page-sub">Manage Customers & Vendors · Inbound Email & Payment Terms</p>
+          <p className="page-sub">Manage Customers &amp; Vendors · Email Accounts for Receipt Acknowledgments &amp; Terms</p>
         </div>
-        <button id="add-party-btn" className="btn-action btn-action-primary" onClick={() => setShowAdd(true)}>
+        <button id="add-party-btn" className="btn-action btn-action-primary" onClick={handleOpenAdd}>
           <Plus size={15}/> {t('parties.add', 'Add Party')}
         </button>
       </div>
@@ -105,12 +135,12 @@ export default function Parties() {
               <tr>
                 <th>Party Name</th>
                 <th>Type</th>
-                <th>Email</th>
+                <th>Email Address (For Acknowledgments)</th>
                 <th>Payment Terms</th>
                 <th>Priority</th>
                 <th>GSTIN</th>
                 <th>State</th>
-                <th>Actions</th>
+                <th>Edit / Action</th>
               </tr>
             </thead>
             <tbody>
@@ -126,10 +156,14 @@ export default function Parties() {
                   </td>
                   <td data-label="Email">
                     {p.email ? (
-                      <span style={{ fontSize: 12, color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ fontSize: 12, color: 'var(--brand-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                         <Mail size={12}/>{p.email}
                       </span>
-                    ) : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>}
+                    ) : (
+                      <button onClick={() => handleOpenEdit(p)} style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#FBBF24', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                        + Add Email
+                      </button>
+                    )}
                   </td>
                   <td data-label="Payment Terms">
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -152,8 +186,8 @@ export default function Parties() {
                     {p.state}
                   </td>
                   <td>
-                    <button className="row-action-btn" id={`view-${p.id}`} aria-label="View">
-                      <ChevronRight size={15}/>
+                    <button onClick={() => handleOpenEdit(p)} className="btn-action btn-action-ghost" style={{ padding: '4px 8px', fontSize: 12, color: 'var(--brand-primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Edit2 size={13}/> Edit
                     </button>
                   </td>
                 </tr>
@@ -163,12 +197,12 @@ export default function Parties() {
         </div>
       </div>
 
-      {/* Add Party Modal */}
+      {/* Add / Edit Party Modal */}
       {showAdd && (
         <div className="modal-overlay" onClick={() => setShowAdd(false)}>
           <div className="modal animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Add New Party</h3>
+              <h3 className="modal-title">{editingParty ? `Edit Party — ${editingParty.name}` : 'Add New Party'}</h3>
               <button id="close-add-party" className="modal-close" onClick={() => setShowAdd(false)}>✕</button>
             </div>
             {saved ? (
@@ -180,21 +214,26 @@ export default function Parties() {
               <form className="modal-form" onSubmit={handleSave}>
                 <div className="field-group">
                   <label className="field-label">Party Name *</label>
-                  <input id="new-party-name" className="field-input" required value={newParty.name}
-                    onChange={e => setNewParty(v => ({...v, name: e.target.value}))} placeholder="e.g. Acme Corporation"/>
+                  <input id="new-party-name" className="field-input" required value={formParty.name}
+                    onChange={e => setFormParty(v => ({...v, name: e.target.value}))} placeholder="e.g. Sahil Traders"/>
                 </div>
 
                 <div className="modal-row">
                   <div className="field-group" style={{ flex: 1 }}>
-                    <label className="field-label">Email Address (for Invoices &amp; Receipts)</label>
-                    <input type="email" className="field-input" value={newParty.email}
-                      onChange={e => setNewParty(v => ({...v, email: e.target.value}))}
-                      placeholder="e.g. accounts@acme.com"/>
+                    <label className="field-label" style={{ color: 'var(--brand-primary)', fontWeight: 700 }}>
+                      📧 Email Address (For Receipt &amp; Invoice Acknowledgments) *
+                    </label>
+                    <input type="email" className="field-input" required value={formParty.email}
+                      onChange={e => setFormParty(v => ({...v, email: e.target.value}))}
+                      placeholder="e.g. accounts@sahiltraders.in" style={{ borderColor: 'var(--brand-primary)' }}/>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                      System sends email acknowledgment to this address when an invoice is created/posted.
+                    </span>
                   </div>
                   <div className="field-group" style={{ flex: 1 }}>
                     <label className="field-label">Party Type *</label>
-                    <select id="new-party-type" className="field-input" value={newParty.type}
-                      onChange={e => setNewParty(v => ({...v, type: e.target.value}))}>
+                    <select id="new-party-type" className="field-input" value={formParty.type}
+                      onChange={e => setFormParty(v => ({...v, type: e.target.value}))}>
                       <option value="customer">Customer</option>
                       <option value="vendor">Vendor</option>
                       <option value="both">Both (Customer &amp; Vendor)</option>
@@ -205,8 +244,8 @@ export default function Parties() {
                 <div className="modal-row">
                   <div className="field-group" style={{ flex: 1 }}>
                     <label className="field-label">Payment Terms</label>
-                    <select className="field-input" value={newParty.paymentTerms}
-                      onChange={e => setNewParty(v => ({...v, paymentTerms: e.target.value}))}>
+                    <select className="field-input" value={formParty.paymentTerms}
+                      onChange={e => setFormParty(v => ({...v, paymentTerms: e.target.value}))}>
                       <option value="Due on Receipt">Due on Receipt</option>
                       <option value="Net 15">Net 15 Days</option>
                       <option value="Net 30">Net 30 Days</option>
@@ -216,8 +255,8 @@ export default function Parties() {
                   </div>
                   <div className="field-group" style={{ flex: 1 }}>
                     <label className="field-label">Priority Level (for Smart Payments)</label>
-                    <select className="field-input" value={newParty.priority}
-                      onChange={e => setNewParty(v => ({...v, priority: e.target.value as any}))}>
+                    <select className="field-input" value={formParty.priority}
+                      onChange={e => setFormParty(v => ({...v, priority: e.target.value as any}))}>
                       <option value="High">🔴 High Priority</option>
                       <option value="Medium">🟡 Medium Priority</option>
                       <option value="Low">⚪ Low Priority</option>
@@ -228,20 +267,22 @@ export default function Parties() {
                 <div className="modal-row">
                   <div className="field-group" style={{ flex: 1 }}>
                     <label className="field-label">GSTIN</label>
-                    <input id="new-party-gstin" className="field-input" value={newParty.gstin}
-                      onChange={e => setNewParty(v => ({...v, gstin: e.target.value.toUpperCase()}))}
+                    <input id="new-party-gstin" className="field-input" value={formParty.gstin}
+                      onChange={e => setFormParty(v => ({...v, gstin: e.target.value.toUpperCase()}))}
                       placeholder="15-digit GSTIN" maxLength={15}/>
                   </div>
                   <div className="field-group" style={{ flex: 1 }}>
                     <label className="field-label">State</label>
-                    <input id="new-party-state" className="field-input" value={newParty.state}
-                      onChange={e => setNewParty(v => ({...v, state: e.target.value}))} placeholder="State name"/>
+                    <input id="new-party-state" className="field-input" value={formParty.state}
+                      onChange={e => setFormParty(v => ({...v, state: e.target.value}))} placeholder="State name"/>
                   </div>
                 </div>
 
                 <div className="modal-actions">
                   <button type="button" className="btn-action btn-action-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
-                  <button id="save-party-btn" type="submit" className="btn-action btn-action-primary">Save Party</button>
+                  <button id="save-party-btn" type="submit" className="btn-action btn-action-primary">
+                    {editingParty ? 'Update Party' : 'Save Party'}
+                  </button>
                 </div>
               </form>
             )}
