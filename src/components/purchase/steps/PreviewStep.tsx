@@ -92,19 +92,7 @@ export default function PreviewStep({ wizard }: Props) {
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
 
-      // We still update the mock array so the frontend Purchases list reflects it immediately
-      import('../../../pages/Purchases').then(({ addMockPurchase }) => {
-        const newBill = {
-          id: crypto.randomUUID(),
-          vendorName: data.vendorName || 'Unknown Vendor',
-          invoiceNo: data.invoiceNo || `INV-${Math.floor(Math.random() * 10000)}`,
-          date: data.invoiceDate || new Date().toISOString().split('T')[0],
-          amount: total,
-          status: 'posted',
-          isOcr: data.source === 'ocr'
-        };
-        addMockPurchase(newBill);
-      });
+      window.dispatchEvent(new Event('purchases_updated'));
 
       wizard.updateData({ ...data }); 
       wizard.goToStep('status');
