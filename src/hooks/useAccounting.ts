@@ -521,47 +521,6 @@ const SEED_PAYMENTS: PaymentVoucher[] = [
   }
 ];
 
-const SEED_DRAFT_PURCHASES: PurchaseInvoice[] = [
-  {
-    id: 'pi-draft-email-1',
-    invoiceNo: 'INV-ST-8819',
-    date: '2026-07-25',
-    vendorName: 'Sahil Traders',
-    vendorGstin: '27AAACS2222B1Z5',
-    items: [
-      { id: 'item-d1', description: 'Raw Material Batch A', qty: 10, rate: 3500, amount: 35000, gstRate: 18, gstAmount: 6300, total: 41300 }
-    ],
-    subtotal: 35000,
-    gstTotal: 6300,
-    netTotal: 41300,
-    status: 'draft',
-    source: 'email',
-    senderEmail: 'accounts@sahiltraders.in',
-    receivedAt: '2026-07-25T14:30:00Z',
-    attachedFileName: 'SahilTraders_Invoice_8819.pdf',
-    createdAt: '2026-07-25T14:30:00Z',
-  },
-  {
-    id: 'pi-draft-email-2',
-    invoiceNo: 'AS-2026-901',
-    date: '2026-07-24',
-    vendorName: 'Alpha Supplies',
-    vendorGstin: '24AAACA7890L1Z3',
-    items: [
-      { id: 'item-d2', description: 'Packaging Boxes & Tape', qty: 50, rate: 420, amount: 21000, gstRate: 12, gstAmount: 2520, total: 23520 }
-    ],
-    subtotal: 21000,
-    gstTotal: 2520,
-    netTotal: 23520,
-    status: 'draft',
-    source: 'email',
-    senderEmail: 'sales@alphasupplies.com',
-    receivedAt: '2026-07-24T09:15:00Z',
-    attachedFileName: 'AlphaSupplies_Bill_901.pdf',
-    createdAt: '2026-07-24T09:15:00Z',
-  }
-];
-
 const SEED_BANK_ACCOUNTS: BankAccount[] = [
   {
     id: 'ba-hdfc-1',
@@ -610,9 +569,8 @@ export function useAccounting() {
   const [purchaseInvoices, setPIState] = useState<PurchaseInvoice[]>(() => {
     const stored = load<PurchaseInvoice[]>('vs_purchases', []);
     if (stored.length === 0) {
-      const combined = [...SEED_PURCHASES, ...SEED_DRAFT_PURCHASES];
-      save('vs_purchases', combined);
-      return combined;
+      save('vs_purchases', SEED_PURCHASES);
+      return SEED_PURCHASES;
     }
     return stored;
   });
