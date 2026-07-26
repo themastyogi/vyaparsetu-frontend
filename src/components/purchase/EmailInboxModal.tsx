@@ -1,10 +1,10 @@
 /**
  * EmailInboxModal.tsx
- * Drawer / Modal for viewing and processing Email-Ingested Purchase Invoices.
- * Inbound Email: invoices.company@vyaparsetu.in
+ * Drawer / Modal for viewing, editing, and processing Email-Ingested Purchase Invoices.
+ * Handles multiple PDF attachments per email and allows direct amount editing before booking.
  */
 import { useState } from 'react';
-import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Plus } from 'lucide-react';
+import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Plus, Edit2, Layers } from 'lucide-react';
 import { useAccounting, type PurchaseInvoice } from '../../hooks/useAccounting';
 import { useMaster } from '../../hooks/useMaster';
 
@@ -23,17 +23,34 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncToast, setSyncToast] = useState<string | null>(null);
   const [showSimModal, setShowSimModal] = useState(false);
+  const [editingDraft, setEditingDraft] = useState<PurchaseInvoice | null>(null);
+
+  // Edit draft form
+  const [editForm, setEditForm] = useState({
+    vendorName: '',
+    senderEmail: '',
+    invoiceNo: '',
+    date: '',
+    description: '',
+    subtotal: '',
+    gstRate: 18,
+    attachedFileName: '',
+  });
 
   // Custom simulation form
   const [simForm, setSimForm] = useState({
     vendorName: '',
-    senderEmail: '',
-    invoiceNo: '',
+    senderEmail: 'themastyogi@gmail.com',
+    invoiceNo1: 'INV-2026-0811',
+    amount1: '15736',
+    attachedFileName1: 'Invoice_Attachment_1.pdf',
+    invoiceNo2: 'INV-2026-0812',
+    amount2: '18568.48',
+    attachedFileName2: 'Invoice_Attachment_2.pdf',
     date: new Date().toISOString().split('T')[0],
-    description: 'Raw Materials & Inventory Purchase',
-    amount: '25000',
+    description: 'Raw Materials & Components Order',
     gstRate: 18,
-    attachedFileName: 'Vendor_Tax_Invoice.pdf',
+    multipleAttachments: true,
   });
 
   if (!isOpen) return null;
@@ -47,10 +64,10 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
       const activeVendors = vendors.length > 0 ? vendors : parties;
       const targetVendor = activeVendors.length > 0
         ? activeVendors[Math.floor(Math.random() * activeVendors.length)]
-        : { name: 'Sahil Traders', email: 'accounts@sahiltraders.in', gstin: '27AAACS2222B1Z5' };
+        : { name: 'Sahil Traders', email: 'themastyogi@gmail.com', gstin: '27AAACS2222B1Z5' };
 
       const invNo = 'EMAIL-INV-' + Math.floor(1000 + Math.random() * 9000);
-      const baseAmount = 15000 + Math.floor(Math.random() * 25000);
+      const baseAmount = 15736;
       const gstRate = 18;
       const gstAmount = Math.round(baseAmount * (gstRate / 100));
       const total = baseAmount + gstAmount;
@@ -63,7 +80,7 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
         items: [
           {
             id: 'item_' + Date.now().toString(36),
-            description: 'Inventory & Supplies Order',
+            description: 'Ingested Invoice Item (Attachment 1)',
             qty: 1,
             rate: baseAmount,
             amount: baseAmount,
@@ -77,58 +94,146 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
         netTotal: total,
         status: 'draft',
         source: 'email',
-        senderEmail: targetVendor.email || `invoices@${targetVendor.name.toLowerCase().replace(/\s+/g, '')}.com`,
+        senderEmail: targetVendor.email || 'themastyogi@gmail.com',
         receivedAt: new Date().toISOString(),
-        attachedFileName: `${targetVendor.name.replace(/\s+/g, '_')}_Invoice_${invNo}.pdf`,
+        attachedFileName: `${targetVendor.name.replace(/\s+/g, '_')}_Bill_${invNo}.pdf`,
       });
 
       setIsSyncing(false);
-      setSyncToast(`New bill ingested from ${created.vendorName} (${created.invoiceNo})!`);
+      setSyncToast(`Ingested invoice from ${created.senderEmail} (${created.invoiceNo})!`);
       setTimeout(() => setSyncToast(null), 3500);
     }, 800);
   };
 
-  const handleCustomSimulateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amt = parseFloat(simForm.amount) || 10000;
-    const gstAmt = Math.round(amt * (simForm.gstRate / 100));
-    const total = amt + gstAmt;
+  const handleOpenEditDraft = (draft: PurchaseInvoice) => {
+    setEditingDraft(draft);
+    setEditForm({
+      vendorName: draft.vendorName,
+      senderEmail: draft.senderEmail || '',
+      invoiceNo: draft.invoiceNo,
+      date: draft.date,
+      description: draft.items[0]?.description || 'Purchase Item',
+      subtotal: String(draft.subtotal || draft.netTotal),
+      gstRate: draft.items[0]?.gstRate || 18,
+      attachedFileName: draft.attachedFileName || 'Invoice.pdf',
+    });
+  };
 
-    const created = saveDraftPurchaseInvoice({
-      invoiceNo: simForm.invoiceNo || 'EMAIL-INV-' + Math.floor(1000 + Math.random() * 9000),
-      date: simForm.date,
-      vendorName: simForm.vendorName || (vendors[0]?.name || 'Sahil Traders'),
-      vendorGstin: vendors.find(v => v.name === simForm.vendorName)?.gstin || '27AAACS2222B1Z5',
+  const handleSaveEditDraft = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDraft) return;
+
+    const sub = parseFloat(editForm.subtotal) || 0;
+    const gstAmt = Math.round(sub * (editForm.gstRate / 100));
+    const total = sub + gstAmt;
+
+    saveDraftPurchaseInvoice({
+      id: editingDraft.id,
+      invoiceNo: editForm.invoiceNo,
+      date: editForm.date,
+      vendorName: editForm.vendorName,
+      vendorGstin: editingDraft.vendorGstin || 'UNREGISTERED',
       items: [
         {
-          id: 'item_' + Date.now().toString(36),
-          description: simForm.description,
+          id: editingDraft.items[0]?.id || 'item_' + Date.now().toString(36),
+          description: editForm.description,
           qty: 1,
-          rate: amt,
-          amount: amt,
-          gstRate: simForm.gstRate,
+          rate: sub,
+          amount: sub,
+          gstRate: editForm.gstRate,
           gstAmount: gstAmt,
           total: total,
         }
       ],
-      subtotal: amt,
+      subtotal: sub,
       gstTotal: gstAmt,
       netTotal: total,
       status: 'draft',
       source: 'email',
-      senderEmail: simForm.senderEmail || 'billing@vendor.com',
-      receivedAt: new Date().toISOString(),
-      attachedFileName: simForm.attachedFileName || 'Invoice_Document.pdf',
+      senderEmail: editForm.senderEmail,
+      receivedAt: editingDraft.receivedAt || new Date().toISOString(),
+      attachedFileName: editForm.attachedFileName,
     });
 
-    setShowSimModal(false);
-    setSyncToast(`Draft Bill ${created.invoiceNo} from ${created.vendorName} created!`);
+    setEditingDraft(null);
+    setSyncToast(`Draft Bill ${editForm.invoiceNo} amounts updated!`);
+    setTimeout(() => setSyncToast(null), 3500);
+  };
+
+  const handleSimulateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const vendorName = simForm.vendorName || vendors[0]?.name || 'Sahil Traders';
+    const vendorObj = vendors.find(v => v.name === vendorName);
+
+    // If 2 attachments option selected, create 2 draft bills!
+    if (simForm.multipleAttachments) {
+      const amt1 = parseFloat(simForm.amount1) || 15736;
+      const gstAmt1 = Math.round(amt1 * (simForm.gstRate / 100));
+      const total1 = amt1 + gstAmt1;
+
+      saveDraftPurchaseInvoice({
+        invoiceNo: simForm.invoiceNo1 || 'EMAIL-INV-8819',
+        date: simForm.date,
+        vendorName: vendorName,
+        vendorGstin: vendorObj?.gstin || '27AAACS2222B1Z5',
+        items: [
+          { id: 'item_sim_1', description: simForm.description + ' (Attachment 1 of 2)', qty: 1, rate: amt1, amount: amt1, gstRate: simForm.gstRate, gstAmount: gstAmt1, total: total1 }
+        ],
+        subtotal: amt1, gstTotal: gstAmt1, netTotal: total1,
+        status: 'draft', source: 'email', senderEmail: simForm.senderEmail,
+        receivedAt: new Date().toISOString(),
+        attachedFileName: simForm.attachedFileName1 || 'Invoice_Attachment_1.pdf',
+      });
+
+      const amt2 = parseFloat(simForm.amount2) || 18568.48;
+      const gstAmt2 = Math.round(amt2 * (simForm.gstRate / 100));
+      const total2 = amt2 + gstAmt2;
+
+      saveDraftPurchaseInvoice({
+        invoiceNo: simForm.invoiceNo2 || 'EMAIL-INV-8820',
+        date: simForm.date,
+        vendorName: vendorName,
+        vendorGstin: vendorObj?.gstin || '27AAACS2222B1Z5',
+        items: [
+          { id: 'item_sim_2', description: simForm.description + ' (Attachment 2 of 2)', qty: 1, rate: amt2, amount: amt2, gstRate: simForm.gstRate, gstAmount: gstAmt2, total: total2 }
+        ],
+        subtotal: amt2, gstTotal: gstAmt2, netTotal: total2,
+        status: 'draft', source: 'email', senderEmail: simForm.senderEmail,
+        receivedAt: new Date().toISOString(),
+        attachedFileName: simForm.attachedFileName2 || 'Invoice_Attachment_2.pdf',
+      });
+
+      setShowSimModal(false);
+      setSyncToast(`Ingested 2 separate purchase invoice attachments from ${simForm.senderEmail}!`);
+    } else {
+      const amt1 = parseFloat(simForm.amount1) || 15736;
+      const gstAmt1 = Math.round(amt1 * (simForm.gstRate / 100));
+      const total1 = amt1 + gstAmt1;
+
+      saveDraftPurchaseInvoice({
+        invoiceNo: simForm.invoiceNo1 || 'EMAIL-INV-8819',
+        date: simForm.date,
+        vendorName: vendorName,
+        vendorGstin: vendorObj?.gstin || '27AAACS2222B1Z5',
+        items: [
+          { id: 'item_sim_1', description: simForm.description, qty: 1, rate: amt1, amount: amt1, gstRate: simForm.gstRate, gstAmount: gstAmt1, total: total1 }
+        ],
+        subtotal: amt1, gstTotal: gstAmt1, netTotal: total1,
+        status: 'draft', source: 'email', senderEmail: simForm.senderEmail,
+        receivedAt: new Date().toISOString(),
+        attachedFileName: simForm.attachedFileName1 || 'Invoice_Attachment_1.pdf',
+      });
+
+      setShowSimModal(false);
+      setSyncToast(`Ingested 1 purchase invoice attachment from ${simForm.senderEmail}!`);
+    }
+
     setTimeout(() => setSyncToast(null), 3500);
   };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 740, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 760, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
         
         {/* Modal Header */}
         <div style={{ padding: '20px 24px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -146,27 +251,31 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
         {/* Info banner & actions */}
         <div style={{ background: 'rgba(59,130,246,0.08)', borderBottom: '1px solid rgba(59,130,246,0.18)', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <div style={{ fontSize: 12, color: '#3B82F6', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-            <Sparkles size={14}/> Vendors email bills to <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{companySettings.inboundEmail}</span>
+            <Sparkles size={14}/> Incoming emails with 1 or multiple PDF attachments create draft bills automatically.
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => {
               const defaultV = vendors[0] || parties[0];
               setSimForm({
                 vendorName: defaultV?.name || '',
-                senderEmail: defaultV?.email || 'sales@vendor.com',
-                invoiceNo: 'EMAIL-INV-' + Math.floor(1000 + Math.random() * 9000),
+                senderEmail: 'themastyogi@gmail.com',
+                invoiceNo1: 'INV-2026-0811',
+                amount1: '15736',
+                attachedFileName1: 'SahilTraders_Invoice_1.pdf',
+                invoiceNo2: 'INV-2026-0812',
+                amount2: '18568.48',
+                attachedFileName2: 'SahilTraders_Invoice_2.pdf',
                 date: new Date().toISOString().split('T')[0],
-                description: 'Custom Raw Materials Order',
-                amount: '20000',
+                description: 'Order Line Item',
                 gstRate: 18,
-                attachedFileName: 'Vendor_Invoice.pdf',
+                multipleAttachments: true,
               });
               setShowSimModal(true);
             }} className="btn-action btn-action-secondary" style={{ padding: '6px 12px', fontSize: 12 }}>
-              <Plus size={13}/> Simulate Custom Email
+              <Layers size={13}/> Ingest Email with 2 PDF Attachments
             </button>
             <button onClick={handleAutoSync} disabled={isSyncing} className="btn-action btn-action-primary" style={{ padding: '6px 12px', fontSize: 12 }}>
-              <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''}/> {isSyncing ? 'Syncing...' : 'Sync Email Inbox'}
+              <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''}/> {isSyncing ? 'Syncing...' : 'Sync Inbox'}
             </button>
           </div>
         </div>
@@ -183,12 +292,12 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
             <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
               <Mail size={42} style={{ opacity: 0.3, marginBottom: 12 }}/>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)' }}>No Pending Ingested Email Bills</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>Vendor emails sent to <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{companySettings.inboundEmail}</span> will automatically appear here.</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Vendor emails sent to <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{companySettings.inboundEmail}</span> will appear here as draft bills.</div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Pending Draft Bills ({draftBills.length})
+                Pending Ingested Draft Bills ({draftBills.length}) — Click 'Edit Amount' to adjust exact totals
               </div>
               {draftBills.map(draft => (
                 <div key={draft.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 12, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
@@ -202,19 +311,24 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                       <span>Ref: <strong style={{ color: 'var(--text-secondary)' }}>{draft.invoiceNo}</strong></span>
                       <span>Date: <strong>{draft.date}</strong></span>
-                      <span>From: <strong style={{ color: 'var(--brand-primary)' }}>{draft.senderEmail || 'email-ingestion'}</strong></span>
+                      <span>From: <strong style={{ color: 'var(--brand-primary)' }}>{draft.senderEmail || 'themastyogi@gmail.com'}</strong></span>
                     </div>
                     {draft.attachedFileName && (
-                      <div style={{ fontSize: 11, color: '#2563EB', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-                        <FileText size={12}/> Attachment: {draft.attachedFileName}
+                      <div style={{ fontSize: 11, color: '#2563EB', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700 }}>
+                        <FileText size={13}/> PDF Attachment: {draft.attachedFileName}
                       </div>
                     )}
                   </div>
+
                   <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                     <div style={{ fontSize: 18, fontWeight: 900, fontFamily: 'monospace', color: '#10B981' }}>
                       ₹{f2(draft.netTotal)}
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => handleOpenEditDraft(draft)} title="Edit Draft Amounts & Items"
+                        style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(59,130,246,0.12)', color: '#2563EB', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Edit2 size={13}/> Edit Amount
+                      </button>
                       <button onClick={() => deletePurchaseInvoice(draft.id)} title="Delete Draft Bill"
                         style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', color: '#DC2626', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
                         <Trash2 size={13}/>
@@ -232,57 +346,42 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
         </div>
       </div>
 
-      {/* Modal for Custom Email Simulation */}
-      {showSimModal && (
+      {/* Modal for Editing Draft Amounts */}
+      {editingDraft && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 480, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 460, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Simulate Incoming Vendor Email Bill</h3>
-              <button onClick={() => setShowSimModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Edit2 size={16} style={{ color: 'var(--brand-primary)' }}/> Adjust Ingested Bill Amounts
+              </h3>
+              <button onClick={() => setEditingDraft(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
             </div>
 
-            <form onSubmit={handleCustomSimulateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <form onSubmit={handleSaveEditDraft} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label className="field-label">Select Vendor *</label>
-                <select required value={simForm.vendorName} onChange={e => {
-                  const vName = e.target.value;
-                  const vObj = vendors.find(v => v.name === vName);
-                  setSimForm(s => ({ ...s, vendorName: vName, senderEmail: vObj?.email || `invoices@${vName.toLowerCase().replace(/\s+/g, '')}.com` }));
-                }} className="field-input">
-                  {vendors.map(v => <option key={v.id} value={v.name}>{v.name} ({v.email || 'No email registered'})</option>)}
-                  {parties.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                </select>
+                <label className="field-label">Vendor Name *</label>
+                <input required value={editForm.vendorName} onChange={e => setEditForm(f => ({ ...f, vendorName: e.target.value }))} className="field-input"/>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
-                  <label className="field-label">Invoice / Ref No *</label>
-                  <input required value={simForm.invoiceNo} onChange={e => setSimForm(s => ({ ...s, invoiceNo: e.target.value }))} className="field-input" style={{ fontFamily: 'monospace' }}/>
+                  <label className="field-label">Invoice Ref No *</label>
+                  <input required value={editForm.invoiceNo} onChange={e => setEditForm(f => ({ ...f, invoiceNo: e.target.value }))} className="field-input" style={{ fontFamily: 'monospace' }}/>
                 </div>
                 <div>
                   <label className="field-label">Date *</label>
-                  <input type="date" required value={simForm.date} onChange={e => setSimForm(s => ({ ...s, date: e.target.value }))} className="field-input"/>
+                  <input type="date" required value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} className="field-input"/>
                 </div>
               </div>
 
-              <div>
-                <label className="field-label">Sender Email Address</label>
-                <input type="email" value={simForm.senderEmail} onChange={e => setSimForm(s => ({ ...s, senderEmail: e.target.value }))} className="field-input"/>
-              </div>
-
-              <div>
-                <label className="field-label">Line Item Description</label>
-                <input value={simForm.description} onChange={e => setSimForm(s => ({ ...s, description: e.target.value }))} className="field-input"/>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 10 }}>
                 <div>
-                  <label className="field-label">Taxable Amount (₹) *</label>
-                  <input type="number" step="any" required value={simForm.amount} onChange={e => setSimForm(s => ({ ...s, amount: e.target.value }))} className="field-input" style={{ fontWeight: 800 }}/>
+                  <label className="field-label">Taxable Subtotal (₹) *</label>
+                  <input type="number" step="any" required value={editForm.subtotal} onChange={e => setEditForm(f => ({ ...f, subtotal: e.target.value }))} className="field-input" style={{ fontWeight: 800 }}/>
                 </div>
                 <div>
                   <label className="field-label">GST Rate (%)</label>
-                  <select value={simForm.gstRate} onChange={e => setSimForm(s => ({ ...s, gstRate: Number(e.target.value) }))} className="field-input">
+                  <select value={editForm.gstRate} onChange={e => setEditForm(f => ({ ...f, gstRate: Number(e.target.value) }))} className="field-input">
                     <option value={0}>0% GST</option>
                     <option value={5}>5% GST</option>
                     <option value={12}>12% GST</option>
@@ -292,14 +391,101 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
                 </div>
               </div>
 
-              <div>
-                <label className="field-label">Attached PDF Filename</label>
-                <input value={simForm.attachedFileName} onChange={e => setSimForm(s => ({ ...s, attachedFileName: e.target.value }))} className="field-input"/>
+              <div style={{ background: 'var(--bg-elevated)', padding: '10px 14px', borderRadius: 8, fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Calculated Net Total:</span>
+                <span style={{ fontWeight: 900, fontFamily: 'monospace', color: '#10B981', fontSize: 15 }}>
+                  ₹{f2((parseFloat(editForm.subtotal) || 0) * (1 + editForm.gstRate / 100))}
+                </span>
               </div>
 
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 14 }}>
+              <div>
+                <label className="field-label">Sender Email Address</label>
+                <input type="email" value={editForm.senderEmail} onChange={e => setEditForm(f => ({ ...f, senderEmail: e.target.value }))} className="field-input"/>
+              </div>
+
+              <div>
+                <label className="field-label">PDF Attachment Filename</label>
+                <input value={editForm.attachedFileName} onChange={e => setEditForm(f => ({ ...f, attachedFileName: e.target.value }))} className="field-input"/>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 12 }}>
+                <button type="button" className="btn-action btn-action-secondary" onClick={() => setEditingDraft(null)}>Cancel</button>
+                <button type="submit" className="btn-action btn-action-primary">Save &amp; Update Amount</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for Email Simulation with Multiple Attachments */}
+      {showSimModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 520, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Ingest Email with PDF Attachments</h3>
+              <button onClick={() => setShowSimModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleSimulateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label className="field-label">Sender Email Address *</label>
+                <input type="email" required value={simForm.senderEmail} onChange={e => setSimForm(s => ({ ...s, senderEmail: e.target.value }))} className="field-input" style={{ fontWeight: 700 }}/>
+              </div>
+
+              <div>
+                <label className="field-label">Select Vendor *</label>
+                <select required value={simForm.vendorName} onChange={e => setSimForm(s => ({ ...s, vendorName: e.target.value }))} className="field-input">
+                  {vendors.map(v => <option key={v.id} value={v.name}>{v.name} ({v.email || 'No email registered'})</option>)}
+                  {parties.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                </select>
+              </div>
+
+              <div style={{ background: 'rgba(108,71,255,0.08)', padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(108,71,255,0.2)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--brand-primary)' }}>
+                  <input type="checkbox" checked={simForm.multipleAttachments} onChange={e => setSimForm(s => ({ ...s, multipleAttachments: e.target.checked }))}/>
+                  Email has 2 Purchase Invoice PDF Attachments
+                </label>
+              </div>
+
+              {/* Attachment 1 */}
+              <div style={{ background: 'var(--bg-elevated)', padding: 14, borderRadius: 10, border: '1px solid var(--border-default)' }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <FileText size={14} style={{ color: '#2563EB' }}/> Attachment #1 PDF
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div>
+                    <label className="field-label">Invoice Ref #1 *</label>
+                    <input required value={simForm.invoiceNo1} onChange={e => setSimForm(s => ({ ...s, invoiceNo1: e.target.value }))} className="field-input" style={{ fontFamily: 'monospace' }}/>
+                  </div>
+                  <div>
+                    <label className="field-label">Exact Amount #1 (₹) *</label>
+                    <input type="number" step="any" required value={simForm.amount1} onChange={e => setSimForm(s => ({ ...s, amount1: e.target.value }))} className="field-input" style={{ fontWeight: 800 }}/>
+                  </div>
+                </div>
+              </div>
+
+              {/* Attachment 2 if selected */}
+              {simForm.multipleAttachments && (
+                <div style={{ background: 'var(--bg-elevated)', padding: 14, borderRadius: 10, border: '1px solid var(--border-default)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <FileText size={14} style={{ color: '#10B981' }}/> Attachment #2 PDF
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div>
+                      <label className="field-label">Invoice Ref #2 *</label>
+                      <input required value={simForm.invoiceNo2} onChange={e => setSimForm(s => ({ ...s, invoiceNo2: e.target.value }))} className="field-input" style={{ fontFamily: 'monospace' }}/>
+                    </div>
+                    <div>
+                      <label className="field-label">Exact Amount #2 (₹) *</label>
+                      <input type="number" step="any" required value={simForm.amount2} onChange={e => setSimForm(s => ({ ...s, amount2: e.target.value }))} className="field-input" style={{ fontWeight: 800 }}/>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 12 }}>
                 <button type="button" className="btn-action btn-action-secondary" onClick={() => setShowSimModal(false)}>Cancel</button>
-                <button type="submit" className="btn-action btn-action-primary">Create Email Draft Bill</button>
+                <button type="submit" className="btn-action btn-action-primary">Ingest PDF Invoice Attachments</button>
               </div>
             </form>
           </div>
