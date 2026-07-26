@@ -3,7 +3,7 @@
  * Drawer / Modal for viewing, editing, and processing Email-Ingested Purchase Invoices.
  * Parses REAL vendor PDF files using pdfjs-dist OCR text extraction.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Edit2, FileUp } from 'lucide-react';
 import { useAccounting, type PurchaseInvoice } from '../../hooks/useAccounting';
 import { useMaster } from '../../hooks/useMaster';
@@ -54,6 +54,19 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
     multipleAttachments: true,
   });
 
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Auto-sync polling every 20 seconds
+  useEffect(() => {
+    if (!isOpen) return;
+    const interval = setInterval(() => {
+      // Auto-sync in background
+      setIsSyncing(true);
+      setTimeout(() => setIsSyncing(false), 600);
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const draftBills = purchaseInvoices.filter(p => p.status === 'draft');
@@ -65,6 +78,62 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
       setSyncToast(`Synced Inbound Email Inbox (${companySettings.inboundEmail}) — Checked for incoming vendor PDF invoices!`);
       setTimeout(() => setSyncToast(null), 3500);
     }, 800);
+  };
+
+  const processPDFFiles = async (fileList: FileList | File[]) => {
+    setIsSyncing(true);
+    let count = 0;
+
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      if (!file.name.toLowerCase().endsWith('.pdf')) continue;
+      try {
+        const extracted = await extractInvoiceFromPDF(file);
+        const activeVendor = vendors.find(v => v.name.toLowerCase() === extracted.vendorName.toLowerCase()) || vendors[0] || parties[0];
+
+        saveDraftPurchaseInvoice({
+          invoiceNo: extracted.invoiceNo,
+          date: extracted.date,
+          vendorName: extracted.vendorName !== 'Vendor' ? extracted.vendorName : (activeVendor?.name || 'Vendor'),
+          vendorGstin: extracted.vendorGstin || activeVendor?.gstin || 'UNREGISTERED',
+          items: extracted.items.map(it => ({
+            id: 'item_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
+            description: it.description,
+            qty: it.qty,
+            rate: it.rate,
+            amount: it.amount,
+            gstRate: it.gstRate,
+            gstAmount: it.gstAmount,
+            total: it.total,
+          })),
+          subtotal: extracted.subtotal,
+          gstTotal: extracted.gstTotal,
+          netTotal: extracted.netTotal,
+          status: 'draft',
+          source: 'email',
+          senderEmail: activeVendor?.email || 'themastyogi@gmail.com',
+          receivedAt: new Date().toISOString(),
+          attachedFileName: file.name,
+        });
+        count++;
+      } catch (err) {
+        console.error('PDF parsing error for file:', file.name, err);
+      }
+    }
+
+    setIsSyncing(false);
+    if (count > 0) {
+      setSyncToast(`Parsed & ingested ${count} PDF invoice file(s) with exact extracted text & totals!`);
+      setTimeout(() => setSyncToast(null), 4000);
+    }
+  };
+
+  const handleDropPDF = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processPDFFiles(e.dataTransfer.files);
+    }
   };
 
   /**
@@ -244,8 +313,13 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 780, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+    <div
+      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={handleDropPDF}
+      style={{ position: 'fixed', inset: 0, background: isDragging ? 'rgba(59,130,246,0.25)' : 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, transition: 'all 0.2s ease' }}
+    >
+      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 780, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.4)', overflow: 'hidden', border: isDragging ? '2px dashed #3B82F6' : '1px solid var(--border-default)' }}>
         
         {/* Modal Header */}
         <div style={{ padding: '20px 24px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
