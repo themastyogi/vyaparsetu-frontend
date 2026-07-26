@@ -79,29 +79,30 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
               date: inv.date || new Date().toISOString().split('T')[0],
               vendorName: inv.vendorName || 'Vendor',
               vendorGstin: inv.vendorGstin || 'UNREGISTERED',
-              items: inv.items || [{ id: '1', description: 'Item from Email', qty: 1, rate: inv.subtotal, amount: inv.subtotal, gstRate: 18, gstAmount: inv.gstTotal, total: inv.netTotal }],
+              items: inv.items || [{ id: '1', description: 'Item from Email PDF Attachment', qty: 1, rate: inv.subtotal, amount: inv.subtotal, gstRate: 18, gstAmount: inv.gstTotal, total: inv.netTotal }],
               subtotal: inv.subtotal,
               gstTotal: inv.gstTotal,
               netTotal: inv.netTotal,
               status: 'draft',
               source: 'email',
-              senderEmail: companySettings.inboundEmail,
+              senderEmail: inv.senderEmail || companySettings.inboundEmail,
               receivedAt: new Date().toISOString(),
               attachedFileName: inv.attachedFileName || 'Invoice.pdf',
             });
           });
-          setSyncToast(`Fetched & ingested ${data.invoices.length} unread PDF bill(s) from Gmail!`);
+          setSyncToast(`Fetched ${data.invoices.length} PDF invoice(s) from Gmail INBOX!`);
         } else {
-          setSyncToast(`Synced INBOX for ${companySettings.inboundEmail} — No new unread PDF bills found.`);
+          setSyncToast(data.message || `Scanned Gmail INBOX for ${companySettings.inboundEmail} — No PDF attachments found.`);
         }
       } else {
-        setSyncToast(`Synced INBOX for ${companySettings.inboundEmail} — Backend IMAP listener standby.`);
+        const errData = await res.json().catch(() => ({}));
+        setSyncToast(`Gmail Sync: ${errData.error || 'Check 2-Step Verification & 16-char App Password in Settings.'}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       setSyncToast(`Synced INBOX for ${companySettings.inboundEmail} — Drag & Drop or Upload PDF below to ingest!`);
     } finally {
       setIsSyncing(false);
-      setTimeout(() => setSyncToast(null), 4500);
+      setTimeout(() => setSyncToast(null), 6000);
     }
   };
 
