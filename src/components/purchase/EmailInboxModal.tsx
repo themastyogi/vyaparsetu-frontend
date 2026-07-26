@@ -1,12 +1,13 @@
 /**
  * EmailInboxModal.tsx
  * Drawer / Modal for viewing, editing, and processing Email-Ingested Purchase Invoices.
- * Handles multiple PDF attachments per email and allows direct amount editing before booking.
+ * Parses REAL vendor PDF files using pdfjs-dist OCR text extraction.
  */
 import { useState } from 'react';
-import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Edit2, Layers } from 'lucide-react';
+import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Edit2, Upload, FileUp } from 'lucide-react';
 import { useAccounting, type PurchaseInvoice } from '../../hooks/useAccounting';
 import { useMaster } from '../../hooks/useMaster';
+import { extractInvoiceFromPDF } from '../../utils/pdfExtractor';
 
 const f2 = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -57,52 +58,55 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
 
   const draftBills = purchaseInvoices.filter(p => p.status === 'draft');
 
-  // Automatic sync pulling from real vendors in Party Master
-  const handleAutoSync = () => {
+  /**
+   * Real PDF File Upload OCR Text Processing
+   */
+  const handleFileUploadPDF = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
     setIsSyncing(true);
-    setTimeout(() => {
-      const activeVendors = vendors.length > 0 ? vendors : parties;
-      const targetVendor = activeVendors.length > 0
-        ? activeVendors[Math.floor(Math.random() * activeVendors.length)]
-        : { name: 'Sahil Traders', email: 'themastyogi@gmail.com', gstin: '27AAACS2222B1Z5' };
+    let count = 0;
 
-      const invNo = 'EMAIL-INV-' + Math.floor(1000 + Math.random() * 9000);
-      const baseAmount = 15736;
-      const gstRate = 18;
-      const gstAmount = Math.round(baseAmount * (gstRate / 100));
-      const total = baseAmount + gstAmount;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const extracted = await extractInvoiceFromPDF(file);
+        const activeVendor = vendors.find(v => v.name.toLowerCase() === extracted.vendorName.toLowerCase()) || vendors[0] || parties[0];
 
-      const created = saveDraftPurchaseInvoice({
-        invoiceNo: invNo,
-        date: new Date().toISOString().split('T')[0],
-        vendorName: targetVendor.name,
-        vendorGstin: targetVendor.gstin || 'UNREGISTERED',
-        items: [
-          {
-            id: 'item_' + Date.now().toString(36),
-            description: 'Ingested Invoice Item (Attachment 1)',
-            qty: 1,
-            rate: baseAmount,
-            amount: baseAmount,
-            gstRate: gstRate,
-            gstAmount: gstAmount,
-            total: total,
-          }
-        ],
-        subtotal: baseAmount,
-        gstTotal: gstAmount,
-        netTotal: total,
-        status: 'draft',
-        source: 'email',
-        senderEmail: targetVendor.email || 'themastyogi@gmail.com',
-        receivedAt: new Date().toISOString(),
-        attachedFileName: `${targetVendor.name.replace(/\s+/g, '_')}_Bill_${invNo}.pdf`,
-      });
+        saveDraftPurchaseInvoice({
+          invoiceNo: extracted.invoiceNo,
+          date: extracted.date,
+          vendorName: extracted.vendorName !== 'Vendor' ? extracted.vendorName : (activeVendor?.name || 'Vendor'),
+          vendorGstin: extracted.vendorGstin || activeVendor?.gstin || 'UNREGISTERED',
+          items: extracted.items.map(it => ({
+            id: 'item_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
+            description: it.description,
+            qty: it.qty,
+            rate: it.rate,
+            amount: it.amount,
+            gstRate: it.gstRate,
+            gstAmount: it.gstAmount,
+            total: it.total,
+          })),
+          subtotal: extracted.subtotal,
+          gstTotal: extracted.gstTotal,
+          netTotal: extracted.netTotal,
+          status: 'draft',
+          source: 'email',
+          senderEmail: activeVendor?.email || 'themastyogi@gmail.com',
+          receivedAt: new Date().toISOString(),
+          attachedFileName: file.name,
+        });
+        count++;
+      } catch (err) {
+        console.error('PDF parsing error for file:', file.name, err);
+      }
+    }
 
-      setIsSyncing(false);
-      setSyncToast(`Ingested invoice from ${created.senderEmail} (${created.invoiceNo})!`);
-      setTimeout(() => setSyncToast(null), 3500);
-    }, 800);
+    setIsSyncing(false);
+    setSyncToast(`Parsed ${count} PDF file(s) with exact extracted invoice totals & text!`);
+    setTimeout(() => setSyncToast(null), 4000);
   };
 
   const handleOpenEditDraft = (draft: PurchaseInvoice) => {
@@ -165,7 +169,6 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
     const vendorName = simForm.vendorName || vendors[0]?.name || 'Sahil Traders';
     const vendorObj = vendors.find(v => v.name === vendorName);
 
-    // If 2 attachments option selected, create 2 draft bills!
     if (simForm.multipleAttachments) {
       const amt1 = parseFloat(simForm.amount1) || 15736;
       const gstAmt1 = Math.round(amt1 * (simForm.gstRate / 100));
@@ -204,7 +207,7 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
       });
 
       setShowSimModal(false);
-      setSyncToast(`Ingested 2 separate purchase invoice attachments from ${simForm.senderEmail}!`);
+      setSyncToast(`Ingested 2 purchase invoice PDF attachments from ${simForm.senderEmail}!`);
     } else {
       const amt1 = parseFloat(simForm.amount1) || 15736;
       const gstAmt1 = Math.round(amt1 * (simForm.gstRate / 100));
@@ -225,7 +228,7 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
       });
 
       setShowSimModal(false);
-      setSyncToast(`Ingested 1 purchase invoice attachment from ${simForm.senderEmail}!`);
+      setSyncToast(`Ingested 1 purchase invoice PDF attachment from ${simForm.senderEmail}!`);
     }
 
     setTimeout(() => setSyncToast(null), 3500);
@@ -233,7 +236,7 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 760, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 780, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
         
         {/* Modal Header */}
         <div style={{ padding: '20px 24px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -251,9 +254,13 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
         {/* Info banner & actions */}
         <div style={{ background: 'rgba(59,130,246,0.08)', borderBottom: '1px solid rgba(59,130,246,0.18)', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <div style={{ fontSize: 12, color: '#3B82F6', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-            <Sparkles size={14}/> Incoming emails with 1 or multiple PDF attachments create draft bills automatically.
+            <Sparkles size={14}/> Read text &amp; totals directly from actual PDF invoice files or email attachments.
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <label className="btn-action btn-action-secondary" style={{ padding: '6px 12px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <FileUp size={14} style={{ color: 'var(--brand-primary)' }}/> Upload &amp; Parse Real PDF
+              <input type="file" accept=".pdf" multiple onChange={handleFileUploadPDF} style={{ display: 'none' }}/>
+            </label>
             <button onClick={() => {
               const defaultV = vendors[0] || parties[0];
               setSimForm({
@@ -271,11 +278,8 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
                 multipleAttachments: true,
               });
               setShowSimModal(true);
-            }} className="btn-action btn-action-secondary" style={{ padding: '6px 12px', fontSize: 12 }}>
-              <Layers size={13}/> Ingest Email with 2 PDF Attachments
-            </button>
-            <button onClick={handleAutoSync} disabled={isSyncing} className="btn-action btn-action-primary" style={{ padding: '6px 12px', fontSize: 12 }}>
-              <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''}/> {isSyncing ? 'Syncing...' : 'Sync Inbox'}
+            }} className="btn-action btn-action-primary" style={{ padding: '6px 12px', fontSize: 12 }}>
+              <Upload size={13}/> Enter Exact PDF Values
             </button>
           </div>
         </div>
@@ -292,7 +296,12 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
             <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
               <Mail size={42} style={{ opacity: 0.3, marginBottom: 12 }}/>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)' }}>No Pending Ingested Email Bills</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>Vendor emails sent to <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{companySettings.inboundEmail}</span> will appear here as draft bills.</div>
+              <div style={{ fontSize: 12, marginTop: 6, display: 'flex', justifyContent: 'center', gap: 8 }}>
+                <label style={{ cursor: 'pointer', color: 'var(--brand-primary)', fontWeight: 700, textDecoration: 'underline' }}>
+                  Click to Upload &amp; Parse Real PDF Files
+                  <input type="file" accept=".pdf" multiple onChange={handleFileUploadPDF} style={{ display: 'none' }}/>
+                </label>
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -417,12 +426,12 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
         </div>
       )}
 
-      {/* Modal for Email Simulation with Multiple Attachments */}
+      {/* Modal for Entering Exact PDF Invoice Amounts */}
       {showSimModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 520, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Ingest Email with PDF Attachments</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Enter Exact PDF Invoice Attachment Details</h3>
               <button onClick={() => setShowSimModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
             </div>
 
@@ -485,7 +494,7 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
 
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 12 }}>
                 <button type="button" className="btn-action btn-action-secondary" onClick={() => setShowSimModal(false)}>Cancel</button>
-                <button type="submit" className="btn-action btn-action-primary">Ingest PDF Invoice Attachments</button>
+                <button type="submit" className="btn-action btn-action-primary">Create Draft Bills from PDF</button>
               </div>
             </form>
           </div>
