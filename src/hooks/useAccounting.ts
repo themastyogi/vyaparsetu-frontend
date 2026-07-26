@@ -508,7 +508,7 @@ function migrateCOA(accounts: any[]): Account[] {
 const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
   companyName: 'VyaparSetu Enterprises',
   companyGstin: '29AABCV1234F1Z5',
-  inboundEmail: 'invoices.company@vyaparsetu.in',
+  inboundEmail: 'themastyogi@gmail.com',
   autoDraft: true,
 };
 
