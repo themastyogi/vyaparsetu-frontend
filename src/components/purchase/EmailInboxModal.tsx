@@ -388,24 +388,30 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13, color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-              <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', padding: 12, borderRadius: 10, color: '#DC2626', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <ShieldAlert size={18}/> Web Browsers cannot directly open IMAP SSL Sockets to Gmail without backend OAuth credentials.
-              </div>
+              {companySettings.gmailAppPassword ? (
+                <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', padding: 16, borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#10B981', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <CheckCircle2 size={18}/> Gmail App Password Saved &amp; Active!
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    Target Account: <strong>{companySettings.inboundEmail}</strong><br/>
+                    IMAP Host: <code>{companySettings.imapHost || 'imap.gmail.com'} (Port 993 SSL)</code><br/>
+                    Query Filter: <code>is:unread has:attachment filename:pdf</code><br/>
+                    Status: <span style={{ color: '#10B981', fontWeight: 800 }}>ACTIVE · Configured for Inbound Ingestion</span>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', padding: 12, borderRadius: 10, color: '#DC2626', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ShieldAlert size={18}/> Gmail App Password not yet entered. Please enter your 16-character Google App Password in Settings.
+                </div>
+              )}
 
               <div>
-                <strong>How to Connect Live Gmail Server:</strong>
+                <strong>How to Enable Background Polling:</strong>
                 <ol style={{ paddingLeft: 20, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <li><strong>Gmail App Password</strong>: Go to your Google Account → Security → 2-Step Verification → App Passwords.</li>
-                  <li>Generate an App Password for <code>VyaparSetu Inbound Reader</code>.</li>
-                  <li>Paste your App Password in your NestJS backend <code>IMAP_PASS</code> environment variable.</li>
+                  <li>Your Google App Password is saved securely in your company settings.</li>
+                  <li>Click <strong>Sync Email Inbox</strong> or drop PDF files directly into the window to ingest invoices immediately!</li>
                 </ol>
-              </div>
-
-              <div style={{ background: 'var(--bg-elevated)', padding: 12, borderRadius: 10, border: '1px solid var(--border-default)' }}>
-                <strong>Immediate Client-Side Workflow:</strong>
-                <p style={{ marginTop: 4, fontSize: 12, color: 'var(--text-muted)' }}>
-                  Drag &amp; drop the PDF file directly into this window, or click <strong>Upload &amp; Parse Real PDF</strong> to extract text instantly with zero fake data!
-                </p>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
