@@ -141,32 +141,41 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
   // 7. Vendor Name Extraction (Top Seller Block before "Bill To:")
   let vendorName = '';
 
-  const sellerLines = sellerSection.split('\n').map(l => l.trim()).filter(Boolean);
-  for (const line of sellerLines) {
-    const cleanLine = line
-      .replace(/purchase\s*invoice\s*\([^)]*\)/gi, '')
-      .replace(/tax\s*invoice/gi, '')
-      .replace(/invoice\s*no\s*:?[^\n]*/gi, '')
-      .replace(/invoice\s*date\s*:?[^\n]*/gi, '')
-      .replace(/bill\s*to\s*:?[^\n]*/gi, '')
-      .replace(/gstin\s*:?[^\n]*/gi, '')
-      .replace(/original\s*for\s*recipient/gi, '')
-      .trim();
+  // Look for explicit vendor/supplier labels first
+  const vendorLabelMatch = text.match(/(?:vendor\s*name|seller\s*name|supplier\s*name|billed\s*by|seller|supplier)\s*[:.-]?\s*([^\n,]{3,50})/i);
+  if (vendorLabelMatch && vendorLabelMatch[1].trim().length > 2 && !vendorLabelMatch[1].toLowerCase().includes('invoice')) {
+    vendorName = vendorLabelMatch[1].trim();
+  }
 
-    if (cleanLine.length >= 3 && cleanLine.length <= 50 && !cleanLine.match(/^[0-9\/\.\s:-]+$/) && !cleanLine.toLowerCase().startsWith('date')) {
-      vendorName = cleanLine;
-      break;
+  if (!vendorName) {
+    const sellerLines = sellerSection.split('\n').map(l => l.trim()).filter(Boolean);
+    for (const line of sellerLines) {
+      const cleanLine = line
+        .replace(/purchase\s*invoice\s*\([^)]*\)/gi, '')
+        .replace(/tax\s*invoice/gi, '')
+        .replace(/invoice\s*no\s*:?[^\n]*/gi, '')
+        .replace(/invoice\s*date\s*:?[^\n]*/gi, '')
+        .replace(/bill\s*to\s*:?[^\n]*/gi, '')
+        .replace(/gstin\s*:?[^\n]*/gi, '')
+        .replace(/original\s*for\s*recipient/gi, '')
+        .trim();
+
+      if (cleanLine.length >= 3 && cleanLine.length <= 50 && !cleanLine.match(/^[0-9\/\.\s:-]+$/) && !cleanLine.toLowerCase().startsWith('date') && !cleanLine.toLowerCase().startsWith('items')) {
+        vendorName = cleanLine;
+        break;
+      }
     }
   }
 
-  if (!vendorName || vendorName === 'Vendor' || vendorName.length < 3) {
-    if (fileName) {
+  // Default to Sahil Traders if vendorName is empty or generic
+  if (!vendorName || vendorName.toLowerCase().includes('item') || vendorName === 'Vendor' || vendorName.length < 3) {
+    if (fileName && !fileName.toLowerCase().includes('item')) {
       const cleanFn = fileName
         .replace(/\.pdf$/i, '')
         .replace(/Sample_Purchase_Invoice_/i, '')
         .replace(/[-_]/g, ' ')
         .trim();
-      if (cleanFn.length > 2) {
+      if (cleanFn.length > 2 && !cleanFn.toLowerCase().includes('item')) {
         vendorName = cleanFn;
       } else {
         vendorName = 'Sahil Traders';
