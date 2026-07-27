@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Plus, Trash2, ArrowRight } from 'lucide-react';
 import { usePurchaseWizard } from '../usePurchaseWizard';
 import { useCompany } from '../../../hooks/useCompany';
 import { useMaster } from '../../../hooks/useMaster';
@@ -159,7 +160,7 @@ export default function ItemsStep({ wizard }: Props) {
               {activeItemIndex === index && (
                 (() => {
                   const combined = [
-                    ...masterItems.map(m => ({ name: m.name, price: m.purchasePrice || m.salesPrice || 1000, gstRate: m.gstRate || 18 })),
+                    ...masterItems.map(m => ({ name: m.name, price: m.price || 1000, gstRate: m.gst || 18 })),
                     ...DEFAULT_MOCK_ITEMS
                   ];
                   const filtered = combined.filter(i => i.name.toLowerCase().includes(item.name.toLowerCase()));

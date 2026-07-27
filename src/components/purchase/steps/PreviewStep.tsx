@@ -2,8 +2,7 @@
 import { useTranslation } from 'react-i18next';
 import { Save, CheckCircle, Clock } from 'lucide-react';
 import { usePurchaseWizard } from '../usePurchaseWizard';
-
-
+import { useMaster } from '../../../hooks/useMaster';
 
 interface Props {
   wizard: ReturnType<typeof usePurchaseWizard>;
@@ -12,6 +11,17 @@ interface Props {
 export default function PreviewStep({ wizard }: Props) {
   const { t } = useTranslation();
   const { data } = wizard.state;
+  const { vendors, parties } = useMaster();
+
+  const allVendorSuggestions = [
+    ...vendors.map((v: any) => ({ name: v.name, gstin: v.gstin })),
+    ...parties.filter((p: any) => p.type === 'Vendor' || p.type === 'Both' || p.type === 'vendor' || p.type === 'both').map((p: any) => ({ name: p.name, gstin: p.gstin })),
+    { name: 'Sahil Traders', gstin: '07ABCDE1234F1Z5' },
+    { name: 'Bharat Packaging', gstin: '27AABCV1234F1Z5' },
+    { name: 'Bharat Logistics', gstin: '06AAACB5432F1Z7' },
+    { name: 'Ramesh Electricals', gstin: '29AABCR1234F1ZS' },
+    { name: 'Sharma Traders', gstin: '27AADCS1234F1Z9' },
+  ];
 
   // --- Calculation Engine ---
   const subtotal = data.items.reduce((sum, item) => sum + ((item.qty || 0) * (item.rate || 0)), 0);
