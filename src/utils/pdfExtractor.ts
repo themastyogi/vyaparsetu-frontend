@@ -189,33 +189,41 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
   const itemRows: Array<{ description: string; qty: number; rate: number; amount: number; gstRate: number; gstAmount: number; cgstAmount?: number; sgstAmount?: number; igstAmount?: number; total: number }> = [];
 
   for (const line of lines) {
-    const itemMatch = line.match(/^([A-Za-z0-9\s-]{3,40})\s+(\d+)\s+([0-9,]+(?:\.[0-9]{2})?)\s+([0-9,]+(?:\.[0-9]{2})?)$/);
+    // Pattern 1: Description Qty Rate Amount (e.g. "IT Support Services 1 34300 34300")
+    const match1 = line.match(/^([A-Za-z0-9\s/&.-]{3,50})\s+(\d+)\s+([0-9,]+(?:\.[0-9]{2})?)\s+([0-9,]+(?:\.[0-9]{2})?)$/);
+    // Pattern 2: S.No Description Qty Rate Amount (e.g. "1 IT Support Services 1 34300 34300")
+    const match2 = line.match(/^\d+\s+([A-Za-z0-9\s/&.-]{3,50})\s+(\d+)\s+([0-9,]+(?:\.[0-9]{2})?)\s+([0-9,]+(?:\.[0-9]{2})?)$/);
+
+    const itemMatch = match1 || match2;
     if (itemMatch) {
       const desc = itemMatch[1].trim();
-      const qty = parseInt(itemMatch[2], 10) || 1;
-      const rate = parseFloat(itemMatch[3].replace(/,/g, '')) || 0;
-      const amt = parseFloat(itemMatch[4].replace(/,/g, '')) || (qty * rate);
-      const itemGst = Math.round(amt * 0.18);
-      const itemNet = amt + itemGst;
+      const lowerDesc = desc.toLowerCase();
+      if (!lowerDesc.startsWith('total') && !lowerDesc.startsWith('subtotal') && !lowerDesc.startsWith('taxable') && !lowerDesc.startsWith('amount') && !lowerDesc.startsWith('invoice')) {
+        const qty = parseInt(itemMatch[2], 10) || 1;
+        const rate = parseFloat(itemMatch[3].replace(/,/g, '')) || 0;
+        const amt = parseFloat(itemMatch[4].replace(/,/g, '')) || (qty * rate);
+        const itemGst = Math.round(amt * 0.18);
+        const itemNet = amt + itemGst;
 
-      itemRows.push({
-        description: desc,
-        qty,
-        rate,
-        amount: amt,
-        gstRate: 18,
-        gstAmount: itemGst,
-        cgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
-        sgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
-        igstAmount: taxType === 'inter_state' ? itemGst : 0,
-        total: itemNet,
-      });
+        itemRows.push({
+          description: desc,
+          qty,
+          rate,
+          amount: amt,
+          gstRate: 18,
+          gstAmount: itemGst,
+          cgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
+          sgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
+          igstAmount: taxType === 'inter_state' ? itemGst : 0,
+          total: itemNet,
+        });
+      }
     }
   }
 
   const finalItems = itemRows.length > 0 ? itemRows : [
     {
-      description: `Services / Goods as per Invoice PDF (${invoiceNo})`,
+      description: `IT Services / Goods as per Tax Invoice (${invoiceNo})`,
       qty: 1,
       rate: subtotal,
       amount: subtotal,
