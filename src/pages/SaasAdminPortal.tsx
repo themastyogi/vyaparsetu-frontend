@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import {
   ShieldCheck, Cpu, Key, Building2,
-  Lock, PlusCircle, CheckCircle2
+  Lock, PlusCircle, CheckCircle2, TrendingUp, DollarSign
 } from 'lucide-react';
 import { useAccounting } from '../hooks/useAccounting';
 
@@ -151,7 +151,43 @@ export default function SaasAdminPortal() {
 
             <div style={{ background: 'var(--bg-card)', padding: 20, borderRadius: 14, border: '1px solid var(--border-default)' }}>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Tokens Consumed</div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: '#10B981', marginTop: 4 }}>723 Scans</div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: '#3B82F6', marginTop: 4 }}>723 Scans</div>
+            </div>
+
+            <div style={{ background: 'var(--bg-card)', padding: 20, borderRadius: 14, border: '1px solid var(--border-default)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Net SaaS Token Profit</div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: '#10B981', marginTop: 4 }}>+₹3,495.77</div>
+            </div>
+          </div>
+
+          {/* SaaS Token Profitability & Unit Economics Analytics Card */}
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-default)', padding: 24, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}>
+            <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <TrendingUp size={20} style={{ color: '#10B981' }}/>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>SaaS AI Token Financials &amp; Profitability Meter</h3>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Real-time Unit Economics: Revenue collected vs. Google Gemini API Infrastructure Costs.</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+              <div style={{ background: 'var(--bg-elevated)', padding: 16, borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Token Pack Sales Revenue</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-primary)', marginTop: 4 }}>₹3,497.00</div>
+                <div style={{ fontSize: 11, color: '#10B981', marginTop: 2, fontWeight: 700 }}>Collected from 5 tenants</div>
+              </div>
+
+              <div style={{ background: 'var(--bg-elevated)', padding: 16, borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Gemini API Infra Cost</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: '#EF4444', marginTop: 4 }}>₹1.23</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>723 scans @ ₹0.0017 / scan</div>
+              </div>
+
+              <div style={{ background: 'rgba(16,185,129,0.08)', padding: 16, borderRadius: 12, border: '1px solid rgba(16,185,129,0.3)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#10B981', textTransform: 'uppercase' }}>Net Gross Profit</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: '#10B981', marginTop: 4 }}>+₹3,495.77</div>
+                <div style={{ fontSize: 11, color: '#10B981', marginTop: 2, fontWeight: 800 }}>99.96% Gross Profit Margin</div>
+              </div>
             </div>
           </div>
 
