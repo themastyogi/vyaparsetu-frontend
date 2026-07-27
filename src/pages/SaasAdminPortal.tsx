@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import {
   ShieldCheck, Cpu, Key, Building2,
-  Lock, PlusCircle, CheckCircle2, TrendingUp, DollarSign
+  Lock, PlusCircle, CheckCircle2, TrendingUp
 } from 'lucide-react';
 import { useAccounting } from '../hooks/useAccounting';
 
