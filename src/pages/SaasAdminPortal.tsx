@@ -191,6 +191,114 @@ export default function SaasAdminPortal() {
             </div>
           </div>
 
+          {/* Pending Tenant Top-Up Requests (Payment Gateway / Admin Approval) */}
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-default)', padding: 24, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}>
+            <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <ShieldCheck size={20} style={{ color: '#F59E0B' }}/>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Pending Tenant Top-Up Requests (Payment Approval)</h3>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Review and approve customer token purchases to grant AI credits to tenant wallets.</p>
+              </div>
+            </div>
+
+            {(!companySettings.topUpRequests || companySettings.topUpRequests.length === 0) ? (
+              <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, background: 'var(--bg-elevated)', borderRadius: 10 }}>
+                No pending payment or top-up requests from tenant customers.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)', textTransform: 'uppercase', fontSize: 11, color: 'var(--text-muted)', textAlign: 'left' }}>
+                      <th style={{ padding: '10px 14px' }}>Date</th>
+                      <th style={{ padding: '10px 14px' }}>Tenant Company</th>
+                      <th style={{ padding: '10px 14px' }}>Pack Name</th>
+                      <th style={{ padding: '10px 14px' }}>Credits</th>
+                      <th style={{ padding: '10px 14px' }}>Amount</th>
+                      <th style={{ padding: '10px 14px' }}>Status</th>
+                      <th style={{ padding: '10px 14px', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {companySettings.topUpRequests.map(req => (
+                      <tr key={req.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{req.date}</td>
+                        <td style={{ padding: '10px 14px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                          {req.tenantName}
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>{req.tenantEmail}</div>
+                        </td>
+                        <td style={{ padding: '10px 14px', fontWeight: 700 }}>{req.packName}</td>
+                        <td style={{ padding: '10px 14px', fontWeight: 900, fontFamily: 'monospace', color: '#10B981' }}>+{req.creditAmount}</td>
+                        <td style={{ padding: '10px 14px', fontWeight: 800 }}>₹{req.price}</td>
+                        <td style={{ padding: '10px 14px' }}>
+                          <span style={{
+                            padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 800,
+                            background: req.status === 'approved' ? 'rgba(16,185,129,0.12)' : req.status === 'pending' ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
+                            color: req.status === 'approved' ? '#10B981' : req.status === 'pending' ? '#D97706' : '#EF4444'
+                          }}>
+                            {req.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                          {req.status === 'pending' ? (
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  // Approve & Grant Credits
+                                  const updatedReqs = companySettings.topUpRequests?.map(r => r.id === req.id ? { ...r, status: 'approved' as const } : r) || [];
+                                  const currentTotal = companySettings.aiCreditsTotal || 300;
+                                  const newTotal = currentTotal + req.creditAmount;
+                                  const history = companySettings.aiCreditHistory || [];
+                                  const newHistory = [
+                                    {
+                                      id: 'purch_approved_' + Date.now().toString(36),
+                                      date: new Date().toISOString().split('T')[0],
+                                      amount: req.creditAmount,
+                                      description: `Payment Approved: ${req.packName} (${req.creditAmount} Credits for ₹${req.price})`,
+                                      type: 'purchase' as const,
+                                    },
+                                    ...history,
+                                  ];
+                                  updateCompanySettings({
+                                    topUpRequests: updatedReqs,
+                                    aiCreditsTotal: newTotal,
+                                    aiCreditHistory: newHistory,
+                                  });
+                                  setToast(`Approved payment & granted ${req.creditAmount} AI Credits to ${req.tenantName}!`);
+                                  setTimeout(() => setToast(null), 4000);
+                                }}
+                                className="btn-action btn-action-primary"
+                                style={{ padding: '4px 10px', fontSize: 11, fontWeight: 800 }}
+                              >
+                                ✅ Approve &amp; Grant Tokens
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedReqs = companySettings.topUpRequests?.map(r => r.id === req.id ? { ...r, status: 'rejected' as const } : r) || [];
+                                  updateCompanySettings({ topUpRequests: updatedReqs });
+                                  setToast(`Top-up request from ${req.tenantName} rejected.`);
+                                  setTimeout(() => setToast(null), 4000);
+                                }}
+                                className="btn-action"
+                                style={{ padding: '4px 8px', fontSize: 11, background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: 'none', borderRadius: 6, fontWeight: 800 }}
+                              >
+                                ✕ Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Settled</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
           {/* Card 1: Assign Tokens & Credits to SaaS Tenant Customers */}
           <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-default)', padding: 24, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}>
             <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -108,6 +108,17 @@ export interface PaymentVoucher {
   createdAt: string;
 }
 
+export interface TopUpRequest {
+  id: string;
+  tenantName: string;
+  tenantEmail: string;
+  packName: string;
+  creditAmount: number;
+  price: number;
+  status: 'pending' | 'approved' | 'rejected';
+  date: string;
+}
+
 export interface CompanySettings {
   companyName: string;
   companyGstin: string;
@@ -122,6 +133,7 @@ export interface CompanySettings {
   aiCreditsTotal?: number;     // Total AI Credits granted/purchased
   aiCreditsUsed?: number;      // Total AI Credits consumed
   aiCreditHistory?: Array<{ id: string; date: string; amount: number; description: string; type: 'grant' | 'usage' | 'purchase' }>;
+  topUpRequests?: TopUpRequest[]; // Pending & approved payment gateway requests
   email?: string;              // Official company email
   phone?: string;              // Contact phone number
   address?: string;            // Full street address

@@ -26,26 +26,25 @@ export default function AiTokenWalletCard() {
   const [toast, setToast] = useState<string | null>(null);
 
   const handleBuyPack = (packName: string, creditAmount: number, price: number) => {
-    const newTotal = totalCredits + creditAmount;
-    const newHistory = [
-      {
-        id: 'purch_' + Date.now().toString(36),
-        date: new Date().toISOString().split('T')[0],
-        amount: creditAmount,
-        description: `Purchased ${packName} (${creditAmount} AI Credits for ₹${price})`,
-        type: 'purchase' as const,
-      },
-      ...history,
-    ];
+    const existingRequests = companySettings.topUpRequests || [];
+    const newRequest = {
+      id: 'req_' + Date.now().toString(36),
+      tenantName: companySettings.companyName || 'Sharma Traders Pvt. Ltd.',
+      tenantEmail: companySettings.inboundEmail || 'themastyogi@gmail.com',
+      packName,
+      creditAmount,
+      price,
+      status: 'pending' as const,
+      date: new Date().toISOString().split('T')[0],
+    };
 
     updateCompanySettings({
-      aiCreditsTotal: newTotal,
-      aiCreditHistory: newHistory,
+      topUpRequests: [newRequest, ...existingRequests],
     });
 
     setShowBuyModal(false);
-    setToast(`Successfully purchased ${creditAmount} AI Scans! Balance updated to ${newTotal - usedCredits} Credits.`);
-    setTimeout(() => setToast(null), 4500);
+    setToast(`⏳ Top-up request for ${packName} (${creditAmount} Credits for ₹${price}) submitted! Status: Pending SaaS Admin Payment Approval.`);
+    setTimeout(() => setToast(null), 6000);
   };
 
   const handleAdminAssign = (e: React.FormEvent) => {
@@ -131,6 +130,45 @@ export default function AiTokenWalletCard() {
           <div style={{ width: `${usedPercent}%`, height: '100%', background: usedPercent > 85 ? 'linear-gradient(90deg, #F59E0B, #EF4444)' : 'linear-gradient(90deg, #3B82F6, #6C47FF)', transition: 'width 0.4s ease' }}/>
         </div>
       </div>
+
+      {/* Submitted Top-Up Requests Status */}
+      {(companySettings.topUpRequests && companySettings.topUpRequests.length > 0) && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <CreditCard size={15}/> Submitted Top-Up Requests &amp; Payment Status
+          </div>
+          <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 10 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)', textTransform: 'uppercase', fontSize: 11, color: 'var(--text-muted)', textAlign: 'left' }}>
+                  <th style={{ padding: '8px 12px' }}>Date</th>
+                  <th style={{ padding: '8px 12px' }}>Token Pack</th>
+                  <th style={{ padding: '8px 12px' }}>Amount</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Payment Approval Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {companySettings.topUpRequests.map(req => (
+                  <tr key={req.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{req.date}</td>
+                    <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-primary)' }}>{req.packName} ({req.creditAmount} Credits)</td>
+                    <td style={{ padding: '8px 12px', fontWeight: 800 }}>₹{req.price}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                      <span style={{
+                        padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 800,
+                        background: req.status === 'approved' ? 'rgba(16,185,129,0.12)' : req.status === 'pending' ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
+                        color: req.status === 'approved' ? '#10B981' : req.status === 'pending' ? '#D97706' : '#EF4444'
+                      }}>
+                        {req.status === 'pending' ? '⏳ Pending Admin Payment Approval' : req.status === 'approved' ? '✅ Approved & Granted' : '❌ Rejected'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Credit History Log */}
       <div>
