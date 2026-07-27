@@ -8,6 +8,7 @@ import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash
 import { useAccounting, type PurchaseInvoice } from '../../hooks/useAccounting';
 import { useMaster } from '../../hooks/useMaster';
 import { extractInvoiceFromPDF } from '../../utils/pdfExtractor';
+import { parseInvoiceWithAiAgent } from '../../services/invoiceAiAgent';
 
 const f2 = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -83,7 +84,8 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
                 for (let i = 0; i < binaryStr.length; i++) {
                   bytes[i] = binaryStr.charCodeAt(i);
                 }
-                extracted = await extractInvoiceFromPDF(bytes.buffer, inv.filename);
+                const layoutExtracted = await extractInvoiceFromPDF(bytes.buffer, inv.filename);
+                extracted = await parseInvoiceWithAiAgent(layoutExtracted.rawText, inv.filename);
               } else {
                 extracted = {
                   vendorName: inv.vendorName || 'Vendor',
