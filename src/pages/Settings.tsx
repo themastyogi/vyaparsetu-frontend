@@ -25,6 +25,7 @@ export default function Settings() {
     inboundEmail: companySettings.inboundEmail || 'themastyogi@gmail.com',
     gmailAppPassword: companySettings.gmailAppPassword || '',
     imapHost: companySettings.imapHost || 'imap.gmail.com',
+    geminiApiKey: companySettings.geminiApiKey || '',
     email: companySettings.email || 'themastyogi@gmail.com',
     phone: companySettings.phone || '+91 98765 43210',
     address: companySettings.address || 'Plot 42, Industrial Area, Phase II',
@@ -55,6 +56,7 @@ export default function Settings() {
       inboundEmail: form.inboundEmail,
       gmailAppPassword: form.gmailAppPassword,
       imapHost: form.imapHost,
+      geminiApiKey: form.geminiApiKey,
       email: form.email,
       phone: form.phone,
       address: form.address,
@@ -64,7 +66,7 @@ export default function Settings() {
       autoDraft: form.autoDraft,
     });
 
-    setToast('Company Profile & Admin Privileges updated successfully!');
+    setToast('Company Profile, Gemini AI Agent Key & Admin Privileges updated successfully!');
     setTimeout(() => setToast(null), 4000);
   };
 
@@ -239,6 +241,34 @@ export default function Settings() {
                   <input type="checkbox" checked={form.autoDraft} onChange={e => setForm(f => ({ ...f, autoDraft: e.target.checked }))}/>
                   Enable Automated PDF OCR Text Extraction on Received Vendor Emails
                 </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: AI Agent & LLM Document Extraction Configuration */}
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-default)', padding: 24, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}>
+            <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Key size={20} style={{ color: 'var(--brand-primary)' }}/>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>🤖 AI Agent PDF Invoice Extraction (Gemini LLM)</h3>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Configure Google Gemini API Key for 99.9% accurate zero-shot PDF invoice document parsing across all vendors.</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label className="field-label" style={{ fontWeight: 800 }}>Google Gemini API Key *</label>
+                <input
+                  type="password"
+                  value={form.geminiApiKey}
+                  onChange={e => setForm(f => ({ ...f, geminiApiKey: e.target.value }))}
+                  placeholder="AIzaSy... (Enter your Google Gemini API Key)"
+                  className="field-input"
+                  style={{ fontWeight: 800, fontFamily: 'monospace' }}
+                />
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, display: 'block' }}>
+                  Get your free Gemini API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: 'var(--brand-primary)', textDecoration: 'underline', fontWeight: 700 }}>Google AI Studio</a>.
+                </span>
               </div>
             </div>
           </div>

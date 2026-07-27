@@ -85,7 +85,7 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
                   bytes[i] = binaryStr.charCodeAt(i);
                 }
                 const layoutExtracted = await extractInvoiceFromPDF(bytes.buffer, inv.filename);
-                extracted = await parseInvoiceWithAiAgent(layoutExtracted.rawText, inv.filename);
+                extracted = await parseInvoiceWithAiAgent(layoutExtracted.rawText, inv.filename, companySettings.geminiApiKey);
               } else {
                 extracted = {
                   vendorName: inv.vendorName || 'Vendor',

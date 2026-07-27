@@ -118,6 +118,7 @@ export interface CompanySettings {
   googleRefreshToken?: string; // OAuth2 Refresh Token
   gmailAppPassword?: string;   // Google 16-char App Password (legacy fallback)
   imapHost?: string;           // imap.gmail.com
+  geminiApiKey?: string;       // Google Gemini AI Agent API Key
   email?: string;              // Official company email
   phone?: string;              // Contact phone number
   address?: string;            // Full street address
