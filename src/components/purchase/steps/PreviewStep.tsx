@@ -105,16 +105,31 @@ export default function PreviewStep({ wizard }: Props) {
       
       {/* Summary Card */}
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
-        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600 }}>{t('purchase.vendor', 'Vendor Name')} *</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600 }}>{t('purchase.vendor', 'Vendor Name (Select or Search)')} *</div>
+        
         <input
           type="text"
+          list="master-vendor-list"
           required
           value={data.vendorName}
-          onChange={e => wizard.updateData({ vendorName: e.target.value })}
-          placeholder="Enter Vendor Name (e.g. Bharat Packaging, Sahil Traders)"
+          onChange={e => {
+            const val = e.target.value;
+            const matched = allVendorSuggestions.find(v => v.name.toLowerCase() === val.toLowerCase());
+            wizard.updateData({
+              vendorName: val,
+              vendorGstin: matched?.gstin || data.vendorGstin || ''
+            });
+          }}
+          placeholder="Type or select Vendor (e.g. Sahil Traders, Bharat Packaging)"
           className="field-input"
           style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '16px' }}
         />
+
+        <datalist id="master-vendor-list">
+          {allVendorSuggestions.map((v, idx) => (
+            <option key={idx} value={v.name}>{v.gstin ? `${v.name} (${v.gstin})` : v.name}</option>
+          ))}
+        </datalist>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--border-subtle)', paddingTop: '16px' }}>
           <div>

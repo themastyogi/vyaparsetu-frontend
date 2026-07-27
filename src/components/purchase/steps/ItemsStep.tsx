@@ -1,29 +1,30 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, ArrowRight } from 'lucide-react';
 import { usePurchaseWizard } from '../usePurchaseWizard';
 import { useCompany } from '../../../hooks/useCompany';
+import { useMaster } from '../../../hooks/useMaster';
 import type { PurchaseLineItem } from '../types';
 
 interface Props {
   wizard: ReturnType<typeof usePurchaseWizard>;
 }
 
-const MOCK_ITEMS = [
-  { name: 'A4 Paper Ream', price: 450 },
-  { name: 'Office Chair – Mesh', price: 8500 },
-  { name: 'Accounting Software', price: 5999 },
-  { name: 'Printer Ink Cartridge', price: 1200 },
-  { name: 'Rice Basmati 5kg', price: 380 },
-  { name: 'Transport Charges', price: 2500 },
-  { name: 'Stapler Machine', price: 650 },
-  { name: 'Premium Widget', price: 1200 },
-  { name: 'Basic Widget', price: 450 },
+const DEFAULT_MOCK_ITEMS = [
+  { name: 'Services / Goods as per Tax Invoice', price: 34300, gstRate: 18 },
+  { name: 'IT Support & Technical Services', price: 25000, gstRate: 18 },
+  { name: 'Raw Packaging Material', price: 15736, gstRate: 18 },
+  { name: 'Corrugated Boxes & Containers', price: 18568, gstRate: 18 },
+  { name: 'A4 Paper Ream', price: 450, gstRate: 18 },
+  { name: 'Office Chair – Mesh', price: 8500, gstRate: 18 },
+  { name: 'Accounting Software Subscription', price: 5999, gstRate: 18 },
+  { name: 'Printer Ink Cartridge', price: 1200, gstRate: 18 },
+  { name: 'Transport & Freight Charges', price: 2500, gstRate: 18 },
 ];
 
 export default function ItemsStep({ wizard }: Props) {
   const { t } = useTranslation();
   const { data } = wizard.state;
+  const { items: masterItems } = useMaster();
   const company = useCompany();
   
   // Local state for items
@@ -155,9 +156,13 @@ export default function ItemsStep({ wizard }: Props) {
               />
               
               {/* Autocomplete Dropdown */}
-              {activeItemIndex === index && item.name.trim() && (
+              {activeItemIndex === index && (
                 (() => {
-                  const filtered = MOCK_ITEMS.filter(i => i.name.toLowerCase().includes(item.name.toLowerCase()));
+                  const combined = [
+                    ...masterItems.map(m => ({ name: m.name, price: m.purchasePrice || m.salesPrice || 1000, gstRate: m.gstRate || 18 })),
+                    ...DEFAULT_MOCK_ITEMS
+                  ];
+                  const filtered = combined.filter(i => i.name.toLowerCase().includes(item.name.toLowerCase()));
                   if (filtered.length === 0) return null;
                   
                   return (
@@ -165,7 +170,7 @@ export default function ItemsStep({ wizard }: Props) {
                       position: 'absolute', top: '100%', left: 0, right: 0,
                       background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                       borderRadius: '6px', marginTop: '4px', zIndex: 50,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflow: 'hidden'
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)', overflow: 'hidden', maxHeight: 220, overflowY: 'auto'
                     }}>
                       {filtered.map((mockItem, idx) => (
                         <div 
@@ -178,13 +183,13 @@ export default function ItemsStep({ wizard }: Props) {
                           onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
                           onClick={() => {
                             const newItems = [...items];
-                            newItems[index] = { ...newItems[index], name: mockItem.name, rate: mockItem.price };
+                            newItems[index] = { ...newItems[index], name: mockItem.name, rate: mockItem.price, gstRate: mockItem.gstRate || 18 };
                             setItems(newItems);
                             setActiveItemIndex(null);
                           }}
                         >
-                          <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{mockItem.name}</span>
-                          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>₹ {mockItem.price}</span>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{mockItem.name}</span>
+                          <span style={{ fontSize: '13px', color: 'var(--brand-primary)', fontWeight: 700 }}>₹ {mockItem.price}</span>
                         </div>
                       ))}
                     </div>
