@@ -9,6 +9,7 @@ import {
   CheckCircle2, Save, Users, Sliders
 } from 'lucide-react';
 import { useAccounting } from '../hooks/useAccounting';
+import AiTokenWalletCard from '../components/settings/AiTokenWalletCard';
 
 export default function Settings() {
   const { companySettings, updateCompanySettings } = useAccounting();
@@ -272,6 +273,9 @@ export default function Settings() {
               </div>
             </div>
           </div>
+
+          {/* Card: AI Token Wallet & Usage Metering */}
+          <AiTokenWalletCard />
 
           {/* Card 3: User Access & Role Privileges */}
           <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-default)', padding: 24, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}>

@@ -119,6 +119,9 @@ export interface CompanySettings {
   gmailAppPassword?: string;   // Google 16-char App Password (legacy fallback)
   imapHost?: string;           // imap.gmail.com
   geminiApiKey?: string;       // Google Gemini AI Agent API Key
+  aiCreditsTotal?: number;     // Total AI Credits granted/purchased
+  aiCreditsUsed?: number;      // Total AI Credits consumed
+  aiCreditHistory?: Array<{ id: string; date: string; amount: number; description: string; type: 'grant' | 'usage' | 'purchase' }>;
   email?: string;              // Official company email
   phone?: string;              // Contact phone number
   address?: string;            // Full street address
@@ -529,6 +532,13 @@ const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
   state: 'Karnataka',
   pincode: '560001',
   autoDraft: true,
+  aiCreditsTotal: 300,
+  aiCreditsUsed: 55,
+  aiCreditHistory: [
+    { id: 'cred-1', date: '2026-07-01', amount: 100, description: 'Monthly SaaS Included AI Credits', type: 'grant' },
+    { id: 'cred-2', date: '2026-07-15', amount: 200, description: 'Super Admin SaaS Allocation', type: 'grant' },
+    { id: 'cred-3', date: '2026-07-26', amount: 55, description: '55 PDF Invoice Document Scans', type: 'usage' },
+  ],
 };
 
 const SEED_PAYMENTS: PaymentVoucher[] = [
