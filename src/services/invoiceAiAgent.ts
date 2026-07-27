@@ -24,9 +24,20 @@ export async function parseInvoiceWithAiAgent(
 
   if (geminiApiKey && rawText.length > 20) {
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+      const cleanKey = geminiApiKey.trim();
+      const isOAuth = cleanKey.startsWith('AQ.');
+      const apiUrl = isOAuth 
+        ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`
+        : `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cleanKey}`;
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (isOAuth) {
+        headers['Authorization'] = `Bearer ${cleanKey}`;
+      }
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           contents: [
             {
