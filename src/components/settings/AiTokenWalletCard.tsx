@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Cpu, PlusCircle, CreditCard, History, ShieldCheck, CheckCircle2, Zap, Sparkles } from 'lucide-react';
+import { Cpu, PlusCircle, CreditCard, History, ShieldCheck, CheckCircle2, Sparkles } from 'lucide-react';
 import { useAccounting } from '../../hooks/useAccounting';
 
 export default function AiTokenWalletCard() {
