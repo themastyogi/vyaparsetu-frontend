@@ -11,6 +11,7 @@ import ChartOfAccounts from './pages/ChartOfAccounts';
 import DebitNotes from './pages/DebitNotes';
 import Payments from './pages/Payments';
 import Settings from './pages/Settings';
+import SaasAdminPortal from './pages/SaasAdminPortal';
 import './index.css';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
           <Route path="reports"           element={<Reports />} />
           <Route path="settings"          element={<Settings />} />
+          <Route path="saas-admin"        element={<SaasAdminPortal />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

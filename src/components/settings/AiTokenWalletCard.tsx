@@ -95,14 +95,6 @@ export default function AiTokenWalletCard() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             type="button"
-            onClick={() => setShowAdminAssignModal(true)}
-            className="btn-action"
-            style={{ background: 'rgba(108,71,255,0.12)', color: 'var(--brand-primary)', border: 'none', padding: '8px 14px', borderRadius: 8, fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <ShieldCheck size={15}/> SaaS Admin Assign Tokens
-          </button>
-          <button
-            type="button"
             onClick={() => setShowBuyModal(true)}
             className="btn-action btn-action-primary"
             style={{ padding: '8px 16px', borderRadius: 8, fontWeight: 800, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}

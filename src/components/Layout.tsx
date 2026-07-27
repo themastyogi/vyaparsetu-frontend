@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Package, FileText,
   ShoppingCart, BarChart3, Settings, LogOut,
-  Bell, Search, ChevronDown, Building2,
+  Bell, Search, ChevronDown, Building2, ShieldCheck,
   HelpCircle, Menu, X, BookOpen, Zap, CreditCard, Sun, Moon
 } from 'lucide-react';
 import './Layout.css';
@@ -36,9 +36,10 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: 'SYSTEM',
+    label: 'ADMIN & SAAS',
     items: [
-      { key: 'nav.settings', icon: <Settings size={18}/>, path: '/dashboard/settings', label: 'Settings' },
+      { key: 'nav.settings', icon: <Settings size={18}/>, path: '/dashboard/settings', label: 'Company Settings' },
+      { key: 'nav.saas_admin', icon: <ShieldCheck size={18}/>, path: '/dashboard/saas-admin', label: 'VyaparSetu Admin Portal' },
     ],
   },
 ];

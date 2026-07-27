@@ -5,7 +5,7 @@
  */
 import React, { useState } from 'react';
 import {
-  Building2, ShieldCheck, Mail, Lock, Key,
+  Building2, ShieldCheck, Mail,
   CheckCircle2, Save, Users, Sliders
 } from 'lucide-react';
 import { useAccounting } from '../hooks/useAccounting';
@@ -13,11 +13,6 @@ import AiTokenWalletCard from '../components/settings/AiTokenWalletCard';
 
 export default function Settings() {
   const { companySettings, updateCompanySettings } = useAccounting();
-
-  // Admin Security Pin / Lock
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState(true);
-  const [adminPin, setAdminPin] = useState('');
-  const [pinError, setPinError] = useState('');
 
   // Form State
   const [form, setForm] = useState({
@@ -38,16 +33,6 @@ export default function Settings() {
   });
 
   const [toast, setToast] = useState<string | null>(null);
-
-  const handleUnlockAdmin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (adminPin === '1234' || adminPin === 'admin' || adminPin.length >= 4) {
-      setIsAdminUnlocked(true);
-      setPinError('');
-    } else {
-      setPinError('Invalid Admin Passcode. Default is 1234');
-    }
-  };
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,20 +60,13 @@ export default function Settings() {
     <div style={{ padding: '24px 32px', maxWidth: 900, margin: '0 auto' }}>
       
       {/* Page Header */}
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Sliders size={24} style={{ color: 'var(--brand-primary)' }}/> System Settings &amp; Admin Controls
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-            Manage Company Information, GSTIN, Admin Privileges, and Inbound Purchase Email.
-          </p>
-        </div>
-
-        <div style={{ background: isAdminUnlocked ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', color: isAdminUnlocked ? '#10B981' : '#EF4444', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
-          {isAdminUnlocked ? <ShieldCheck size={16}/> : <Lock size={16}/>}
-          {isAdminUnlocked ? 'Admin Privileges Unlocked' : 'Admin Privileges Locked'}
-        </div>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Sliders size={24} style={{ color: 'var(--brand-primary)' }}/> Company Profile &amp; Settings
+        </h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+          Manage your Business Details, GSTIN, Inbound Purchase Email, and AI Token Wallet.
+        </p>
       </div>
 
       {toast && (
@@ -97,28 +75,7 @@ export default function Settings() {
         </div>
       )}
 
-      {/* Admin Lock Overlay if locked */}
-      {!isAdminUnlocked ? (
-        <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-default)', padding: 40, textAlign: 'center', boxShadow: '0 12px 32px rgba(0,0,0,0.2)' }}>
-          <Lock size={48} style={{ color: 'var(--brand-primary)', marginBottom: 16, opacity: 0.8 }}/>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>Admin Privileges Required</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, maxWidth: 420, margin: '6px auto 20px' }}>
-            Company Information, GSTIN, and Inbound Email configuration are restricted to Business Owners &amp; Admins.
-          </p>
-
-          <form onSubmit={handleUnlockAdmin} style={{ maxWidth: 320, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div>
-              <label className="field-label">Enter Admin Security Passcode</label>
-              <input type="password" required value={adminPin} onChange={e => setAdminPin(e.target.value)} placeholder="Passcode (e.g. 1234)" className="field-input" style={{ textAlign: 'center', fontSize: 16, letterSpacing: '0.2em' }}/>
-              {pinError && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{pinError}</span>}
-            </div>
-            <button type="submit" className="btn-action btn-action-primary" style={{ justifyContent: 'center', padding: '12px' }}>
-              <Key size={16}/> Unlock Admin Settings
-            </button>
-          </form>
-        </div>
-      ) : (
-        <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           
           {/* Card 1: Company Profile & Legal Information */}
           <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-default)', padding: 24, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}>
@@ -282,7 +239,6 @@ export default function Settings() {
           </div>
 
         </form>
-      )}
 
     </div>
   );
