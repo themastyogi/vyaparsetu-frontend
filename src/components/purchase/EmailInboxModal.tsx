@@ -19,7 +19,7 @@ interface EmailInboxModalProps {
 }
 
 export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }: EmailInboxModalProps) {
-  const { companySettings, purchaseInvoices, saveDraftPurchaseInvoice, deletePurchaseInvoice, clearAllDrafts } = useAccounting();
+  const { companySettings, purchaseInvoices, saveDraftPurchaseInvoice, deletePurchaseInvoice, clearAllDrafts, consumeAiCredit } = useAccounting();
   const { vendors, parties } = useMaster();
 
   const [isSyncing, setIsSyncing] = useState(false);
@@ -86,6 +86,9 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
                 }
                 const layoutExtracted = await extractInvoiceFromPDF(bytes.buffer, inv.filename);
                 extracted = await parseInvoiceWithAiAgent(layoutExtracted.rawText, inv.filename, companySettings.geminiApiKey);
+                if (extracted.extractedByAi) {
+                  consumeAiCredit(inv.filename || 'PDF Invoice Scan');
+                }
               } else {
                 extracted = {
                   vendorName: inv.vendorName || 'Vendor',

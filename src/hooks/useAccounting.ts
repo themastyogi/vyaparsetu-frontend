@@ -661,6 +661,31 @@ export function useAccounting() {
     });
   }, []);
 
+  const consumeAiCredit = useCallback((description: string) => {
+    setCompanySettingsState(prev => {
+      const currentUsed = prev.aiCreditsUsed ?? 55;
+      const newUsed = currentUsed + 1;
+      const history = prev.aiCreditHistory || [];
+      const newHistory = [
+        {
+          id: 'use_' + Date.now().toString(36),
+          date: new Date().toISOString().split('T')[0],
+          amount: 1,
+          description: `AI PDF Scan: ${description}`,
+          type: 'usage' as const,
+        },
+        ...history,
+      ];
+      const next = {
+        ...prev,
+        aiCreditsUsed: newUsed,
+        aiCreditHistory: newHistory,
+      };
+      save('vs_company_settings', next);
+      return next;
+    });
+  }, []);
+
   // ── Bank Accounts CRUD ────────────────────────────────────────
   const addBankAccount = useCallback((acct: Omit<BankAccount, 'id'>) => {
     const full: BankAccount = { ...acct, id: 'ba_' + Date.now().toString(36) };
@@ -1409,7 +1434,7 @@ export function useAccounting() {
 
   return {
     // Data & Settings
-    coa, companySettings, updateCompanySettings, bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount,
+    coa, companySettings, updateCompanySettings, consumeAiCredit, bankAccounts, addBankAccount, updateBankAccount, deleteBankAccount,
     salesInvoices, purchaseInvoices, debitNotes, payments, journalEntries, reconciliationRecords, toggleBRSClearance,
     // COA
     saveCoa, addAccount, updateAccount, deleteAccount, resetCOA,
