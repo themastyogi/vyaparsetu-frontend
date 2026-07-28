@@ -263,11 +263,43 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
     }
   }
 
-  // 8. Line Items Extraction
+  // 8. SAP/Oracle Style Spatial Table Boundary Isolation Engine
   const itemRows: Array<{ description: string; hsn?: string; qty: number; rate: number; amount: number; gstRate: number; gstAmount: number; cgstAmount?: number; sgstAmount?: number; igstAmount?: number; total: number }> = [];
 
-  // 8. Robust Line Items Extraction Engine
+  let tableLines: string[] = [];
+  let inTableSection = false;
+
   for (const line of lines) {
+    const lower = line.toLowerCase();
+
+    // Table Header Detection: Starts table reading mode
+    if (!inTableSection && (
+      (lower.includes('item') || lower.includes('description') || lower.includes('particulars')) &&
+      (lower.includes('qty') || lower.includes('quantity') || lower.includes('rate') || lower.includes('amount') || lower.includes('price'))
+    )) {
+      inTableSection = true;
+      continue; // Skip the header line itself
+    }
+
+    // Table Summary Detection: Ends table reading mode
+    if (inTableSection && (
+      lower.startsWith('summary') || lower.startsWith('taxable value') || lower.startsWith('subtotal') ||
+      lower.startsWith('grand total') || lower.startsWith('net amount') || lower.startsWith('cgst') ||
+      lower.startsWith('sgst') || lower.startsWith('igst') || lower.startsWith('total') || lower.includes('amount in words')
+    )) {
+      inTableSection = false;
+      break; // Stop line item parsing immediately upon reaching summary table
+    }
+
+    if (inTableSection) {
+      tableLines.push(line);
+    }
+  }
+
+  // Fallback to all lines if explicit table header wasn't found
+  const linesToProcess = tableLines.length > 0 ? tableLines : lines;
+
+  for (const line of linesToProcess) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.length < 5) continue;
 
@@ -339,6 +371,11 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
           rate = rateMatch.num;
           qty = Math.max(1, Math.round(amt / (rate || 1)));
           qtyOrRateIndex = rateMatch.index;
+        }
+
+        // Tier 3 Re-reconciliation: Amount must be reasonable (<= grand total)
+        if (netTotal > 0 && amt > netTotal * 1.05) {
+          continue; // Ignore phone numbers or invalid high values!
         }
 
         // Description is everything BEFORE the Qty / Rate token index
