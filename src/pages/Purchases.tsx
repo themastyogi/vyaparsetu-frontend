@@ -11,6 +11,7 @@ import CompanyProfileModal from '../components/company/CompanyProfileModal';
 import { useAccounting, type PurchaseInvoice, type SalesInvoice } from '../hooks/useAccounting';
 import { useMaster } from '../hooks/useMaster';
 import { extractInvoiceFromPDF } from '../utils/pdfExtractor';
+import { parseInvoiceWithAiAgent } from '../services/invoiceAiAgent';
 import { APP_VERSION } from '../config/version';
 import './Parties.css';
 
@@ -48,7 +49,8 @@ export default function Purchases() {
 
     try {
       const file = files[0];
-      const extracted = await extractInvoiceFromPDF(file);
+      const layoutExtracted = await extractInvoiceFromPDF(file);
+      const extracted = await parseInvoiceWithAiAgent(layoutExtracted.rawText, file.name, companySettings.geminiApiKey);
 
       wizard.clearDraft();
       wizard.updateData({
@@ -64,7 +66,7 @@ export default function Purchases() {
           rate: i.rate,
           gstRate: i.gstRate,
         })),
-        remarks: `Extracted text from PDF file: ${file.name}`,
+        remarks: `Extracted via ${extracted.extractedByAi ? 'Google Gemini 1.5 AI Agent' : 'PDF OCR Engine'}: ${file.name}`,
       });
       wizard.openWizardAtStep('preview');
     } catch (err) {

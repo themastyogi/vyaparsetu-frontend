@@ -192,7 +192,12 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
       const file = fileList[i];
       if (!file.name.toLowerCase().endsWith('.pdf')) continue;
       try {
-        const extracted = await extractInvoiceFromPDF(file);
+        const layoutExtracted = await extractInvoiceFromPDF(file);
+        const extracted = await parseInvoiceWithAiAgent(layoutExtracted.rawText, file.name, companySettings.geminiApiKey);
+        if (extracted.extractedByAi) {
+          consumeAiCredit(file.name || 'PDF Invoice Scan');
+        }
+
         const activeVendor = vendors.find(v => v.name.toLowerCase() === extracted.vendorName.toLowerCase()) || vendors[0] || parties[0];
 
         saveDraftPurchaseInvoice({
@@ -200,7 +205,7 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
           date: extracted.date,
           vendorName: extracted.vendorName !== 'Vendor' ? extracted.vendorName : (activeVendor?.name || 'Vendor'),
           vendorGstin: extracted.vendorGstin || activeVendor?.gstin || 'UNREGISTERED',
-          items: extracted.items.map(it => ({
+          items: extracted.items.map((it: any) => ({
             id: 'item_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
             description: it.description,
             qty: it.qty,
