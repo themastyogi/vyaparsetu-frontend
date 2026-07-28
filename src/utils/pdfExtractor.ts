@@ -246,67 +246,65 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
       continue;
     }
 
-    // Extract all numeric tokens from line (handles 10.00, 34,300.00, 40474)
+    // Parse table row numbers from right to left (Amount -> Rate -> Qty)
     const numMatches = Array.from(trimmed.matchAll(/\b([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|\d+(?:\.\d{1,2})?)\b/g));
     if (numMatches.length >= 2) {
-      const firstNumIndex = numMatches[0].index ?? 0;
-      let desc = trimmed.substring(0, firstNumIndex).replace(/^[0-9\.\s-]+/, '').trim();
-      const lowerDesc = desc.toLowerCase();
-      
-      if (
-        desc.length >= 2 &&
-        !lowerDesc.includes('invoice') &&
-        !lowerDesc.includes('gstin') &&
-        !lowerDesc.includes('cgst') &&
-        !lowerDesc.includes('sgst') &&
-        !lowerDesc.includes('igst') &&
-        !lowerDesc.includes('tax') &&
-        !lowerDesc.includes('total')
-      ) {
-        const nums = numMatches.map(m => parseFloat(m[1].replace(/,/g, ''))).filter(n => !isNaN(n) && n > 0);
-        
-        if (nums.length >= 2) {
-          let qty = 1;
-          let rate = 0;
-          let amt = 0;
+      const matchDetails = numMatches.map(m => ({
+        text: m[1],
+        num: parseFloat(m[1].replace(/,/g, '')),
+        index: m.index ?? 0,
+        length: m[0].length
+      })).filter(m => !isNaN(m.num) && m.num > 0);
 
-          if (nums.length >= 3) {
-            if (nums[0] < 1000 && nums[1] > 0) {
-              qty = nums[0];
-              rate = nums[1];
-              amt = nums[2] || (qty * rate);
-            } else if (nums[0] >= 1000 && nums[1] < 1000) {
-              // First number is HSN code (e.g. 8481)
-              qty = nums[1];
-              rate = nums[2];
-              amt = nums[3] || (qty * rate);
-            } else {
-              rate = nums[0];
-              amt = nums[1];
-            }
-          } else {
-            rate = nums[0];
-            amt = nums[1];
-          }
+      if (matchDetails.length >= 2) {
+        // Last number is Amount
+        const amountMatch = matchDetails[matchDetails.length - 1];
+        // Second to last number is Rate
+        const rateMatch = matchDetails[matchDetails.length - 2];
 
-          if (amt > 0 || rate > 0) {
-            const itemAmt = amt > 0 ? amt : (qty * rate);
-            const itemGst = Math.round(itemAmt * (gstRate / 100));
-            const itemNet = itemAmt + itemGst;
+        // Third to last (if available and <= 10000) is Qty
+        let qtyMatch = matchDetails.length >= 3 ? matchDetails[matchDetails.length - 3] : null;
+        if (qtyMatch && (qtyMatch.num > 10000 || qtyMatch.index < 5)) {
+          qtyMatch = null;
+        }
 
-            itemRows.push({
-              description: desc,
-              qty: Math.max(1, Math.round(qty)),
-              rate: rate || itemAmt,
-              amount: itemAmt,
-              gstRate,
-              gstAmount: itemGst,
-              cgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
-              sgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
-              igstAmount: taxType === 'inter_state' ? itemGst : 0,
-              total: itemNet,
-            });
-          }
+        const amt = amountMatch.num;
+        const rate = rateMatch.num;
+        const qty = qtyMatch ? Math.round(qtyMatch.num) : Math.max(1, Math.round(amt / (rate || 1)));
+
+        // Description is everything BEFORE the Qty (or Rate) token index
+        const qtyOrRateIndex = qtyMatch ? qtyMatch.index : rateMatch.index;
+        let desc = trimmed.substring(0, qtyOrRateIndex).replace(/^[0-9\.\s-]+/, '').trim();
+        // Remove trailing unit words (e.g. Ream, Pcs, Box, Kg, Nos, Mtr, Set)
+        desc = desc.replace(/\b(?:ream|pcs|pc|box|kg|nos|mtr|set|unit|units|doz|tbl|pkts|pkt)\b$/i, '').trim();
+
+        const lowerDesc = desc.toLowerCase();
+        if (
+          desc.length >= 2 &&
+          !lowerDesc.includes('invoice') &&
+          !lowerDesc.includes('gstin') &&
+          !lowerDesc.includes('cgst') &&
+          !lowerDesc.includes('sgst') &&
+          !lowerDesc.includes('igst') &&
+          !lowerDesc.includes('tax') &&
+          !lowerDesc.includes('total')
+        ) {
+          const itemAmt = amt > 0 ? amt : (qty * rate);
+          const itemGst = Math.round(itemAmt * (gstRate / 100));
+          const itemNet = itemAmt + itemGst;
+
+          itemRows.push({
+            description: desc,
+            qty: Math.max(1, qty),
+            rate: rate || itemAmt,
+            amount: itemAmt,
+            gstRate,
+            gstAmount: itemGst,
+            cgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
+            sgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
+            igstAmount: taxType === 'inter_state' ? itemGst : 0,
+            total: itemNet,
+          });
         }
       }
     }
