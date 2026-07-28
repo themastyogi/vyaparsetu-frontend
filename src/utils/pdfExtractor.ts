@@ -240,7 +240,7 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
 
   const finalItems = itemRows.length > 0 ? itemRows : [
     {
-      description: `IT Services / Goods as per Tax Invoice (${invoiceNo})`,
+      description: vendorName && vendorName !== 'Vendor' ? `Supply of Goods & Services from ${vendorName}` : 'Goods & Services as per Invoice',
       qty: 1,
       rate: subtotal,
       amount: subtotal,

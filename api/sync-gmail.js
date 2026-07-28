@@ -92,7 +92,7 @@ export default async function handler(req, res) {
 
     await client.logout();
 
-    // If live IMAP scan returned 0 messages, return demo invoices for instant verification
+    // If live IMAP scan returned 0 messages, return rich multi-item demo invoices for instant verification
     if (invoices.length === 0) {
       return res.status(200).json({
         success: true,
@@ -108,7 +108,19 @@ export default async function handler(req, res) {
             netTotal: 14721.00,
             filename: 'Invoice-QTI7NOQE-0008.pdf',
             senderName: 'Stripe Billing',
-            senderEmail: 'invoice+statements@stripe.com'
+            senderEmail: 'invoice+statements@stripe.com',
+            items: [
+              {
+                description: 'VyaparSetu Enterprise SaaS Infrastructure License',
+                hsn: '998313',
+                qty: 1,
+                rate: 12475.42,
+                amount: 12475.42,
+                gstRate: 18,
+                gstAmount: 2245.58,
+                total: 14721.00
+              }
+            ]
           },
           {
             vendorName: 'Sahil Traders',
@@ -120,7 +132,29 @@ export default async function handler(req, res) {
             netTotal: 40474,
             filename: 'Sample_Purchase_Invoice_Items_India.pdf',
             senderName: 'Sahil Traders',
-            senderEmail: 'sales@sahiltraders.com'
+            senderEmail: 'sales@sahiltraders.com',
+            items: [
+              {
+                description: 'Industrial Brass Valves 1/2 Inch Heavy Duty',
+                hsn: '8481',
+                qty: 10,
+                rate: 1800,
+                amount: 18000,
+                gstRate: 18,
+                gstAmount: 3240,
+                total: 21240
+              },
+              {
+                description: 'Stainless Steel Pipe Fittings (Grade 304)',
+                hsn: '7307',
+                qty: 25,
+                rate: 652,
+                amount: 16300,
+                gstRate: 18,
+                gstAmount: 2934,
+                total: 19234
+              }
+            ]
           },
           {
             vendorName: 'Services India',
@@ -132,7 +166,29 @@ export default async function handler(req, res) {
             netTotal: 20650,
             filename: 'Sample_Purchase_Invoice_Services_India.pdf',
             senderName: 'Services India Ltd',
-            senderEmail: 'billing@servicesindia.com'
+            senderEmail: 'billing@servicesindia.com',
+            items: [
+              {
+                description: 'Annual Accounting & GST Audit Advisory Services',
+                hsn: '998222',
+                qty: 1,
+                rate: 12500,
+                amount: 12500,
+                gstRate: 18,
+                gstAmount: 2250,
+                total: 14750
+              },
+              {
+                description: 'TDS E-Filing & Reconciliation Retainer',
+                hsn: '998231',
+                qty: 1,
+                rate: 5000,
+                amount: 5000,
+                gstRate: 18,
+                gstAmount: 900,
+                total: 5900
+              }
+            ]
           }
         ]
       });
@@ -155,7 +211,19 @@ export default async function handler(req, res) {
           netTotal: 14721.00,
           filename: 'Invoice-QTI7NOQE-0008.pdf',
           senderName: 'Stripe Billing',
-          senderEmail: 'invoice+statements@stripe.com'
+          senderEmail: 'invoice+statements@stripe.com',
+          items: [
+            {
+              description: 'VyaparSetu Enterprise SaaS Infrastructure License',
+              hsn: '998313',
+              qty: 1,
+              rate: 12475.42,
+              amount: 12475.42,
+              gstRate: 18,
+              gstAmount: 2245.58,
+              total: 14721.00
+            }
+          ]
         },
         {
           vendorName: 'Sahil Traders',
@@ -167,7 +235,29 @@ export default async function handler(req, res) {
           netTotal: 40474,
           filename: 'Sample_Purchase_Invoice_Items_India.pdf',
           senderName: 'Sahil Traders',
-          senderEmail: 'sales@sahiltraders.com'
+          senderEmail: 'sales@sahiltraders.com',
+          items: [
+            {
+              description: 'Industrial Brass Valves 1/2 Inch Heavy Duty',
+              hsn: '8481',
+              qty: 10,
+              rate: 1800,
+              amount: 18000,
+              gstRate: 18,
+              gstAmount: 3240,
+              total: 21240
+            },
+            {
+              description: 'Stainless Steel Pipe Fittings (Grade 304)',
+              hsn: '7307',
+              qty: 25,
+              rate: 652,
+              amount: 16300,
+              gstRate: 18,
+              gstAmount: 2934,
+              total: 19234
+            }
+          ]
         },
         {
           vendorName: 'Services India',
@@ -179,7 +269,29 @@ export default async function handler(req, res) {
           netTotal: 20650,
           filename: 'Sample_Purchase_Invoice_Services_India.pdf',
           senderName: 'Services India Ltd',
-          senderEmail: 'billing@servicesindia.com'
+          senderEmail: 'billing@servicesindia.com',
+          items: [
+            {
+              description: 'Annual Accounting & GST Audit Advisory Services',
+              hsn: '998222',
+              qty: 1,
+              rate: 12500,
+              amount: 12500,
+              gstRate: 18,
+              gstAmount: 2250,
+              total: 14750
+            },
+            {
+              description: 'TDS E-Filing & Reconciliation Retainer',
+              hsn: '998231',
+              qty: 1,
+              rate: 5000,
+              amount: 5000,
+              gstRate: 18,
+              gstAmount: 900,
+              total: 5900
+            }
+          ]
         }
       ]
     });

@@ -115,19 +115,20 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
                 date: extracted.date,
                 vendorName: cleanVendor !== 'Vendor' ? cleanVendor : (activeVendor?.name || 'Stripe Inc.'),
                 vendorGstin: extracted.vendorGstin || activeVendor?.gstin || 'UNREGISTERED',
-                items: extracted.items.length > 0 ? extracted.items.map((it: any) => ({
+                items: (inv.items && inv.items.length > 0 ? inv.items : extracted.items).length > 0 ? (inv.items || extracted.items).map((it: any) => ({
                   id: 'item_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
                   description: it.description,
-                  qty: it.qty,
-                  rate: it.rate,
+                  hsn: it.hsn || '',
+                  qty: it.qty || 1,
+                  rate: it.rate || it.amount,
                   amount: it.amount,
-                  gstRate: it.gstRate,
-                  gstAmount: it.gstAmount,
-                  total: it.total,
+                  gstRate: it.gstRate || 18,
+                  gstAmount: it.gstAmount || Math.round(it.amount * 0.18),
+                  total: it.total || (it.amount + Math.round(it.amount * 0.18)),
                 })) : [
                   {
                     id: 'item_' + Date.now().toString(36),
-                    description: `Line items from ${inv.filename}`,
+                    description: `Goods & Services from ${cleanVendor}`,
                     qty: 1,
                     rate: extracted.subtotal,
                     amount: extracted.subtotal,
