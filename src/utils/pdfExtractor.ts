@@ -203,23 +203,47 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
   }
 
   // 8. Line Items Extraction
-  const itemRows: Array<{ description: string; qty: number; rate: number; amount: number; gstRate: number; gstAmount: number; cgstAmount?: number; sgstAmount?: number; igstAmount?: number; total: number }> = [];
+  const itemRows: Array<{ description: string; hsn?: string; qty: number; rate: number; amount: number; gstRate: number; gstAmount: number; cgstAmount?: number; sgstAmount?: number; igstAmount?: number; total: number }> = [];
 
   for (const line of lines) {
     // Pattern 1: Description Qty Rate Amount (e.g. "IT Support Services 1 34300 34300")
     const match1 = line.match(/^([A-Za-z0-9\s/&.-]{3,50})\s+(\d+)\s+([0-9,]+(?:\.[0-9]{2})?)\s+([0-9,]+(?:\.[0-9]{2})?)$/);
     // Pattern 2: S.No Description Qty Rate Amount (e.g. "1 IT Support Services 1 34300 34300")
     const match2 = line.match(/^\d+\s+([A-Za-z0-9\s/&.-]{3,50})\s+(\d+)\s+([0-9,]+(?:\.[0-9]{2})?)\s+([0-9,]+(?:\.[0-9]{2})?)$/);
+    // Pattern 3: Description HSN Qty Rate Amount (e.g. "Brass Valves 8481 10 1800 18000")
+    const match3 = line.match(/^([A-Za-z0-9\s/&.-]{3,50})\s+(\d{4,8})\s+(\d+)\s+([0-9,]+(?:\.[0-9]{2})?)\s+([0-9,]+(?:\.[0-9]{2})?)$/);
 
     const itemMatch = match1 || match2;
-    if (itemMatch) {
+    if (match3) {
+      const desc = match3[1].trim();
+      const hsn = match3[2];
+      const qty = parseInt(match3[3], 10) || 1;
+      const rate = parseFloat(match3[4].replace(/,/g, '')) || 0;
+      const amt = parseFloat(match3[5].replace(/,/g, '')) || (qty * rate);
+      const itemGst = Math.round(amt * (gstRate / 100));
+      const itemNet = amt + itemGst;
+
+      itemRows.push({
+        description: desc,
+        hsn,
+        qty,
+        rate,
+        amount: amt,
+        gstRate,
+        gstAmount: itemGst,
+        cgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
+        sgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
+        igstAmount: taxType === 'inter_state' ? itemGst : 0,
+        total: itemNet,
+      });
+    } else if (itemMatch) {
       const desc = itemMatch[1].trim();
       const lowerDesc = desc.toLowerCase();
       if (!lowerDesc.startsWith('total') && !lowerDesc.startsWith('subtotal') && !lowerDesc.startsWith('taxable') && !lowerDesc.startsWith('amount') && !lowerDesc.startsWith('invoice')) {
         const qty = parseInt(itemMatch[2], 10) || 1;
         const rate = parseFloat(itemMatch[3].replace(/,/g, '')) || 0;
         const amt = parseFloat(itemMatch[4].replace(/,/g, '')) || (qty * rate);
-        const itemGst = Math.round(amt * 0.18);
+        const itemGst = Math.round(amt * (gstRate / 100));
         const itemNet = amt + itemGst;
 
         itemRows.push({
@@ -227,7 +251,7 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
           qty,
           rate,
           amount: amt,
-          gstRate: 18,
+          gstRate,
           gstAmount: itemGst,
           cgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
           sgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
