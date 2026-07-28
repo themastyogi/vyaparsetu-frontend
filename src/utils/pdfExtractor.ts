@@ -246,7 +246,7 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
       continue;
     }
 
-    // Parse table row numbers from right to left (Amount -> Rate -> Qty)
+    // Universal Mathematical Engine & Right-to-Left Table Column Analysis
     const numMatches = Array.from(trimmed.matchAll(/\b([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|\d+(?:\.\d{1,2})?)\b/g));
     if (numMatches.length >= 2) {
       const matchDetails = numMatches.map(m => ({
@@ -257,23 +257,48 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
       })).filter(m => !isNaN(m.num) && m.num > 0);
 
       if (matchDetails.length >= 2) {
-        // Last number is Amount
-        const amountMatch = matchDetails[matchDetails.length - 1];
-        // Second to last number is Rate
-        const rateMatch = matchDetails[matchDetails.length - 2];
+        let foundMath = false;
+        let qty = 1;
+        let rate = 0;
+        let amt = 0;
+        let qtyOrRateIndex = matchDetails[matchDetails.length - 2].index;
 
-        // Third to last (if available and <= 10000) is Qty
-        let qtyMatch = matchDetails.length >= 3 ? matchDetails[matchDetails.length - 3] : null;
-        if (qtyMatch && (qtyMatch.num > 10000 || qtyMatch.index < 5)) {
-          qtyMatch = null;
+        // Universal Mathematical Formula Validation: Find (qty, rate, amt) where qty * rate ≈ amt
+        for (let i = 0; i < matchDetails.length; i++) {
+          for (let j = 0; j < matchDetails.length; j++) {
+            if (i === j) continue;
+            for (let k = 0; k < matchDetails.length; k++) {
+              if (k === i || k === j) continue;
+              const testQty = matchDetails[i].num;
+              const testRate = matchDetails[j].num;
+              const testAmt = matchDetails[k].num;
+
+              // Check if testQty * testRate ≈ testAmt (with 1.5% rounding tolerance)
+              if (testQty > 0 && testRate > 0 && Math.abs(testQty * testRate - testAmt) < Math.max(1, testAmt * 0.015)) {
+                qty = Math.round(testQty);
+                rate = testRate;
+                amt = testAmt;
+                qtyOrRateIndex = Math.min(matchDetails[i].index, matchDetails[j].index);
+                foundMath = true;
+                break;
+              }
+            }
+            if (foundMath) break;
+          }
+          if (foundMath) break;
         }
 
-        const amt = amountMatch.num;
-        const rate = rateMatch.num;
-        const qty = qtyMatch ? Math.round(qtyMatch.num) : Math.max(1, Math.round(amt / (rate || 1)));
+        // Fallback to Right-to-Left column alignment if exact math triple wasn't found
+        if (!foundMath) {
+          const amountMatch = matchDetails[matchDetails.length - 1];
+          const rateMatch = matchDetails[matchDetails.length - 2];
+          amt = amountMatch.num;
+          rate = rateMatch.num;
+          qty = Math.max(1, Math.round(amt / (rate || 1)));
+          qtyOrRateIndex = rateMatch.index;
+        }
 
-        // Description is everything BEFORE the Qty (or Rate) token index
-        const qtyOrRateIndex = qtyMatch ? qtyMatch.index : rateMatch.index;
+        // Description is everything BEFORE the Qty / Rate token index
         let desc = trimmed.substring(0, qtyOrRateIndex).replace(/^[0-9\.\s-]+/, '').trim();
         // Remove trailing unit words (e.g. Ream, Pcs, Box, Kg, Nos, Mtr, Set)
         desc = desc.replace(/\b(?:ream|pcs|pc|box|kg|nos|mtr|set|unit|units|doz|tbl|pkts|pkt)\b$/i, '').trim();
