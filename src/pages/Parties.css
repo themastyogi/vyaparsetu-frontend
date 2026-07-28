@@ -367,3 +367,55 @@ select.field-input { cursor: pointer; }
     overflow-y: auto;
   }
 }
+
+/* ─── Premium Purchase Bills Table Styling System ─── */
+.parties-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.parties-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+}
+
+.parties-table thead tr {
+  background: var(--bg-elevated, #F8FAFC);
+}
+
+.parties-table thead th {
+  padding: 14px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #64748B);
+  border-bottom: 1.5px solid var(--border-default, #E2E8F0);
+  white-space: nowrap;
+}
+
+.parties-table tbody tr {
+  transition: all 0.15s ease-in-out;
+  border-bottom: 1px solid var(--border-subtle, #F1F5F9);
+}
+
+.parties-table tbody tr:hover {
+  background: rgba(99, 102, 241, 0.035);
+}
+
+.parties-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.parties-table td {
+  padding: 14px 18px;
+  vertical-align: middle;
+  color: var(--text-primary, #0F172A);
+  border-bottom: 1px solid var(--border-subtle, #F1F5F9);
+}

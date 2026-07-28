@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Search, Plus, Camera, Mail,
-  Trash2, Link2, X, FileUp, RotateCcw, ShieldAlert
+  Trash2, Link2, X, FileUp, RotateCcw
 } from 'lucide-react';
 import { usePurchaseWizard } from '../components/purchase/usePurchaseWizard';
 import PurchaseWizard from '../components/purchase/PurchaseWizard';
@@ -32,16 +32,10 @@ export default function Purchases() {
     deletePurchaseInvoice, postDraftPurchaseInvoice, reversePurchaseInvoice, linkSalesToPurchase, removeDuplicateDrafts,
   } = useAccounting();
 
-  // Role toggle for demonstration (VyaparSetu Admin vs Normal Company User)
-  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
+  // Role toggle (VyaparSetu Admin handled internally via portal)
+  const [isSuperAdmin] = useState<boolean>(() => {
     return localStorage.getItem('vs_user_role') === 'super_admin';
   });
-
-  const toggleSuperAdminRole = () => {
-    const next = !isSuperAdmin;
-    setIsSuperAdmin(next);
-    localStorage.setItem('vs_user_role', next ? 'super_admin' : 'company_user');
-  };
 
   const [, setRefreshTick] = useState(0);
 
@@ -174,20 +168,6 @@ export default function Purchases() {
             <span style={{ background: 'rgba(99,102,241,0.15)', color: '#818CF8', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 12, fontFamily: 'monospace' }}>
               {APP_VERSION}
             </span>
-            <button
-              type="button"
-              onClick={toggleSuperAdminRole}
-              style={{
-                background: isSuperAdmin ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.15)',
-                color: isSuperAdmin ? '#EF4444' : '#818CF8',
-                border: isSuperAdmin ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(99,102,241,0.3)',
-                fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 12, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 5
-              }}
-              title="Click to toggle between Company User & VyaparSetu Super Admin role"
-            >
-              <ShieldAlert size={12}/> Role: {isSuperAdmin ? 'VyaparSetu Admin (Delete Mode)' : 'Company User (Reverse Only)'}
-            </button>
           </div>
           <p className="page-sub">Linked to accounting ledger · Incremental Email Ingestion · Auto-posted</p>
         </div>
@@ -278,78 +258,83 @@ export default function Purchases() {
       </div>
 
       {/* Table */}
-      <div className="parties-card" style={{ flex: 1 }}>
+      <div className="parties-card" style={{ flex: 1, marginTop: 12 }}>
         <div style={{ overflowX: 'auto' }}>
           <table className="parties-table">
             <thead>
               <tr>
-                <th>Vendor</th>
-                <th>Invoice No &amp; Date</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Taxable (₹)</th>
-                <th style={{ textAlign: 'right' }}>GST (₹)</th>
-                <th style={{ textAlign: 'right' }}>Net Total (₹)</th>
-                <th>Linked to SI</th>
-                <th>Actions</th>
+                <th style={{ minWidth: 220, paddingLeft: 20 }}>Vendor</th>
+                <th style={{ minWidth: 160 }}>Invoice No &amp; Date</th>
+                <th style={{ minWidth: 130 }}>Status</th>
+                <th style={{ minWidth: 130, textAlign: 'right' }}>Taxable (₹)</th>
+                <th style={{ minWidth: 120, textAlign: 'right' }}>GST (₹)</th>
+                <th style={{ minWidth: 140, textAlign: 'right' }}>Net Total (₹)</th>
+                <th style={{ minWidth: 130 }}>Linked to SI</th>
+                <th style={{ minWidth: 130, paddingRight: 20, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="empty-cell">No bills found</td></tr>
+                <tr><td colSpan={8} className="empty-cell">No purchase bills found</td></tr>
               ) : filtered.map(p => {
                 const linkedSI = getSIForLink(p);
                 return (
                   <tr key={p.id}>
                     {/* Vendor */}
-                    <td>
-                      <div className="party-name-cell">
-                        <div className="party-avatar">{p.vendorName.charAt(0).toUpperCase()}</div>
+                    <td style={{ paddingLeft: 20 }}>
+                      <div className="party-name-cell" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div className="party-avatar" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(108,71,255,0.12)', color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
+                          {p.vendorName.charAt(0).toUpperCase()}
+                        </div>
                         <div>
-                          <div style={{ fontWeight: 600 }}>{p.vendorName}</div>
-                          {p.vendorGstin && <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.vendorGstin}</div>}
+                          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{p.vendorName}</div>
+                          {p.vendorGstin && <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: 1 }}>{p.vendorGstin}</div>}
                         </div>
                       </div>
                     </td>
                     {/* Invoice No */}
                     <td>
-                      <div style={{ fontWeight: 700, color: 'var(--brand-primary)', fontSize: 13 }}>{p.invoiceNo}</div>
+                      <div style={{ fontWeight: 800, color: 'var(--brand-primary)', fontSize: 13, letterSpacing: '0.01em' }}>{p.invoiceNo}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{p.date}</div>
                     </td>
                     {/* Status */}
                     <td>
                       <span style={{
-                        fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 12,
-                        background: p.status === 'posted' ? 'rgba(16,185,129,0.15)' : p.status === 'reversed' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
-                        color: p.status === 'posted' ? '#34D399' : p.status === 'reversed' ? '#EF4444' : '#FBBF24',
+                        fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 20,
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        background: p.status === 'posted' ? 'rgba(16,185,129,0.14)' : p.status === 'reversed' ? 'rgba(239,68,68,0.14)' : 'rgba(245,158,11,0.14)',
+                        color: p.status === 'posted' ? '#10B981' : p.status === 'reversed' ? '#EF4444' : '#D97706',
+                        border: p.status === 'posted' ? '1px solid rgba(16,185,129,0.3)' : p.status === 'reversed' ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(245,158,11,0.3)',
                       }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: p.status === 'posted' ? '#10B981' : p.status === 'reversed' ? '#EF4444' : '#D97706' }} />
                         {p.status === 'posted' ? 'Posted' : p.status === 'reversed' ? 'Reversed' : 'Draft (Email)'}
                       </span>
                     </td>
                     {/* Amounts */}
-                    <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>{f2(p.subtotal)}</td>
-                    <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-muted)' }}>{f2(p.gstTotal)}</td>
-                    <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{f2(p.netTotal)}</td>
+                    <td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 13 }}>{f2(p.subtotal)}</td>
+                    <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: 13 }}>{f2(p.gstTotal)}</td>
+                    <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 800, fontSize: 13, color: 'var(--text-primary)' }}>{f2(p.netTotal)}</td>
                     {/* Link */}
                     <td>
                       {linkedSI ? (
-                        <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(22,163,74,0.1)', padding: '3px 8px', borderRadius: 6 }}>
                           <Link2 size={12}/> {linkedSI.invoiceNo}
                         </div>
                       ) : (
-                        <button className="btn-action btn-action-ghost" style={{ padding: '3px 8px', fontSize: 11 }} onClick={() => setLinkModal(p)}>
+                        <button className="btn-action btn-action-secondary" style={{ padding: '3px 9px', fontSize: 11, fontWeight: 700 }} onClick={() => setLinkModal(p)}>
                           + Link SI
                         </button>
                       )}
                     </td>
                     {/* Actions */}
-                    <td>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <td style={{ paddingRight: 20 }}>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
                         {p.status === 'draft' && (
                           <>
-                            <button className="btn-action btn-action-primary" style={{ padding: '3px 9px', fontSize: 11 }} onClick={() => handlePostDraftDirectly(p)}>
+                            <button className="btn-action btn-action-primary" style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700 }} onClick={() => handlePostDraftDirectly(p)}>
                               Post Bill
                             </button>
-                            <button className="btn-action btn-action-ghost" style={{ padding: '3px 8px', color: '#ef4444' }} onClick={() => deletePurchaseInvoice(p.id)} title="Delete Draft">
+                            <button className="btn-action btn-action-secondary" style={{ padding: '4px 8px', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }} onClick={() => deletePurchaseInvoice(p.id)} title="Delete Draft">
                               <Trash2 size={13}/>
                             </button>
                           </>
@@ -357,25 +342,23 @@ export default function Purchases() {
 
                         {p.status === 'posted' && (
                           <>
-                            {/* Normal Company User: Can ONLY Reverse transaction */}
                             {!isSuperAdmin ? (
                               <button 
                                 className="btn-action btn-action-secondary" 
-                                style={{ padding: '3px 9px', fontSize: 11, color: '#F59E0B', borderColor: 'rgba(245,158,11,0.3)', display: 'flex', alignItems: 'center', gap: 4 }} 
+                                style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700, color: '#D97706', borderColor: 'rgba(217,119,6,0.3)', display: 'inline-flex', alignItems: 'center', gap: 4 }} 
                                 onClick={() => {
                                   if (confirm(`Are you sure you want to REVERSE purchase invoice ${p.invoiceNo}? This will post a Reversal Journal Entry to preserve the audit trail.`)) {
                                     reversePurchaseInvoice(p.id);
                                   }
                                 }}
-                                title="Normal users cannot delete posted transactions. Click to Reverse."
+                                title="Click to Reverse posted bill"
                               >
                                 <RotateCcw size={12}/> Reverse
                               </button>
                             ) : (
-                              /* VyaparSetu Admin: Can Delete posted transaction */
                               <button 
-                                className="btn-action btn-action-ghost" 
-                                style={{ padding: '3px 8px', color: '#ef4444' }} 
+                                className="btn-action btn-action-secondary" 
+                                style={{ padding: '4px 8px', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }} 
                                 onClick={() => {
                                   if (confirm(`ADMIN ACTION: Permanently delete posted purchase invoice ${p.invoiceNo}?`)) {
                                     deletePurchaseInvoice(p.id);
@@ -390,7 +373,7 @@ export default function Purchases() {
                         )}
 
                         {p.status === 'reversed' && (
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>Reversal Recorded</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', fontWeight: 600 }}>Reversed</span>
                         )}
                       </div>
                     </td>
