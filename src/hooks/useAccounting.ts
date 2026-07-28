@@ -418,23 +418,8 @@ export const DEFAULT_COA: Account[] = [
   { code: '7020', name: 'Depreciation',              type: 'Expense',   group: 'Depreciation' },
 ];
 
-// ── Seed purchase invoices ────────────────────────────────────────
-const SEED_PURCHASES: PurchaseInvoice[] = [
-  {
-    id: 'pi-seed-1', invoiceNo: 'INV-2026-042', date: '2026-04-20',
-    vendorName: 'Sharma Traders', vendorGstin: '',
-    items: [{ id: 'pii-1', description: 'Goods', qty: 1, rate: 45000, amount: 45000, gstRate: 5, gstAmount: 2250, total: 47250 }],
-    subtotal: 45000, gstTotal: 2250, netTotal: 47250,
-    status: 'posted', createdAt: '2026-04-20T00:00:00Z',
-  },
-  {
-    id: 'pi-seed-2', invoiceNo: 'TSI-APR-05', date: '2026-04-18',
-    vendorName: 'Tech Solutions India', vendorGstin: '',
-    items: [{ id: 'pii-2', description: 'Services', qty: 1, rate: 89000, amount: 89000, gstRate: 18, gstAmount: 16020, total: 105020 }],
-    subtotal: 89000, gstTotal: 16020, netTotal: 105020,
-    status: 'posted', createdAt: '2026-04-18T00:00:00Z',
-  },
-];
+// ── Seed purchase invoices (Empty by default for clean user experience) ────
+const SEED_PURCHASES: PurchaseInvoice[] = [];
 
 // ── Storage helpers ───────────────────────────────────────────────
 function load<T>(key: string, fallback: T): T {
@@ -609,7 +594,7 @@ export function useAccounting() {
   const [salesInvoices, setSIState]    = useState<SalesInvoice[]>(() => load('vs_sales', []));
   const [purchaseInvoices, setPIState] = useState<PurchaseInvoice[]>(() => {
     const stored = load<PurchaseInvoice[]>('vs_purchases', []);
-    const cleaned = stored.filter(p => p.status !== 'draft' || (!p.id.includes('pi-draft') && !p.id.includes('sample')));
+    const cleaned = stored.filter(p => !p.id.includes('pi-seed') && (p.status !== 'draft' || (!p.id.includes('pi-draft') && !p.id.includes('sample'))));
     
     const targetList = cleaned.length === 0 ? SEED_PURCHASES : cleaned;
     const seen = new Set<string>();
