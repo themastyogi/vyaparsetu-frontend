@@ -82,18 +82,58 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
   const sellerGstinMatches = sellerSection.match(gstinRegex) || text.match(gstinRegex) || [];
   const vendorGstin = sellerGstinMatches[0] ? sellerGstinMatches[0].toUpperCase() : 'UNREGISTERED';
 
-  // 2. Invoice Number Regex (matches patterns like ST/26-27/00201, INV-2026-0811, BILL/102)
-  const invNoRegex = /(?:invoice\s*(?:no|number|#)?|bill\s*(?:no|number|#)?|inv\s*#?)\s*[:.-]?\s*([A-Z0-9\/-]{3,30})/i;
-  const invNoMatch = text.match(invNoRegex);
+  // 2. Multi-Strategy Explicit Invoice Number Extractor
   let invoiceNo = '';
-  if (invNoMatch) {
-    const rawNo = invNoMatch[1].trim().split(/\s+/)[0];
-    if (rawNo && rawNo.length >= 3 && !rawNo.toLowerCase().includes('oice') && !rawNo.toLowerCase().includes('date')) {
-      invoiceNo = rawNo.replace(/[^A-Z0-9\/-]/gi, '');
+
+  // Strategy A: Explicit Label Match (Invoice No / Bill No / Inv No / Tax Invoice No)
+  const explicitInvRegex = /(?:invoice|bill|inv|ref)\s*(?:no|num|number|#)\s*[:.-]?\s*([A-Z0-9\/-]{3,30})/gi;
+  const explicitMatches = Array.from(text.matchAll(explicitInvRegex));
+  
+  for (const m of explicitMatches) {
+    if (m && m[1]) {
+      const candidate = m[1].trim().split(/\s+/)[0].replace(/[^A-Z0-9\/-]/gi, '');
+      const lowerCand = candidate.toLowerCase();
+      if (
+        candidate.length >= 3 &&
+        !lowerCand.includes('oice') &&
+        !lowerCand.includes('date') &&
+        !lowerCand.includes('tax') &&
+        !lowerCand.includes('bill') &&
+        !lowerCand.includes('goods')
+      ) {
+        invoiceNo = candidate;
+        break;
+      }
     }
   }
-  
-  // Clean invalid invoice numbers
+
+  // Strategy B: Pattern match for Indian invoice formats like ST/26-27/00125, INV-2026-001, SI/2026-0811
+  if (!invoiceNo) {
+    const patternRegex = /\b([A-Z]{1,6}\/[0-9]{2}-[0-9]{2}\/[0-9]{3,6}|[A-Z]{2,6}-[0-9]{4}-[0-9]{3,6}|[A-Z]{2,6}\/[0-9]{4}\/[0-9]{3,6})\b/gi;
+    const patternMatch = text.match(patternRegex);
+    if (patternMatch && patternMatch[0]) {
+      invoiceNo = patternMatch[0].trim();
+    }
+  }
+
+  // Strategy C: Scan line-by-line after "Invoice No" or "Invoice Number"
+  if (!invoiceNo) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/invoice\s*no|bill\s*no|inv\s*no/i.test(line)) {
+        const parts = line.split(/[:.-]/);
+        if (parts.length >= 2) {
+          const cand = parts[1].trim().split(/\s+/)[0].replace(/[^A-Z0-9\/-]/gi, '');
+          if (cand.length >= 3 && !cand.toLowerCase().includes('oice')) {
+            invoiceNo = cand;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Clean fallback
   if (!invoiceNo || invoiceNo.length < 3) {
     const cleanFn = (fileName || 'Invoice')
       .replace(/\.pdf$/i, '')
