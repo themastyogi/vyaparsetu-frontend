@@ -11,6 +11,7 @@ import CompanyProfileModal from '../components/company/CompanyProfileModal';
 import { useAccounting, type PurchaseInvoice, type SalesInvoice } from '../hooks/useAccounting';
 import { useMaster } from '../hooks/useMaster';
 import { extractInvoiceFromPDF } from '../utils/pdfExtractor';
+import { APP_VERSION } from '../config/version';
 import './Parties.css';
 
 // Kept for backward-compat (purchase wizard may still call it)
@@ -150,8 +151,13 @@ export default function Purchases() {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t('purchase.title', 'Purchase Bills')}</h1>
-          <p className="page-sub">Linked to accounting ledger · Email Ingestion · Auto-posted</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h1 className="page-title">{t('purchase.title', 'Purchase Bills')}</h1>
+            <span style={{ background: 'rgba(99,102,241,0.15)', color: '#818CF8', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 12, fontFamily: 'monospace' }}>
+              {APP_VERSION}
+            </span>
+          </div>
+          <p className="page-sub">Linked to accounting ledger · Incremental Email Ingestion · Auto-posted</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <label className="btn-action btn-action-secondary" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>

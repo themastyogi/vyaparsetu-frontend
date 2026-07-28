@@ -129,6 +129,8 @@ export interface CompanySettings {
   googleRefreshToken?: string; // OAuth2 Refresh Token
   gmailAppPassword?: string;   // Google 16-char App Password (legacy fallback)
   imapHost?: string;           // imap.gmail.com
+  lastEmailSyncTimestamp?: string; // ISO Timestamp of last successful email sync
+  syncFromDate?: string;       // User configurable start date for checking backdated emails
   geminiApiKey?: string;       // Google Gemini AI Agent API Key
   aiCreditsTotal?: number;     // Total AI Credits granted/purchased
   aiCreditsUsed?: number;      // Total AI Credits consumed

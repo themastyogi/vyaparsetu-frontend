@@ -4,13 +4,15 @@
  * Parses REAL vendor PDF files using pdfjs-dist OCR text extraction with zero mock data.
  */
 import React, { useState, useEffect } from 'react';
-import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Sparkles, Trash2, Edit2, FileUp, ShieldAlert, Key } from 'lucide-react';
+import { Mail, RefreshCw, FileText, ArrowRight, CheckCircle2, X, Trash2, Edit2, FileUp, ShieldAlert, Key } from 'lucide-react';
 import { useAccounting, type PurchaseInvoice } from '../../hooks/useAccounting';
 import { useMaster } from '../../hooks/useMaster';
 import { extractInvoiceFromPDF } from '../../utils/pdfExtractor';
 import { parseInvoiceWithAiAgent } from '../../services/invoiceAiAgent';
 
 const f2 = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+import { APP_VERSION, LAST_DEPLOY_TIMESTAMP } from '../../config/version';
 
 interface EmailInboxModalProps {
   isOpen: boolean;
@@ -19,13 +21,18 @@ interface EmailInboxModalProps {
 }
 
 export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }: EmailInboxModalProps) {
-  const { companySettings, purchaseInvoices, saveDraftPurchaseInvoice, deletePurchaseInvoice, clearAllDrafts, consumeAiCredit } = useAccounting();
+  const { companySettings, updateCompanySettings, purchaseInvoices, saveDraftPurchaseInvoice, deletePurchaseInvoice, clearAllDrafts, consumeAiCredit } = useAccounting();
   const { vendors, parties } = useMaster();
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncToast, setSyncToast] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState<PurchaseInvoice | null>(null);
   const [showConnectGmailModal, setShowConnectGmailModal] = useState(false);
+
+  // Sync date range state (user configurable start timestamp)
+  const [syncFromDate, setSyncFromDate] = useState<string>(() => {
+    return companySettings.syncFromDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+  });
 
   // Edit draft form
   const [editForm, setEditForm] = useState({
@@ -68,8 +75,12 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
           email: companySettings.inboundEmail,
           password: companySettings.gmailAppPassword,
           host: companySettings.imapHost || 'imap.gmail.com',
+          sinceDate: syncFromDate,
         })
       });
+
+      const nowIso = new Date().toISOString();
+      updateCompanySettings({ lastEmailSyncTimestamp: nowIso, syncFromDate });
 
       if (res.ok) {
         const data = await res.json();
@@ -142,18 +153,20 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
                 netTotal: extracted.netTotal,
                 status: 'draft',
                 source: 'email',
-                senderEmail: inv.senderEmail || companySettings.inboundEmail,
-                receivedAt: new Date().toISOString(),
+                senderEmail: inv.senderEmail || activeVendor?.email || companySettings.inboundEmail,
+                receivedAt: inv.date || new Date().toISOString(),
                 attachedFileName: inv.filename || 'Invoice.pdf',
               });
               count++;
-            } catch (err) {
-              console.error('Client PDF parse error for email attachment:', err);
+            } catch (invErr) {
+              console.error('Invoice item parsing error:', invErr);
             }
           }
-          setSyncToast(`Parsed & ingested ${count} PDF invoice(s) with exact text & amounts directly from Gmail!`);
+          setSyncToast(`Synced ${count} email invoice(s) received since ${new Date(syncFromDate).toLocaleDateString()}!`);
+          setTimeout(() => setSyncToast(null), 4000);
         } else {
-          setSyncToast(data.message || `Scanned Gmail INBOX for ${companySettings.inboundEmail} — No PDF attachments found.`);
+          setSyncToast(data.message || 'Scanned inbox: 0 new invoice attachments found.');
+          setTimeout(() => setSyncToast(null), 4000);
         }
       } else {
         const errData = await res.json().catch(() => ({}));
@@ -298,36 +311,60 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
       <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 780, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.4)', overflow: 'hidden', border: isDragging ? '2px dashed #3B82F6' : '1px solid var(--border-default)' }}>
         
         {/* Modal Header */}
-        <div style={{ padding: '20px 24px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '16px 24px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Mail size={20} style={{ color: 'var(--brand-primary)' }}/> Purchase Bill Email Ingestion Inbox
-            </h2>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
-              Inbound Booking Email: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--brand-primary)' }}>{companySettings.inboundEmail}</span>
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Mail size={20} style={{ color: 'var(--brand-primary)' }}/> Purchase Bill Email Ingestion Inbox
+              </h2>
+              <span style={{ background: 'rgba(99,102,241,0.15)', color: '#818CF8', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 12, fontFamily: 'monospace' }} title={`Deployed: ${LAST_DEPLOY_TIMESTAMP}`}>
+                {APP_VERSION}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span>Inbound Booking Email: <strong style={{ fontFamily: 'monospace', color: 'var(--brand-primary)' }}>{companySettings.inboundEmail}</strong></span>
+              <span style={{ color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                🕒 Last Synced: {companySettings.lastEmailSyncTimestamp ? new Date(companySettings.lastEmailSyncTimestamp).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : 'Never'}
+              </span>
+            </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20}/></button>
         </div>
 
-        {/* Info banner & actions */}
-        <div style={{ background: 'rgba(59,130,246,0.08)', borderBottom: '1px solid rgba(59,130,246,0.18)', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-          <div style={{ fontSize: 12, color: '#3B82F6', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-            <Sparkles size={14}/> Read text &amp; totals directly from actual PDF invoice files or email attachments.
+        {/* Sync Controls & Backdated Date Filter Bar */}
+        <div style={{ background: 'rgba(59,130,246,0.06)', borderBottom: '1px solid rgba(59,130,246,0.15)', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>Sync Emails Received After:</span>
+            <input
+              type="datetime-local"
+              value={syncFromDate}
+              onChange={(e) => setSyncFromDate(e.target.value)}
+              style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600 }}
+              title="Set custom date & time to re-scan backdated emails"
+            />
+            <button
+              onClick={() => {
+                const date7DaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+                setSyncFromDate(date7DaysAgo);
+              }}
+              style={{ background: 'none', border: 'none', color: 'var(--brand-primary)', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Set 7 Days Backdated
+            </button>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {draftBills.length > 0 && (
-              <button onClick={() => { clearAllDrafts(); setSyncToast('Cleared all sample & pending draft bills!'); setTimeout(() => setSyncToast(null), 3000); }}
+              <button onClick={() => { clearAllDrafts(); setSyncToast('Cleared all pending draft bills!'); setTimeout(() => setSyncToast(null), 3000); }}
                 className="btn-action btn-action-ghost" style={{ padding: '6px 10px', fontSize: 12, color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8 }}>
                 <Trash2 size={13}/> Clear All Drafts
               </button>
             )}
             <label className="btn-action btn-action-secondary" style={{ padding: '6px 12px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, opacity: isSyncing ? 0.7 : 1 }}>
-              <FileUp size={14} style={{ color: 'var(--brand-primary)' }}/> {isSyncing ? 'Parsing PDF...' : 'Upload & Parse Real PDF'}
+              <FileUp size={14} style={{ color: 'var(--brand-primary)' }}/> {isSyncing ? 'Parsing PDF...' : 'Upload PDF'}
               <input type="file" accept=".pdf" multiple onChange={handleFileUploadPDF} style={{ display: 'none' }}/>
             </label>
             <button onClick={() => setShowConnectGmailModal(true)} className="btn-action btn-action-secondary" style={{ padding: '6px 12px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, color: '#6C47FF', borderColor: 'rgba(108,71,255,0.3)' }}>
-              <Key size={13}/> Connect Live Gmail / IMAP
+              <Key size={13}/> IMAP Credentials
             </button>
             <button onClick={handleSyncEmailInbox} disabled={isSyncing} className="btn-action btn-action-primary" style={{ padding: '6px 14px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
               <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''}/> {isSyncing ? 'Syncing...' : 'Sync Email Inbox'}

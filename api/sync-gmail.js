@@ -10,11 +10,12 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-  const { email, password, host } = req.body || {};
+  const { email, password, host, sinceDate } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: 'Missing email or password' });
   }
 
+  const filterDate = sinceDate ? new Date(sinceDate) : null;
   const cleanPassword = password.replace(/\s+/g, '').trim();
 
   const client = new ImapFlow({
@@ -47,6 +48,10 @@ export default async function handler(req, res) {
         scannedCount++;
         try {
           const parsed = await simpleParser(message.source);
+
+          if (filterDate && parsed.date && new Date(parsed.date) < filterDate) {
+            continue; // Skip backdated emails older than user specified sync date
+          }
 
           if (parsed.attachments && parsed.attachments.length > 0) {
             for (let att of parsed.attachments) {
