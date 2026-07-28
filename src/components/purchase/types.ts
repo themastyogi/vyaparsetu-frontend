@@ -13,9 +13,18 @@ export type PurchasePurpose = 'stock' | 'expense' | 'asset' | 'personal';
 export interface PurchaseLineItem {
   id: string;
   name: string;
+  description?: string;
+  hsn?: string;
+  uom?: string;       // Unit of Measure (Ream, Month, Job, Pcs, Box, Kg, Mtr, Set)
   qty: number;
   rate: number;
+  amount?: number;    // Line Taxable Value (Qty * Rate)
   gstRate: number;
+  gstAmount?: number; // Line Tax Amount
+  total?: number;     // Line Total Amount
+  accountHead?: string; // Chart of Accounts Expense Head (for Service invoices)
+  masterItemId?: string; // Linked Item Master ID
+  isNewItem?: boolean;
 }
 
 export interface PurchaseDraftData {

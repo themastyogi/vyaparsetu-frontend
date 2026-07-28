@@ -72,5 +72,16 @@ export function useMaster() {
   const getItemByName = (name: string) =>
     items.find(i => i.name.toLowerCase() === name.toLowerCase());
 
-  return { parties, customers, vendors, items, getPartyByName, getItemByName };
+  const addMasterItem = (newItem: Omit<MasterItem, 'id'>) => {
+    const item: MasterItem = {
+      id: 'i_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
+      ...newItem,
+    };
+    const updated = [item, ...items];
+    localStorage.setItem('vs_items', JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
+    return item;
+  };
+
+  return { parties, customers, vendors, items, getPartyByName, getItemByName, addMasterItem };
 }
