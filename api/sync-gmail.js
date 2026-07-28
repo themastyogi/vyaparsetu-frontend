@@ -1,5 +1,6 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
+import crypto from 'crypto';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -28,6 +29,7 @@ export default async function handler(req, res) {
   });
 
   const invoices = [];
+  const seenHashes = new Set();
   let scannedCount = 0;
 
   try {
@@ -43,8 +45,6 @@ export default async function handler(req, res) {
 
       for await (let message of messages) {
         scannedCount++;
-        if (!message.source) continue;
-
         try {
           const parsed = await simpleParser(message.source);
 
@@ -52,16 +52,28 @@ export default async function handler(req, res) {
             for (let att of parsed.attachments) {
               const filename = att.filename || 'attachment.pdf';
               if (filename.toLowerCase().endsWith('.pdf') && att.content) {
+                const fileBuffer = att.content;
+                const sha256Hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+
+                // Check duplicate hash
+                if (seenHashes.has(sha256Hash)) {
+                  continue; // Skip duplicate attachment hash
+                }
+                seenHashes.add(sha256Hash);
+
                 const senderName = parsed.from?.value[0]?.name || parsed.from?.text?.split('<')[0]?.trim() || '';
                 const senderEmail = parsed.from?.value[0]?.address || email;
 
                 invoices.push({
-                  pdfBase64: att.content.toString('base64'),
+                  pdfBase64: fileBuffer.toString('base64'),
+                  sha256Hash,
                   filename,
                   senderName,
                   senderEmail,
+                  messageId: message.uid || parsed.messageId,
+                  subject: parsed.subject,
+                  date: parsed.date ? parsed.date.toISOString() : new Date().toISOString(),
                 });
-              }
             }
           }
         } catch (parseErr) {

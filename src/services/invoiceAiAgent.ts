@@ -44,13 +44,21 @@ export async function parseInvoiceWithAiAgent(
               role: 'user',
               parts: [
                 {
-                  text: `You are an expert AI Accounting Agent for Indian Tax Invoices. Analyze the following raw invoice text extracted from file "${fileName || 'Invoice.pdf'}" and output ONLY a raw JSON object with NO markdown formatting or code blocks.
-                  
-Required JSON Schema:
+          text: `SYSTEM CONTEXT: You are an ERP Invoice Processing Agent for Indian Businesses complying with GST, TDS (194C/194J/194Q), TCS (206C), and RCM. Analyze raw invoice text extracted from file "${fileName || 'Invoice.pdf'}" and output ONLY a valid JSON object.
+
+STRICT CONSTRAINTS:
+1. Never invent or guess values. Every value must exist within the supplied text.
+2. Never use Buyer / "Bill To" info as Vendor. Top seller is Vendor.
+3. Identify Reverse Charge (RCM=true if document contains 'Reverse Charge', 'RCM', or 'GST Payable by Recipient').
+4. Determine documentType: "Tax Invoice" | "Purchase Invoice" | "Credit Note" | "Debit Note" | "Receipt".
+
+REQUIRED JSON SCHEMA:
 {
-  "vendorName": "Exact Seller / Vendor Company Name printed on top left",
-  "vendorGstin": "15-digit GSTIN of the Vendor",
-  "invoiceNo": "Invoice / Bill Number e.g. ST/26-27/00201",
+  "documentType": "Tax Invoice",
+  "vendorName": "Exact Seller Company Name",
+  "vendorGstin": "15-digit GSTIN e.g. 07ABCDE1234F1Z5",
+  "vendorPan": "10-digit PAN",
+  "invoiceNo": "Invoice Number e.g. ST/26-27/00201",
   "date": "YYYY-MM-DD",
   "subtotal": 34300,
   "gstTotal": 6174,
@@ -58,12 +66,17 @@ Required JSON Schema:
   "discountAmount": 0,
   "paymentTerms": "Net 30 Days",
   "taxType": "intra_state",
+  "reverseCharge": false,
+  "tdsSection": "194C",
+  "tdsAmount": 0,
+  "tcsAmount": 0,
   "cgstTotal": 3087,
   "sgstTotal": 3087,
   "igstTotal": 0,
   "items": [
     {
       "description": "Item Description",
+      "hsn": "8471",
       "qty": 1,
       "rate": 34300,
       "amount": 34300,
@@ -71,10 +84,11 @@ Required JSON Schema:
       "gstAmount": 6174,
       "total": 40474
     }
-  ]
+  ],
+  "confidenceScore": 98
 }
 
-Invoice Document Text:
+DOCUMENT TEXT:
 ${rawText}`
                 }
               ]
@@ -109,7 +123,7 @@ ${rawText}`
             igstTotal: parsed.igstTotal || 0,
             items: parsed.items || [],
             rawText,
-            aiConfidenceScore: 0.98,
+            aiConfidenceScore: (parsed.confidenceScore || 98) / 100,
             extractedByAi: true,
             modelUsed: 'gemini-1.5-flash',
           };
