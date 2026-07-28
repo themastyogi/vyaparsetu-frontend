@@ -193,7 +193,7 @@ export default function ItemsStep({ wizard }: Props) {
 
   const totalTaxableValue = subtotal - safeDiscount + totalTaxableCharges;
   const vendorStateCode = data.vendorGstin ? data.vendorGstin.substring(0, 2) : 'unknown';
-  const isInterState = vendorStateCode !== 'unknown' && vendorStateCode !== company.stateCode;
+  const isInterState = data.taxMode === 'inter' || (data.taxMode !== 'intra' && vendorStateCode !== 'unknown' && vendorStateCode !== company.stateCode);
   const total = totalTaxableValue + totalGst + totalNonTaxableCharges;
 
   const handleNext = () => {
@@ -216,6 +216,8 @@ export default function ItemsStep({ wizard }: Props) {
           const lineGst = lineTaxable * ((item.gstRate || 18) / 100);
           const lineTotal = lineTaxable + lineGst;
           const matchedMaster = findMasterMatch(item.name);
+          const isLinked = Boolean(matchedMaster || item.masterItemId);
+          const isServiceItem = Boolean(item.accountHead);
 
           return (
             <div key={item.id} style={{ 
@@ -227,15 +229,19 @@ export default function ItemsStep({ wizard }: Props) {
                   <Tag size={14} style={{ color: 'var(--brand-primary)' }}/> {t('purchase.item', 'Item')} {index + 1}
                 </span>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={() => openCreateItemModal(index)}
-                    style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'var(--brand-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                  >
-                    <Plus size={12}/> Create New Item
-                  </button>
-                  {items.length > 1 && (
-                    <button onClick={() => removeItem(index)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer' }}>
+                  {/* Rule 2 & 3: Hide Create New Item if item is linked OR if it is a Service Item */}
+                  {!isLinked && !isServiceItem && (
+                    <button
+                      type="button"
+                      onClick={() => openCreateItemModal(index)}
+                      style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'var(--brand-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <Plus size={12}/> Create New Item
+                    </button>
+                  )}
+                  {/* Rule 3: Remove Delete button for Service Items */}
+                  {items.length > 1 && !isServiceItem && (
+                    <button onClick={() => removeItem(index)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer' }} title="Delete Item">
                       <Trash2 size={16} />
                     </button>
                   )}

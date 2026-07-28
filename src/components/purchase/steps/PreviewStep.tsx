@@ -1,9 +1,11 @@
 
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Save, CheckCircle, Clock } from 'lucide-react';
+import { Save, CheckCircle, Clock, UserPlus, X, Building } from 'lucide-react';
 import { usePurchaseWizard } from '../usePurchaseWizard';
 import { useMaster } from '../../../hooks/useMaster';
 import { useAccounting } from '../../../hooks/useAccounting';
+import { INDIAN_STATES } from './BasicDetailsStep';
 
 interface Props {
   wizard: ReturnType<typeof usePurchaseWizard>;
@@ -12,8 +14,18 @@ interface Props {
 export default function PreviewStep({ wizard }: Props) {
   const { t } = useTranslation();
   const { data } = wizard.state;
-  const { vendors, parties } = useMaster();
+  const { vendors, parties, addMasterParty } = useMaster();
   const { postPurchaseInvoice } = useAccounting();
+
+  // Create Vendor Modal state
+  const [showCreateVendorModal, setShowCreateVendorModal] = useState(false);
+  const [newVendorForm, setNewVendorForm] = useState({
+    name: '',
+    gstin: '',
+    state: 'Delhi',
+    email: '',
+    paymentTerms: 'Net 30',
+  });
 
   const allVendorSuggestions = [
     ...vendors.map((v: any) => ({ name: v.name, gstin: v.gstin })),
@@ -58,7 +70,8 @@ export default function PreviewStep({ wizard }: Props) {
   });
 
   const totalTaxableValue = subtotal - safeDiscount + totalTaxableCharges;
-  const isInterState = data.taxMode === 'inter';
+  const vendorStateCode = data.vendorGstin ? data.vendorGstin.substring(0, 2) : 'unknown';
+  const isInterState = data.taxMode === 'inter' || (data.taxMode !== 'intra' && vendorStateCode !== 'unknown' && vendorStateCode !== '29');
   const total = totalTaxableValue + totalGst + totalNonTaxableCharges;
 
   const handleSave = async () => {
@@ -130,12 +143,44 @@ export default function PreviewStep({ wizard }: Props) {
     }
   };
 
+  const handleSaveNewVendor = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVendorForm.name.trim()) return;
+
+    const created = addMasterParty({
+      name: newVendorForm.name,
+      type: 'vendor',
+      gstin: newVendorForm.gstin.toUpperCase() || 'UNREGISTERED',
+      state: newVendorForm.state,
+      email: newVendorForm.email,
+      paymentTerms: newVendorForm.paymentTerms,
+    });
+
+    wizard.updateData({
+      vendorName: created.name,
+      vendorGstin: created.gstin,
+    });
+    setShowCreateVendorModal(false);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
       
       {/* Summary Card */}
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
-        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600 }}>{t('purchase.vendor', 'Vendor Name (Select or Search)')} *</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('purchase.vendor', 'Vendor Name (Select or Search)')} *</div>
+          <button
+            type="button"
+            onClick={() => {
+              setNewVendorForm({ name: data.vendorName || '', gstin: data.vendorGstin || '', state: 'Delhi', email: '', paymentTerms: 'Net 30' });
+              setShowCreateVendorModal(true);
+            }}
+            style={{ background: 'none', border: 'none', color: 'var(--brand-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+          >
+            <UserPlus size={14}/> + Create New Vendor
+          </button>
+        </div>
         
         <input
           type="text"
@@ -321,6 +366,91 @@ export default function PreviewStep({ wizard }: Props) {
           {t('common.back', 'Go Back to Edit')}
         </button>
       </div>
+
+      {/* Create New Vendor Modal */}
+      {showCreateVendorModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 12, width: '100%', maxWidth: 480, padding: 24, boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: '1px solid var(--border-default)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Building size={18} style={{ color: 'var(--brand-primary)' }}/> Create New Vendor Profile
+              </h3>
+              <button type="button" onClick={() => setShowCreateVendorModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18}/></button>
+            </div>
+
+            <form onSubmit={handleSaveNewVendor} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="field-group">
+                <label className="field-label">VENDOR COMPANY NAME *</label>
+                <input
+                  type="text"
+                  required
+                  className="field-input"
+                  placeholder="e.g. Sahil Traders Pvt Ltd"
+                  value={newVendorForm.name}
+                  onChange={e => setNewVendorForm({ ...newVendorForm, name: e.target.value })}
+                />
+              </div>
+
+              <div className="modal-row" style={{ display: 'flex', gap: 10 }}>
+                <div className="field-group" style={{ flex: 1 }}>
+                  <label className="field-label">GSTIN (15 DIGITS)</label>
+                  <input
+                    type="text"
+                    className="field-input"
+                    placeholder="27AAACS2222B1Z5"
+                    maxLength={15}
+                    value={newVendorForm.gstin}
+                    onChange={e => setNewVendorForm({ ...newVendorForm, gstin: e.target.value.toUpperCase() })}
+                  />
+                </div>
+                <div className="field-group" style={{ flex: 1 }}>
+                  <label className="field-label">STATE / REGION</label>
+                  <select
+                    className="field-input"
+                    value={newVendorForm.state}
+                    onChange={e => setNewVendorForm({ ...newVendorForm, state: e.target.value })}
+                  >
+                    {INDIAN_STATES.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="modal-row" style={{ display: 'flex', gap: 10 }}>
+                <div className="field-group" style={{ flex: 1 }}>
+                  <label className="field-label">VENDOR EMAIL (OPTIONAL)</label>
+                  <input
+                    type="email"
+                    className="field-input"
+                    placeholder="billing@vendor.com"
+                    value={newVendorForm.email}
+                    onChange={e => setNewVendorForm({ ...newVendorForm, email: e.target.value })}
+                  />
+                </div>
+                <div className="field-group" style={{ flex: 1 }}>
+                  <label className="field-label">PAYMENT TERMS</label>
+                  <select
+                    className="field-input"
+                    value={newVendorForm.paymentTerms}
+                    onChange={e => setNewVendorForm({ ...newVendorForm, paymentTerms: e.target.value })}
+                  >
+                    <option value="Net 15">Net 15 Days</option>
+                    <option value="Net 30">Net 30 Days</option>
+                    <option value="Net 45">Net 45 Days</option>
+                    <option value="Due on Receipt">Due on Receipt</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+                <button type="button" className="btn-action btn-action-ghost" onClick={() => setShowCreateVendorModal(false)}>Cancel</button>
+                <button type="submit" className="btn-action btn-action-primary">Save Vendor &amp; Select</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
