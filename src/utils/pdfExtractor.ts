@@ -205,59 +205,75 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
   // 8. Line Items Extraction
   const itemRows: Array<{ description: string; hsn?: string; qty: number; rate: number; amount: number; gstRate: number; gstAmount: number; cgstAmount?: number; sgstAmount?: number; igstAmount?: number; total: number }> = [];
 
+  // 8. Robust Line Items Extraction Engine
   for (const line of lines) {
-    // Pattern 1: Description Qty Rate Amount (e.g. "IT Support Services 1 34300 34300")
-    const match1 = line.match(/^([A-Za-z0-9\s/&.-]{3,50})\s+(\d+)\s+([0-9,]+(?:\.[0-9]{2})?)\s+([0-9,]+(?:\.[0-9]{2})?)$/);
-    // Pattern 2: S.No Description Qty Rate Amount (e.g. "1 IT Support Services 1 34300 34300")
-    const match2 = line.match(/^\d+\s+([A-Za-z0-9\s/&.-]{3,50})\s+(\d+)\s+([0-9,]+(?:\.[0-9]{2})?)\s+([0-9,]+(?:\.[0-9]{2})?)$/);
-    // Pattern 3: Description HSN Qty Rate Amount (e.g. "Brass Valves 8481 10 1800 18000")
-    const match3 = line.match(/^([A-Za-z0-9\s/&.-]{3,50})\s+(\d{4,8})\s+(\d+)\s+([0-9,]+(?:\.[0-9]{2})?)\s+([0-9,]+(?:\.[0-9]{2})?)$/);
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.length < 5) continue;
 
-    const itemMatch = match1 || match2;
-    if (match3) {
-      const desc = match3[1].trim();
-      const hsn = match3[2];
-      const qty = parseInt(match3[3], 10) || 1;
-      const rate = parseFloat(match3[4].replace(/,/g, '')) || 0;
-      const amt = parseFloat(match3[5].replace(/,/g, '')) || (qty * rate);
-      const itemGst = Math.round(amt * (gstRate / 100));
-      const itemNet = amt + itemGst;
+    const lower = trimmed.toLowerCase();
+    if (
+      lower.startsWith('total') || lower.startsWith('subtotal') ||
+      lower.startsWith('grand total') || lower.startsWith('net amount') ||
+      lower.startsWith('taxable value') || lower.startsWith('amount payable') ||
+      lower.startsWith('bill to') || lower.startsWith('ship to') ||
+      lower.startsWith('tax invoice') || lower.startsWith('invoice no') ||
+      lower.startsWith('gstin') || lower.startsWith('terms') || lower.startsWith('bank')
+    ) {
+      continue;
+    }
 
-      itemRows.push({
-        description: desc,
-        hsn,
-        qty,
-        rate,
-        amount: amt,
-        gstRate,
-        gstAmount: itemGst,
-        cgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
-        sgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
-        igstAmount: taxType === 'inter_state' ? itemGst : 0,
-        total: itemNet,
-      });
-    } else if (itemMatch) {
-      const desc = itemMatch[1].trim();
-      const lowerDesc = desc.toLowerCase();
-      if (!lowerDesc.startsWith('total') && !lowerDesc.startsWith('subtotal') && !lowerDesc.startsWith('taxable') && !lowerDesc.startsWith('amount') && !lowerDesc.startsWith('invoice')) {
-        const qty = parseInt(itemMatch[2], 10) || 1;
-        const rate = parseFloat(itemMatch[3].replace(/,/g, '')) || 0;
-        const amt = parseFloat(itemMatch[4].replace(/,/g, '')) || (qty * rate);
-        const itemGst = Math.round(amt * (gstRate / 100));
-        const itemNet = amt + itemGst;
+    // Extract all numeric tokens from line (handles 10.00, 34,300.00, 40474)
+    const numMatches = Array.from(trimmed.matchAll(/\b([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|\d+(?:\.\d{1,2})?)\b/g));
+    if (numMatches.length >= 2) {
+      const firstNumIndex = numMatches[0].index ?? 0;
+      let desc = trimmed.substring(0, firstNumIndex).replace(/^[0-9\.\s-]+/, '').trim();
+      
+      if (desc.length >= 2 && !desc.toLowerCase().includes('invoice') && !desc.toLowerCase().includes('gstin')) {
+        const nums = numMatches.map(m => parseFloat(m[1].replace(/,/g, ''))).filter(n => !isNaN(n) && n > 0);
+        
+        if (nums.length >= 2) {
+          let qty = 1;
+          let rate = 0;
+          let amt = 0;
 
-        itemRows.push({
-          description: desc,
-          qty,
-          rate,
-          amount: amt,
-          gstRate,
-          gstAmount: itemGst,
-          cgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
-          sgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
-          igstAmount: taxType === 'inter_state' ? itemGst : 0,
-          total: itemNet,
-        });
+          if (nums.length >= 3) {
+            if (nums[0] < 1000 && nums[1] > 0) {
+              qty = nums[0];
+              rate = nums[1];
+              amt = nums[2] || (qty * rate);
+            } else if (nums[0] >= 1000 && nums[1] < 1000) {
+              // First number is HSN code (e.g. 8481)
+              qty = nums[1];
+              rate = nums[2];
+              amt = nums[3] || (qty * rate);
+            } else {
+              rate = nums[0];
+              amt = nums[1];
+            }
+          } else {
+            rate = nums[0];
+            amt = nums[1];
+          }
+
+          if (amt > 0 || rate > 0) {
+            const itemAmt = amt > 0 ? amt : (qty * rate);
+            const itemGst = Math.round(itemAmt * (gstRate / 100));
+            const itemNet = itemAmt + itemGst;
+
+            itemRows.push({
+              description: desc,
+              qty: Math.max(1, Math.round(qty)),
+              rate: rate || itemAmt,
+              amount: itemAmt,
+              gstRate,
+              gstAmount: itemGst,
+              cgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
+              sgstAmount: taxType === 'intra_state' ? Math.round(itemGst / 2) : 0,
+              igstAmount: taxType === 'inter_state' ? itemGst : 0,
+              total: itemNet,
+            });
+          }
+        }
       }
     }
   }
