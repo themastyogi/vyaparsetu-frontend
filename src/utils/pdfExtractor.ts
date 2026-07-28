@@ -238,7 +238,10 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
       lower.startsWith('taxable value') || lower.startsWith('amount payable') ||
       lower.startsWith('bill to') || lower.startsWith('ship to') ||
       lower.startsWith('tax invoice') || lower.startsWith('invoice no') ||
-      lower.startsWith('gstin') || lower.startsWith('terms') || lower.startsWith('bank')
+      lower.startsWith('gstin') || lower.startsWith('terms') || lower.startsWith('bank') ||
+      lower.includes('cgst') || lower.includes('sgst') || lower.includes('igst') ||
+      lower.includes('tax @') || lower.includes('gst @') || lower.includes('round off') ||
+      lower.includes('amount in words') || lower.includes('total tax') || lower.includes('tax amount')
     ) {
       continue;
     }
@@ -248,8 +251,18 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
     if (numMatches.length >= 2) {
       const firstNumIndex = numMatches[0].index ?? 0;
       let desc = trimmed.substring(0, firstNumIndex).replace(/^[0-9\.\s-]+/, '').trim();
+      const lowerDesc = desc.toLowerCase();
       
-      if (desc.length >= 2 && !desc.toLowerCase().includes('invoice') && !desc.toLowerCase().includes('gstin')) {
+      if (
+        desc.length >= 2 &&
+        !lowerDesc.includes('invoice') &&
+        !lowerDesc.includes('gstin') &&
+        !lowerDesc.includes('cgst') &&
+        !lowerDesc.includes('sgst') &&
+        !lowerDesc.includes('igst') &&
+        !lowerDesc.includes('tax') &&
+        !lowerDesc.includes('total')
+      ) {
         const nums = numMatches.map(m => parseFloat(m[1].replace(/,/g, ''))).filter(n => !isNaN(n) && n > 0);
         
         if (nums.length >= 2) {
