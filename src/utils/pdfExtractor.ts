@@ -44,8 +44,23 @@ export async function extractInvoiceFromPDF(input: File | ArrayBuffer, fileName?
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
-    const pageText = textContent.items.map((item: any) => item.str).join(' ');
-    fullText += pageText + '\n';
+    
+    // Group text items by Y-coordinate (transform[5]) to reconstruct line structure
+    const lineMap = new Map<number, string[]>();
+    for (const item of textContent.items as any[]) {
+      if (!item.str || !item.str.trim()) continue;
+      // Round Y coordinate to 2 decimal precision or integer tolerance
+      const y = Math.round((item.transform?.[5] || 0) / 3) * 3;
+      if (!lineMap.has(y)) {
+        lineMap.set(y, []);
+      }
+      lineMap.get(y)!.push(item.str.trim());
+    }
+
+    // Sort Y descending (top of page to bottom)
+    const sortedY = Array.from(lineMap.keys()).sort((a, b) => b - a);
+    const pageLines = sortedY.map(y => lineMap.get(y)!.join(' ')).filter(Boolean);
+    fullText += pageLines.join('\n') + '\n';
   }
 
   return parseInvoiceText(fullText, name);
@@ -70,10 +85,16 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
   // 2. Invoice Number Regex (matches patterns like ST/26-27/00201, INV-2026-0811, BILL/102)
   const invNoRegex = /(?:invoice\s*(?:no|number|#)?|bill\s*(?:no|number|#)?|inv\s*#?)\s*[:.-]?\s*([A-Z0-9\/-]{3,30})/i;
   const invNoMatch = text.match(invNoRegex);
-  let invoiceNo = invNoMatch ? invNoMatch[1].trim() : '';
+  let invoiceNo = '';
+  if (invNoMatch) {
+    const rawNo = invNoMatch[1].trim().split(/\s+/)[0];
+    if (rawNo && rawNo.length >= 3 && !rawNo.toLowerCase().includes('oice') && !rawNo.toLowerCase().includes('date')) {
+      invoiceNo = rawNo.replace(/[^A-Z0-9\/-]/gi, '');
+    }
+  }
   
   // Clean invalid invoice numbers
-  if (!invoiceNo || invoiceNo.length < 3 || invoiceNo.toLowerCase().includes('oice') || invoiceNo.toLowerCase().includes('date')) {
+  if (!invoiceNo || invoiceNo.length < 3) {
     const cleanFn = (fileName || 'Invoice')
       .replace(/\.pdf$/i, '')
       .replace(/^Sample_Purchase_Invoice_/i, '')
