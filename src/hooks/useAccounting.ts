@@ -596,7 +596,24 @@ export function useAccounting() {
   const [salesInvoices, setSIState]    = useState<SalesInvoice[]>(() => load('vs_sales', []));
   const [purchaseInvoices, setPIState] = useState<PurchaseInvoice[]>(() => {
     const stored = load<PurchaseInvoice[]>('vs_purchases', []);
-    const cleaned = stored.filter(p => !p.id.includes('pi-seed') && (p.status !== 'draft' || (!p.id.includes('pi-draft') && !p.id.includes('sample'))));
+    const cleaned = stored.filter(p => {
+      if (p.id.includes('pi-seed')) return false;
+      if (p.status === 'draft') {
+        if (p.id.includes('pi-draft') || p.id.includes('sample')) return false;
+        // Purge legacy draft cards with old fallback placeholder item descriptions
+        const firstItemDesc = p.items?.[0]?.description?.toLowerCase() || '';
+        if (
+          firstItemDesc.includes('supply of goods & services') ||
+          firstItemDesc.includes('it services / goods') ||
+          firstItemDesc.includes('services / goods as per tax invoice') ||
+          firstItemDesc.includes('goods & services as per invoice') ||
+          firstItemDesc.includes('line items from sample')
+        ) {
+          return false; // Automatically purge legacy fallback draft!
+        }
+      }
+      return true;
+    });
     
     const targetList = cleaned.length === 0 ? SEED_PURCHASES : cleaned;
     const seen = new Set<string>();

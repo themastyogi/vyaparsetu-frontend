@@ -11,7 +11,6 @@ interface Props {
 }
 
 const DEFAULT_MOCK_ITEMS = [
-  { name: 'Services / Goods as per Tax Invoice', price: 34300, gstRate: 18 },
   { name: 'IT Support & Technical Services', price: 25000, gstRate: 18 },
   { name: 'Raw Packaging Material', price: 15736, gstRate: 18 },
   { name: 'Corrugated Boxes & Containers', price: 18568, gstRate: 18 },
