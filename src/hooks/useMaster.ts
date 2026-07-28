@@ -80,6 +80,7 @@ export function useMaster() {
     const updated = [item, ...items];
     localStorage.setItem('vs_items', JSON.stringify(updated));
     window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('items_updated'));
     return item;
   };
 

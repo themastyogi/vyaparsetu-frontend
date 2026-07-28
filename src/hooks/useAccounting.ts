@@ -780,7 +780,6 @@ export function useAccounting() {
       createdAt: new Date().toISOString(),
     };
     setPIState(prev => {
-      // Deduplicate: Check if a draft with the same invoiceNo or vendorName+netTotal already exists
       const duplicateIndex = prev.findIndex(p => p.status === 'draft' && (
         p.id === draftId ||
         (data.invoiceNo && p.invoiceNo.toLowerCase() === data.invoiceNo.toLowerCase()) ||
@@ -844,6 +843,18 @@ export function useAccounting() {
   }, []);
 
   const postPurchaseInvoice = useCallback((data: Omit<PurchaseInvoice, 'id' | 'status' | 'createdAt'>): PurchaseInvoice => {
+    // Duplicate Invoice Check at Posting Time
+    const currentList = load<PurchaseInvoice[]>('vs_purchases', []);
+    const duplicate = currentList.find(p => 
+      p.status === 'posted' &&
+      p.vendorName.toLowerCase().trim() === data.vendorName.toLowerCase().trim() &&
+      p.invoiceNo.toLowerCase().trim() === data.invoiceNo.toLowerCase().trim()
+    );
+    if (duplicate) {
+      alert(`⚠️ Duplicate Invoice Warning:\nInvoice No. "${data.invoiceNo}" for vendor "${data.vendorName}" has ALREADY been posted on ${duplicate.date}!\n\nDuplicate posting is not allowed.`);
+      throw new Error(`Duplicate Invoice No. ${data.invoiceNo} for Vendor ${data.vendorName} already posted.`);
+    }
+
     const inv: PurchaseInvoice = { ...data, id: uid(), status: 'posted', createdAt: new Date().toISOString() };
     setPIState(prev => {
       const next = [inv, ...prev];
@@ -1064,7 +1075,28 @@ export function useAccounting() {
         entries.push({ date: dn.date, entryType: 'Purchase Debit Note', refNo: dn.dnNo, debit: dn.netTotal, credit: 0, jeId: dn.id });
     });
     pis.filter(pi => pi.vendorName.toLowerCase() === name)
-      .forEach(pi => entries.push({ date: pi.date, entryType: 'Purchase Invoice', refNo: pi.invoiceNo, debit: 0, credit: pi.netTotal, jeId: pi.id }));
+      .forEach(pi => {
+        entries.push({
+          date: pi.date,
+          entryType: pi.status === 'reversed' ? 'Purchase Invoice (Reversed)' : 'Purchase Invoice',
+          refNo: pi.invoiceNo,
+          debit: 0,
+          credit: pi.netTotal,
+          jeId: pi.id
+        });
+
+        // If purchase bill is reversed, add offsetting Debit Reversal line to Party Ledger!
+        if (pi.status === 'reversed') {
+          entries.push({
+            date: pi.date,
+            entryType: 'Purchase Reversal',
+            refNo: 'REV-' + pi.invoiceNo,
+            debit: pi.netTotal,
+            credit: 0,
+            jeId: 'rev_' + pi.id
+          });
+        }
+      });
     
     // Sort all entries chronologically
     const allSorted = [...entries].sort((a, b) => a.date.localeCompare(b.date) || a.refNo.localeCompare(b.refNo));

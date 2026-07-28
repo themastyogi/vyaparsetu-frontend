@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Search, Download, Package, ChevronRight, AlertTriangle } from 'lucide-react';
+import { useMaster } from '../hooks/useMaster';
 import './Parties.css';
 
 const ITEMS = [
@@ -27,17 +28,47 @@ function stockStatus(qty: number | null, reorder: number | null, type: string, t
 
 export default function Items() {
   const { t } = useTranslation();
+  const { items: masterItems } = useMaster();
+  const [, setRefreshTick] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setRefreshTick(t => t + 1);
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('items_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('items_updated', handleUpdate);
+    };
+  }, []);
+
+  // Merge seed ITEMS with masterItems from localStorage
+  const allItems = [
+    ...masterItems.map(mi => ({
+      id: mi.id,
+      name: mi.name,
+      type: (mi as any).type || 'stock',
+      hsn: mi.hsn || '8471',
+      gst: mi.gst || 18,
+      unit: mi.unit || 'Pcs',
+      price: mi.price || 0,
+      qty: (mi as any).qty ?? 100,
+      reorder: 20,
+      emoji: (mi as any).emoji || '📦',
+    })),
+    ...ITEMS.filter(seed => !masterItems.some(mi => mi.name.toLowerCase() === seed.name.toLowerCase())),
+  ];
+
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all'|'stock'|'service'|'expense'|'asset'>('all');
   const [showAdd, setShowAdd] = useState(false);
   const [saved, setSaved]     = useState(false);
   const [newItem, setNewItem] = useState({ name: '', hsn: '', type: 'stock', gst: '18', price: '', unit: 'Pcs' });
 
-  const filtered = ITEMS
+  const filtered = allItems
     .filter(i => filter === 'all' || i.type === filter)
     .filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.hsn.includes(search));
 
-  const lowStockCount = ITEMS.filter(i => {
+  const lowStockCount = allItems.filter(i => {
     const s = stockStatus(i.qty, i.reorder, i.type, t);
     return s?.cls === 'stock-low' || s?.cls === 'stock-out';
   }).length;
@@ -177,9 +208,9 @@ export default function Items() {
                           <span className="txn-party">{item.name}</span>
                         </div>
                       </td>
-                      <td data-label={t('items.col_type')}>
+                      <td data-label={String(t('items.col_type'))}>
                         <span className={`type-tag ${TYPE_COLORS[item.type]}`}>
-                          {t(`items.${item.type}`, item.type.charAt(0).toUpperCase() + item.type.slice(1))}
+                          {String(t(`items.${item.type}`, item.type.charAt(0).toUpperCase() + item.type.slice(1)))}
                         </span>
                       </td>
                       <td data-label={t('items.col_hsn')}><span className="mono">{item.hsn}</span></td>
@@ -238,15 +269,15 @@ export default function Items() {
                           <span className="txn-party">{item.name}</span>
                         </div>
                       </td>
-                      <td data-label={t('items.col_type')}>
+                      <td data-label={String(t('items.col_type'))}>
                         <span className={`type-tag ${TYPE_COLORS[item.type]}`}>
-                          {t(`items.${item.type}`, item.type.charAt(0).toUpperCase() + item.type.slice(1))}
+                          {String(t(`items.${item.type}`, item.type.charAt(0).toUpperCase() + item.type.slice(1)))}
                         </span>
                       </td>
                       <td data-label="SAC Code"><span className="mono">{item.hsn}</span></td>
-                      <td data-label={t('items.col_gst')}><span className="txn-amount">{item.gst}%</span></td>
-                      <td data-label={t('items.col_price')}><span className="txn-amount">₹ {item.price.toLocaleString('en-IN')}</span></td>
-                      <td data-label={t('items.col_status')}>
+                      <td data-label={String(t('items.col_gst'))}><span className="txn-amount">{item.gst}%</span></td>
+                      <td data-label={String(t('items.col_price'))}><span className="txn-amount">₹ {item.price.toLocaleString('en-IN')}</span></td>
+                      <td data-label={String(t('items.col_status'))}>
                         <span className="status-pill status-paid">{t('parties.active','Active')}</span>
                       </td>
                       <td>

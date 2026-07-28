@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Search, Plus, Camera, Mail,
-  Trash2, Link2, X, FileUp, RotateCcw
+  Trash2, Link2, X, FileUp, RotateCcw, Eye, AlertCircle
 } from 'lucide-react';
 import { usePurchaseWizard } from '../components/purchase/usePurchaseWizard';
 import PurchaseWizard from '../components/purchase/PurchaseWizard';
@@ -49,9 +49,32 @@ export default function Purchases() {
   const [filter,      setFilter]      = useState<'all' | 'posted' | 'draft'>('all');
   const [search,      setSearch]      = useState('');
   const [linkModal,   setLinkModal]   = useState<PurchaseInvoice | null>(null);
+  const [reversingBill, setReversingBill] = useState<PurchaseInvoice | null>(null);
   const [showEmailInbox, setShowEmailInbox] = useState(false);
   const [showEditCompanyEmail, setShowEditCompanyEmail] = useState(false);
   const [emailAckToast, setEmailAckToast]   = useState<{ party: string; email: string; invNo: string; amount: number } | null>(null);
+
+  const handleReviewDraft = (draft: PurchaseInvoice) => {
+    wizard.clearDraft();
+    wizard.updateData({
+      vendorName: draft.vendorName,
+      vendorGstin: draft.vendorGstin,
+      invoiceNo: draft.invoiceNo,
+      invoiceDate: draft.date,
+      purpose: 'stock',
+      items: draft.items.map(i => ({
+        id: i.id,
+        name: i.description,
+        description: i.description,
+        qty: i.qty,
+        rate: i.rate,
+        gstRate: i.gstRate || 18,
+        uom: 'Pcs',
+      })),
+      source: 'ocr',
+    });
+    wizard.openWizardAtStep('basic_details');
+  };
 
   const handleDirectPDFUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -331,6 +354,9 @@ export default function Purchases() {
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
                         {p.status === 'draft' && (
                           <>
+                            <button className="btn-action btn-action-secondary" style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700, color: 'var(--brand-primary)', borderColor: 'var(--border-default)', display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => handleReviewDraft(p)} title="Review & Edit Draft Bill">
+                              <Eye size={12}/> Review
+                            </button>
                             <button className="btn-action btn-action-primary" style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700 }} onClick={() => handlePostDraftDirectly(p)}>
                               Post Bill
                             </button>
@@ -346,11 +372,7 @@ export default function Purchases() {
                               <button 
                                 className="btn-action btn-action-secondary" 
                                 style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700, color: '#D97706', borderColor: 'rgba(217,119,6,0.3)', display: 'inline-flex', alignItems: 'center', gap: 4 }} 
-                                onClick={() => {
-                                  if (confirm(`Are you sure you want to REVERSE purchase invoice ${p.invoiceNo}? This will post a Reversal Journal Entry to preserve the audit trail.`)) {
-                                    reversePurchaseInvoice(p.id);
-                                  }
-                                }}
+                                onClick={() => setReversingBill(p)}
                                 title="Click to Reverse posted bill"
                               >
                                 <RotateCcw size={12}/> Reverse
@@ -411,6 +433,45 @@ export default function Purchases() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="btn-action btn-action-secondary" onClick={() => setLinkModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User-Friendly Reversal Confirmation Modal */}
+      {reversingBill && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 460, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.4)', border: '1px solid var(--border-default)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706' }}>
+                <RotateCcw size={22}/>
+              </div>
+              <div>
+                <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>Confirm Bill Reversal</h3>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>GAAP &amp; Indian Accounting Audit Trail Compliance</div>
+              </div>
+            </div>
+
+            <div style={{ background: 'var(--bg-elevated)', borderRadius: 10, padding: 14, border: '1px solid var(--border-subtle)', marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Are you sure you want to reverse purchase bill <strong style={{ color: 'var(--brand-primary)' }}>{reversingBill.invoiceNo}</strong> from vendor <strong style={{ color: 'var(--text-primary)' }}>{reversingBill.vendorName}</strong> (₹{f2(reversingBill.netTotal)})?
+              <div style={{ marginTop: 8, fontSize: 12, color: '#D97706', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <AlertCircle size={14}/> Reversing will post an offsetting Debit Reversal Entry in your accounting ledger.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button type="button" className="btn-action btn-action-ghost" onClick={() => setReversingBill(null)}>Cancel</button>
+              <button 
+                type="button" 
+                className="btn-action" 
+                style={{ background: '#D97706', color: '#fff', fontWeight: 800 }}
+                onClick={() => {
+                  reversePurchaseInvoice(reversingBill.id);
+                  setReversingBill(null);
+                }}
+              >
+                <RotateCcw size={14}/> Confirm Reversal
+              </button>
             </div>
           </div>
         </div>
