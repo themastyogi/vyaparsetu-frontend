@@ -609,16 +609,23 @@ export function useAccounting() {
   const [salesInvoices, setSIState]    = useState<SalesInvoice[]>(() => load('vs_sales', []));
   const [purchaseInvoices, setPIState] = useState<PurchaseInvoice[]>(() => {
     const stored = load<PurchaseInvoice[]>('vs_purchases', []);
-    // Clean out any legacy sample draft bills from localStorage!
     const cleaned = stored.filter(p => p.status !== 'draft' || (!p.id.includes('pi-draft') && !p.id.includes('sample')));
-    if (stored.length !== cleaned.length) {
-      save('vs_purchases', cleaned);
+    
+    const targetList = cleaned.length === 0 ? SEED_PURCHASES : cleaned;
+    const seen = new Set<string>();
+    const deduplicated: PurchaseInvoice[] = [];
+    
+    for (const inv of targetList) {
+      if (inv.status === 'draft') {
+        const key = (inv.invoiceNo ? inv.invoiceNo.toLowerCase().trim() : '') + '|' + inv.vendorName.toLowerCase().trim() + '|' + Math.round(inv.netTotal);
+        if (seen.has(key)) continue; // Skip duplicate draft automatically!
+        seen.add(key);
+      }
+      deduplicated.push(inv);
     }
-    if (cleaned.length === 0) {
-      save('vs_purchases', SEED_PURCHASES);
-      return SEED_PURCHASES;
-    }
-    return cleaned;
+    
+    save('vs_purchases', deduplicated);
+    return deduplicated;
   });
   const [debitNotes, setDNState]       = useState<DebitNote[]>(() => load('vs_debit_notes', []));
   const [payments, setPaymentsState]   = useState<PaymentVoucher[]>(() => {
