@@ -83,5 +83,16 @@ export function useMaster() {
     return item;
   };
 
-  return { parties, customers, vendors, items, getPartyByName, getItemByName, addMasterItem };
+  const addMasterParty = (newParty: Omit<MasterParty, 'id'>) => {
+    const party: MasterParty = {
+      id: 'p_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
+      ...newParty,
+    };
+    const updated = [party, ...parties];
+    localStorage.setItem('vs_parties', JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
+    return party;
+  };
+
+  return { parties, customers, vendors, items, getPartyByName, getItemByName, addMasterItem, addMasterParty };
 }

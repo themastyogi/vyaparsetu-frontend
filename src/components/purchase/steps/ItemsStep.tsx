@@ -242,23 +242,43 @@ export default function ItemsStep({ wizard }: Props) {
                 </div>
               </div>
 
-              {/* Master Matching Suggestion Banner */}
-              {matchedMaster && matchedMaster.name.toLowerCase() !== item.name.toLowerCase() && (
+              {/* Master Matching Suggestion Banner or Linked Item Status */}
+              {matchedMaster ? (
                 <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', padding: '6px 12px', borderRadius: 6, fontSize: 12, color: '#10B981', fontWeight: 600, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <Sparkles size={13}/> Suggested Match in Inventory: <strong>{matchedMaster.name}</strong> (HSN: {matchedMaster.hsn || 'N/A'})
+                    <Sparkles size={13}/> Inventory Item Matched: <strong>{matchedMaster.name}</strong> (HSN: {matchedMaster.hsn || 'N/A'})
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      updateItem(index, 'name', matchedMaster.name);
-                      if (matchedMaster.unit) updateItem(index, 'uom', matchedMaster.unit);
-                      if (matchedMaster.gst) updateItem(index, 'gstRate', matchedMaster.gst);
-                    }}
-                    style={{ background: '#10B981', color: '#fff', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    Link &amp; Sync
-                  </button>
+                  {item.name.toLowerCase() !== matchedMaster.name.toLowerCase() && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateItem(index, 'name', matchedMaster.name);
+                        if (matchedMaster.unit) updateItem(index, 'uom', matchedMaster.unit);
+                        if (matchedMaster.gst) updateItem(index, 'gstRate', matchedMaster.gst);
+                        updateItem(index, 'masterItemId', matchedMaster.id);
+                      }}
+                      style={{ background: '#10B981', color: '#fff', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Link Item
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-subtle)', padding: '6px 12px', borderRadius: 6, fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>No item match found in Inventory Master.</span>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--brand-primary)', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={item.accountHead ? true : false}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          updateItem(index, 'accountHead', suggestAccountHead(item.name || ''));
+                        } else {
+                          updateItem(index, 'accountHead', '');
+                        }
+                      }}
+                    /> Is this a Service / Expense Item?
+                  </label>
                 </div>
               )}
 
@@ -305,7 +325,8 @@ export default function ItemsStep({ wizard }: Props) {
                                 uom: mItem.unit || newItems[index].uom || 'Pcs',
                                 rate: mItem.price || newItems[index].rate, 
                                 gstRate: mItem.gst || 18,
-                                masterItemId: mItem.id
+                                masterItemId: mItem.id,
+                                accountHead: '' // Clear expense GL head because it's a matched inventory item!
                               };
                               setItems(newItems);
                               setActiveItemIndex(null);
@@ -378,21 +399,23 @@ export default function ItemsStep({ wizard }: Props) {
                 </div>
               </div>
 
-              {/* Chart of Accounts (COA) Expense Head Selector (for Service Invoices) */}
-              <div className="field-group" style={{ marginBottom: 10 }}>
-                <label className="field-label" style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Layers size={12}/> EXPENSE GL ACCOUNT HEAD (COA MAPPER)
-                </label>
-                <select 
-                  className="field-input" 
-                  value={item.accountHead || suggestAccountHead(item.name || '')} 
-                  onChange={e => updateItem(index, 'accountHead', e.target.value)}
-                >
-                  {COA_EXPENSE_HEADS.map(head => (
-                    <option key={head} value={head}>{head}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Chart of Accounts (COA) Expense Head Selector - Rendered ONLY if NOT a matched inventory item AND marked as Service/Expense */}
+              {!matchedMaster && item.accountHead && (
+                <div className="field-group" style={{ marginBottom: 10 }}>
+                  <label className="field-label" style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Layers size={12}/> EXPENSE GL ACCOUNT HEAD (SERVICE / EXPENSE INVOICE)
+                  </label>
+                  <select 
+                    className="field-input" 
+                    value={item.accountHead} 
+                    onChange={e => updateItem(index, 'accountHead', e.target.value)}
+                  >
+                    {COA_EXPENSE_HEADS.map(head => (
+                      <option key={head} value={head}>{head}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Line Amount Summary Badges */}
               <div style={{ background: 'var(--bg-elevated)', padding: '8px 12px', borderRadius: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, fontSize: 12, fontWeight: 600 }}>
