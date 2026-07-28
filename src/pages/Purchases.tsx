@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Search, Plus, Camera, Mail,
-  Trash2, Link2, X, FileUp
+  Trash2, Link2, X, FileUp, RotateCcw, ShieldAlert
 } from 'lucide-react';
 import { usePurchaseWizard } from '../components/purchase/usePurchaseWizard';
 import PurchaseWizard from '../components/purchase/PurchaseWizard';
@@ -29,11 +29,27 @@ export default function Purchases() {
   const { getPartyByName, vendors } = useMaster();
   const {
     companySettings, purchaseInvoices, salesInvoices,
-    deletePurchaseInvoice, postDraftPurchaseInvoice, linkSalesToPurchase, removeDuplicateDrafts,
+    deletePurchaseInvoice, postDraftPurchaseInvoice, reversePurchaseInvoice, linkSalesToPurchase, removeDuplicateDrafts,
   } = useAccounting();
+
+  // Role toggle for demonstration (VyaparSetu Admin vs Normal Company User)
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
+    return localStorage.getItem('vs_user_role') === 'super_admin';
+  });
+
+  const toggleSuperAdminRole = () => {
+    const next = !isSuperAdmin;
+    setIsSuperAdmin(next);
+    localStorage.setItem('vs_user_role', next ? 'super_admin' : 'company_user');
+  };
+
+  const [, setRefreshTick] = useState(0);
 
   useEffect(() => {
     removeDuplicateDrafts();
+    const handleUpdate = () => setRefreshTick(t => t + 1);
+    window.addEventListener('purchases_updated', handleUpdate);
+    return () => window.removeEventListener('purchases_updated', handleUpdate);
   }, [removeDuplicateDrafts]);
 
   const [filter,      setFilter]      = useState<'all' | 'posted' | 'draft'>('all');
@@ -158,6 +174,20 @@ export default function Purchases() {
             <span style={{ background: 'rgba(99,102,241,0.15)', color: '#818CF8', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 12, fontFamily: 'monospace' }}>
               {APP_VERSION}
             </span>
+            <button
+              type="button"
+              onClick={toggleSuperAdminRole}
+              style={{
+                background: isSuperAdmin ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.15)',
+                color: isSuperAdmin ? '#EF4444' : '#818CF8',
+                border: isSuperAdmin ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(99,102,241,0.3)',
+                fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 12, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5
+              }}
+              title="Click to toggle between Company User & VyaparSetu Super Admin role"
+            >
+              <ShieldAlert size={12}/> Role: {isSuperAdmin ? 'VyaparSetu Admin (Delete Mode)' : 'Company User (Reverse Only)'}
+            </button>
           </div>
           <p className="page-sub">Linked to accounting ledger · Incremental Email Ingestion · Auto-posted</p>
         </div>
@@ -217,27 +247,40 @@ export default function Purchases() {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="page-toolbar">
-        <div className="toolbar-search">
-          <Search size={14} className="toolbar-search-icon"/>
-          <input type="text" placeholder="Search by vendor or invoice no…"
-            className="toolbar-search-input" value={search} onChange={e => setSearch(e.target.value)}/>
-        </div>
-        <div className="filter-tabs">
+      {/* Filters & Search */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '16px 0', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
           {(['all', 'posted', 'draft'] as const).map(f => (
-            <button key={f} className={`filter-tab ${filter === f ? 'filter-tab-active' : ''}`}
-              onClick={() => setFilter(f)}>
-              {f === 'all' ? 'All Bills' : f === 'posted' ? 'Posted Bills' : 'Draft Bills'}
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              style={{
+                padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 600,
+                border: 'none', cursor: 'pointer',
+                background: filter === f ? 'var(--brand-primary)' : 'var(--bg-card)',
+                color: filter === f ? '#fff' : 'var(--text-secondary)',
+              }}>
+              {f === 'all' ? 'All Bills' : f === 'posted' ? 'Posted' : 'Drafts'}
             </button>
           ))}
+        </div>
+        <div style={{ position: 'relative', minWidth: '240px' }}>
+          <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            type="text"
+            className="field-input"
+            style={{ paddingLeft: '32px', fontSize: '13px' }}
+            placeholder="Search vendor or invoice no..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
       </div>
 
       {/* Table */}
-      <div className="page-card">
-        <div className="table-wrap">
-          <table className="data-table">
+      <div className="parties-card" style={{ flex: 1 }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="parties-table">
             <thead>
               <tr>
                 <th>Vendor</th>
@@ -276,10 +319,10 @@ export default function Purchases() {
                     <td>
                       <span style={{
                         fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 12,
-                        background: p.status === 'posted' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
-                        color: p.status === 'posted' ? '#34D399' : '#FBBF24',
+                        background: p.status === 'posted' ? 'rgba(16,185,129,0.15)' : p.status === 'reversed' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
+                        color: p.status === 'posted' ? '#34D399' : p.status === 'reversed' ? '#EF4444' : '#FBBF24',
                       }}>
-                        {p.status === 'posted' ? 'Posted' : 'Draft (Email)'}
+                        {p.status === 'posted' ? 'Posted' : p.status === 'reversed' ? 'Reversed' : 'Draft (Email)'}
                       </span>
                     </td>
                     {/* Amounts */}
@@ -300,15 +343,55 @@ export default function Purchases() {
                     </td>
                     {/* Actions */}
                     <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         {p.status === 'draft' && (
-                          <button className="btn-action btn-action-primary" style={{ padding: '3px 9px', fontSize: 11 }} onClick={() => handlePostDraftDirectly(p)}>
-                            Post Bill
-                          </button>
+                          <>
+                            <button className="btn-action btn-action-primary" style={{ padding: '3px 9px', fontSize: 11 }} onClick={() => handlePostDraftDirectly(p)}>
+                              Post Bill
+                            </button>
+                            <button className="btn-action btn-action-ghost" style={{ padding: '3px 8px', color: '#ef4444' }} onClick={() => deletePurchaseInvoice(p.id)} title="Delete Draft">
+                              <Trash2 size={13}/>
+                            </button>
+                          </>
                         )}
-                        <button className="btn-action btn-action-ghost" style={{ padding: '3px 8px', color: '#ef4444' }} onClick={() => deletePurchaseInvoice(p.id)}>
-                          <Trash2 size={13}/>
-                        </button>
+
+                        {p.status === 'posted' && (
+                          <>
+                            {/* Normal Company User: Can ONLY Reverse transaction */}
+                            {!isSuperAdmin ? (
+                              <button 
+                                className="btn-action btn-action-secondary" 
+                                style={{ padding: '3px 9px', fontSize: 11, color: '#F59E0B', borderColor: 'rgba(245,158,11,0.3)', display: 'flex', alignItems: 'center', gap: 4 }} 
+                                onClick={() => {
+                                  if (confirm(`Are you sure you want to REVERSE purchase invoice ${p.invoiceNo}? This will post a Reversal Journal Entry to preserve the audit trail.`)) {
+                                    reversePurchaseInvoice(p.id);
+                                  }
+                                }}
+                                title="Normal users cannot delete posted transactions. Click to Reverse."
+                              >
+                                <RotateCcw size={12}/> Reverse
+                              </button>
+                            ) : (
+                              /* VyaparSetu Admin: Can Delete posted transaction */
+                              <button 
+                                className="btn-action btn-action-ghost" 
+                                style={{ padding: '3px 8px', color: '#ef4444' }} 
+                                onClick={() => {
+                                  if (confirm(`ADMIN ACTION: Permanently delete posted purchase invoice ${p.invoiceNo}?`)) {
+                                    deletePurchaseInvoice(p.id);
+                                  }
+                                }}
+                                title="VyaparSetu Admin Delete"
+                              >
+                                <Trash2 size={13}/>
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        {p.status === 'reversed' && (
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>Reversal Recorded</span>
+                        )}
                       </div>
                     </td>
                   </tr>

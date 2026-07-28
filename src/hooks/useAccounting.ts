@@ -86,7 +86,7 @@ export interface PurchaseInvoice {
   netTotal: number;
   linkedSalesInvoiceId?: string;
   remarks?: string;
-  status: 'draft' | 'posted';
+  status: 'draft' | 'posted' | 'reversed';
   source?: 'manual' | 'email';
   senderEmail?: string;
   receivedAt?: string;
@@ -794,6 +794,7 @@ export function useAccounting() {
         next = [inv, ...prev];
       }
       save('vs_purchases', next);
+      window.dispatchEvent(new Event('purchases_updated'));
       return next;
     });
     return inv;
@@ -814,6 +815,7 @@ export function useAccounting() {
         filtered.push(inv);
       }
       save('vs_purchases', filtered);
+      window.dispatchEvent(new Event('purchases_updated'));
       return filtered;
     });
   }, []);
@@ -826,6 +828,7 @@ export function useAccounting() {
       postedInv = { ...target, status: 'posted' };
       const next = prev.map(p => p.id === id ? postedInv! : p);
       save('vs_purchases', next);
+      window.dispatchEvent(new Event('purchases_updated'));
       return next;
     });
     if (postedInv) {
@@ -842,7 +845,12 @@ export function useAccounting() {
 
   const postPurchaseInvoice = useCallback((data: Omit<PurchaseInvoice, 'id' | 'status' | 'createdAt'>): PurchaseInvoice => {
     const inv: PurchaseInvoice = { ...data, id: uid(), status: 'posted', createdAt: new Date().toISOString() };
-    setPIState(prev => { const next = [inv, ...prev]; save('vs_purchases', next); return next; });
+    setPIState(prev => {
+      const next = [inv, ...prev];
+      save('vs_purchases', next);
+      window.dispatchEvent(new Event('purchases_updated'));
+      return next;
+    });
     setJEState(prev => {
       const already = prev.some(j => j.relatedId === inv.id && j.entryType === 'Purchase Invoice');
       if (already) return prev;
@@ -853,8 +861,48 @@ export function useAccounting() {
   }, []);
 
   const deletePurchaseInvoice = useCallback((id: string) => {
-    setPIState(prev => { const next = prev.filter(p => p.id !== id); save('vs_purchases', next); return next; });
-    setJEState(prev => { const next = prev.filter(je => !(je.relatedId === id && je.entryType === 'Purchase Invoice')); save('vs_journal', next); return next; });
+    setPIState(prev => {
+      const next = prev.filter(p => p.id !== id);
+      save('vs_purchases', next);
+      window.dispatchEvent(new Event('purchases_updated'));
+      return next;
+    });
+    setJEState(prev => {
+      const next = prev.filter(je => !(je.relatedId === id && je.entryType === 'Purchase Invoice'));
+      save('vs_journal', next);
+      return next;
+    });
+  }, []);
+
+  const reversePurchaseInvoice = useCallback((id: string) => {
+    let reversedInv: PurchaseInvoice | undefined;
+    setPIState(prev => {
+      const target = prev.find(p => p.id === id);
+      if (!target) return prev;
+      reversedInv = { ...target, status: 'reversed' };
+      const next = prev.map(p => p.id === id ? reversedInv! : p);
+      save('vs_purchases', next);
+      window.dispatchEvent(new Event('purchases_updated'));
+      return next;
+    });
+
+    if (reversedInv) {
+      const origJE = buildPurchaseInvoiceJE(reversedInv);
+      const reversalJE: JournalEntry = {
+        ...origJE,
+        id: 'je_rev_' + Date.now().toString(36),
+        entryType: 'Purchase Reversal',
+        relatedNo: 'REV-' + (origJE.relatedNo || reversedInv.invoiceNo),
+        createdAt: new Date().toISOString(),
+        lines: origJE.lines.map(l => ({
+          ...l,
+          debit: l.credit,
+          credit: l.debit,
+        })),
+      };
+      setJEState(prev => { const next = [reversalJE, ...prev]; save('vs_journal', next); return next; });
+    }
+    return reversedInv;
   }, []);
 
   const clearAllDrafts = useCallback(() => {
@@ -1493,7 +1541,7 @@ export function useAccounting() {
     saveCoa, addAccount, updateAccount, deleteAccount, resetCOA,
     // Transactions
     postSalesInvoice, deleteSalesInvoice,
-    saveDraftPurchaseInvoice, postDraftPurchaseInvoice, postPurchaseInvoice, deletePurchaseInvoice, clearAllDrafts, removeDuplicateDrafts,
+    saveDraftPurchaseInvoice, postDraftPurchaseInvoice, postPurchaseInvoice, deletePurchaseInvoice, reversePurchaseInvoice, clearAllDrafts, removeDuplicateDrafts,
     postDebitNote, postDebitNotePair, postPurchaseInvoiceJE, linkSalesToPurchase,
     recordPayment, deletePayment,
     // Reports & BRS
