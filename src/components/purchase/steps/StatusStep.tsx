@@ -53,9 +53,54 @@ export default function StatusStep({ wizard }: Props) {
 
   // ── Print: open isolated window ────────────────────────────────
   const handlePrint = () => {
-    // Build ledger rows
+    const isInterState = data.taxMode === 'inter' || (data.vendorGstin && data.vendorGstin.substring(0, 2) !== '29');
+
+    // Group line item taxable amounts by account head (e.g. Consulting & Professional Fees, Freight & Logistics, Purchases)
+    const expAccountAmounts = new Map<string, number>();
+    data.items.forEach(item => {
+      const accHead = (item as any).accountHead || 'Inventory / Purchase';
+      const itemTaxable = (item.qty || 0) * (item.rate || 0);
+      expAccountAmounts.set(accHead, (expAccountAmounts.get(accHead) ?? 0) + itemTaxable);
+    });
+
+    // Subtract discount proportionally if applicable
+    if (discountAmt > 0 && taxableTotal > 0) {
+      expAccountAmounts.forEach((amt, accHead) => {
+        const ratio = amt / taxableTotal;
+        expAccountAmounts.set(accHead, amt - (discountAmt * ratio));
+      });
+    }
+
+    // Build Particulars ledger rows dynamically
+    const debitAccountRowsHtml = Array.from(expAccountAmounts.entries()).map(([accHead, amt]) => `
+      <tr style="border-bottom:1px dashed #ddd;">
+        <td style="padding:6px 10px; font-weight:bold; border-right:1px solid #000;">${accHead} A/c</td>
+        <td style="padding:6px 10px; text-align:right; border-right:1px solid #000; font-family:Courier New,monospace;">${f2(amt)}</td>
+        <td style="padding:6px 10px; text-align:right;"></td>
+      </tr>
+    `).join('');
+
+    // Tax rows
     const cgst = gstTotal / 2;
     const sgst = gstTotal / 2;
+    const gstRows = gstTotal > 0 ? (
+      isInterState ? `
+        <tr style="border-bottom:1px dashed #ddd;">
+          <td style="padding:6px 10px;font-weight:bold;border-right:1px solid #000;">Input IGST A/c</td>
+          <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;font-family:Courier New,monospace;">${f2(gstTotal)}</td>
+          <td style="padding:6px 10px;text-align:right;"></td>
+        </tr>` : `
+        <tr style="border-bottom:1px dashed #ddd;">
+          <td style="padding:6px 10px;font-weight:bold;border-right:1px solid #000;">Input CGST A/c</td>
+          <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;font-family:Courier New,monospace;">${f2(cgst)}</td>
+          <td style="padding:6px 10px;text-align:right;"></td>
+        </tr>
+        <tr style="border-bottom:1px dashed #ddd;">
+          <td style="padding:6px 10px;font-weight:bold;border-right:1px solid #000;">Input SGST A/c</td>
+          <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;font-family:Courier New,monospace;">${f2(sgst)}</td>
+          <td style="padding:6px 10px;text-align:right;"></td>
+        </tr>`
+    ) : '';
 
     // Item rows HTML
     const itemRowsHtml = data.items.map(item => {
@@ -65,9 +110,9 @@ export default function StatusStep({ wizard }: Props) {
         <td style="padding:4px 8px;border-right:1px solid #ccc;">${item.name}</td>
         <td style="padding:4px 8px;text-align:right;border-right:1px solid #ccc;">${item.qty}</td>
         <td style="padding:4px 8px;text-align:right;border-right:1px solid #ccc;">${f2(item.rate || 0)}</td>
+        <td style="padding:4px 8px;text-align:right;border-right:1px solid #ccc;">${f2(lineAmt)}</td>
         <td style="padding:4px 8px;text-align:right;border-right:1px solid #ccc;">${item.gstRate || 0}%</td>
-        <td style="padding:4px 8px;text-align:right;">${f2(lineAmt)}</td>
-        <td style="padding:4px 8px;text-align:right;">${f2(lineGst)}</td>
+        <td style="padding:4px 8px;text-align:right;border-right:1px solid #ccc;">${f2(lineGst)}</td>
         <td style="padding:4px 8px;text-align:right;font-weight:bold;">${f2(lineAmt + lineGst)}</td>
       </tr>`;
     }).join('');
@@ -79,18 +124,6 @@ export default function StatusStep({ wizard }: Props) {
     const chargesRow = chargesTotal > 0
       ? `<tr><td colspan="6" style="padding:4px 8px;text-align:right;border-right:1px solid #ccc;font-style:italic;">Freight / Charges</td>
            <td style="padding:4px 8px;text-align:right;">${f2(chargesTotal)}</td></tr>` : '';
-
-    const gstRows = gstTotal > 0 ? `
-      <tr style="border-bottom:1px dashed #ddd;">
-        <td style="padding:6px 10px;font-weight:bold;border-right:1px solid #000;">Input CGST A/c</td>
-        <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;font-family:Courier New,monospace;">${f2(cgst)}</td>
-        <td style="padding:6px 10px;text-align:right;"></td>
-      </tr>
-      <tr style="border-bottom:1px dashed #ddd;">
-        <td style="padding:6px 10px;font-weight:bold;border-right:1px solid #000;">Input SGST A/c</td>
-        <td style="padding:6px 10px;text-align:right;border-right:1px solid #000;font-family:Courier New,monospace;">${f2(sgst)}</td>
-        <td style="padding:6px 10px;text-align:right;"></td>
-      </tr>` : '';
 
     const chargesLedgerRow = chargesTotal > 0 ? `
       <tr style="border-bottom:1px dashed #ddd;">
@@ -150,12 +183,8 @@ export default function StatusStep({ wizard }: Props) {
       </tr>
     </thead>
     <tbody>
-      <!-- Debit: Inventory -->
-      <tr style="border-bottom:1px dashed #ddd;">
-        <td style="padding:6px 10px; font-weight:bold; border-right:1px solid #000;">Inventory / Purchase A/c</td>
-        <td style="padding:6px 10px; text-align:right; border-right:1px solid #000; font-family:Courier New,monospace;">${f2(taxableTotal - discountAmt)}</td>
-        <td style="padding:6px 10px; text-align:right;"></td>
-      </tr>
+      <!-- Debit: Expense / Inventory GL Account Heads -->
+      ${debitAccountRowsHtml}
       <!-- Debit: GST -->
       ${gstRows}
       <!-- Debit: Charges -->

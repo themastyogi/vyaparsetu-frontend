@@ -469,16 +469,44 @@ function buildSalesDNJE(dn: DebitNote): JournalEntry {
 
 function buildPurchaseInvoiceJE(p: PurchaseInvoice): JournalEntry {
   const lines: JournalLine[] = [];
-  const purchByRate = new Map<number, number>();
-  const gstByRate   = new Map<number, number>();
+  const expAccountAmounts = new Map<string, number>();
+  const gstByRate = new Map<number, number>();
+
   for (const item of p.items) {
-    purchByRate.set(item.gstRate, (purchByRate.get(item.gstRate) ?? 0) + item.amount);
-    gstByRate.set(item.gstRate,   (gstByRate.get(item.gstRate)   ?? 0) + item.gstAmount);
+    // If the line item specifies a GL account head (e.g. Consulting & Professional Fees), debit that account!
+    // Otherwise fallback to Purchases (Inventory)
+    const accHead = (item as any).accountHead || 'Purchases';
+    expAccountAmounts.set(accHead, (expAccountAmounts.get(accHead) ?? 0) + item.amount);
+
+    const gstAmt = item.gstAmount || Math.round(item.amount * ((item.gstRate || 18) / 100));
+    if (gstAmt > 0) {
+      gstByRate.set(item.gstRate || 18, (gstByRate.get(item.gstRate || 18) ?? 0) + gstAmt);
+    }
   }
-  purchByRate.forEach(amt => lines.push({ account: 'Purchases', debit: amt, credit: 0 }));
-  gstByRate.forEach((amt, rate) => lines.push({ account: gstAccountName(rate, 'Input'), debit: amt, credit: 0 }));
+
+  // 1. Debit each specific Expense / Inventory GL Account Head
+  expAccountAmounts.forEach((amt, accHead) => {
+    lines.push({ account: accHead, debit: amt, credit: 0 });
+  });
+
+  // 2. Debit Tax Accounts (Input Tax / GST)
+  gstByRate.forEach((amt, rate) => {
+    lines.push({ account: gstAccountName(rate, 'Input'), debit: amt, credit: 0 });
+  });
+
+  // 3. Credit Vendor (Accounts Payable)
   lines.push({ account: 'Accounts Payable', debit: 0, credit: p.netTotal });
-  return { id: uid(), date: p.date, entryType: 'Purchase Invoice', relatedId: p.id, relatedNo: p.invoiceNo, party: p.vendorName, lines, createdAt: new Date().toISOString() };
+
+  return {
+    id: uid(),
+    date: p.date,
+    entryType: 'Purchase Invoice',
+    relatedId: p.id,
+    relatedNo: p.invoiceNo,
+    party: p.vendorName,
+    lines,
+    createdAt: new Date().toISOString(),
+  };
 }
 
 function buildPurchaseDNJE(dn: DebitNote): JournalEntry {
