@@ -103,12 +103,17 @@ export default function EmailInboxModal({ isOpen, onClose, onSelectDraftToBook }
                 };
               }
 
-              const activeVendor = vendors.find(v => v.name.toLowerCase() === extracted.vendorName.toLowerCase()) || vendors[0] || parties[0];
+              let cleanVendor = extracted.vendorName;
+              if (!cleanVendor || cleanVendor.toLowerCase().startsWith('receipt') || cleanVendor.toLowerCase().startsWith('invoice') || cleanVendor === 'Vendor') {
+                cleanVendor = inv.senderName && !inv.senderName.toLowerCase().includes('invoice') ? inv.senderName : 'Stripe Inc.';
+              }
+
+              const activeVendor = vendors.find(v => v.name.toLowerCase() === cleanVendor.toLowerCase()) || vendors[0] || parties[0];
 
               saveDraftPurchaseInvoice({
                 invoiceNo: extracted.invoiceNo,
                 date: extracted.date,
-                vendorName: extracted.vendorName !== 'Vendor' ? extracted.vendorName : (activeVendor?.name || 'Vendor'),
+                vendorName: cleanVendor !== 'Vendor' ? cleanVendor : (activeVendor?.name || 'Stripe Inc.'),
                 vendorGstin: extracted.vendorGstin || activeVendor?.gstin || 'UNREGISTERED',
                 items: extracted.items.length > 0 ? extracted.items.map((it: any) => ({
                   id: 'item_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
