@@ -769,12 +769,42 @@ export function useAccounting() {
       createdAt: new Date().toISOString(),
     };
     setPIState(prev => {
-      const exists = prev.some(p => p.id === draftId);
-      const next = exists ? prev.map(p => p.id === draftId ? inv : p) : [inv, ...prev];
+      // Deduplicate: Check if a draft with the same invoiceNo or vendorName+netTotal already exists
+      const duplicateIndex = prev.findIndex(p => p.status === 'draft' && (
+        p.id === draftId ||
+        (data.invoiceNo && p.invoiceNo.toLowerCase() === data.invoiceNo.toLowerCase()) ||
+        (p.vendorName.toLowerCase() === data.vendorName.toLowerCase() && Math.abs(p.netTotal - data.netTotal) < 1)
+      ));
+
+      let next: PurchaseInvoice[];
+      if (duplicateIndex >= 0) {
+        next = prev.map((p, idx) => idx === duplicateIndex ? { ...inv, id: prev[duplicateIndex].id } : p);
+      } else {
+        next = [inv, ...prev];
+      }
       save('vs_purchases', next);
       return next;
     });
     return inv;
+  }, []);
+
+  const removeDuplicateDrafts = useCallback(() => {
+    setPIState(prev => {
+      const seen = new Set<string>();
+      const filtered: PurchaseInvoice[] = [];
+      for (const inv of prev) {
+        if (inv.status === 'draft') {
+          const key = (inv.invoiceNo ? inv.invoiceNo.toLowerCase().trim() : '') + '|' + inv.vendorName.toLowerCase().trim() + '|' + Math.round(inv.netTotal);
+          if (seen.has(key)) {
+            continue; // Skip duplicate draft
+          }
+          seen.add(key);
+        }
+        filtered.push(inv);
+      }
+      save('vs_purchases', filtered);
+      return filtered;
+    });
   }, []);
 
   const postDraftPurchaseInvoice = useCallback((id: string): PurchaseInvoice | undefined => {
@@ -1452,7 +1482,7 @@ export function useAccounting() {
     saveCoa, addAccount, updateAccount, deleteAccount, resetCOA,
     // Transactions
     postSalesInvoice, deleteSalesInvoice,
-    saveDraftPurchaseInvoice, postDraftPurchaseInvoice, postPurchaseInvoice, deletePurchaseInvoice, clearAllDrafts,
+    saveDraftPurchaseInvoice, postDraftPurchaseInvoice, postPurchaseInvoice, deletePurchaseInvoice, clearAllDrafts, removeDuplicateDrafts,
     postDebitNote, postDebitNotePair, postPurchaseInvoiceJE, linkSalesToPurchase,
     recordPayment, deletePayment,
     // Reports & BRS

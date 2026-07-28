@@ -74,8 +74,12 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
   
   // Clean invalid invoice numbers
   if (!invoiceNo || invoiceNo.length < 3 || invoiceNo.toLowerCase().includes('oice') || invoiceNo.toLowerCase().includes('date')) {
-    const cleanFn = (fileName || 'Invoice').replace(/\.pdf$/i, '').replace(/[^A-Z0-9-]/gi, '_');
-    invoiceNo = `INV-${cleanFn.slice(-12)}`;
+    const cleanFn = (fileName || 'Invoice')
+      .replace(/\.pdf$/i, '')
+      .replace(/^Sample_Purchase_Invoice_/i, '')
+      .replace(/[^A-Z0-9_-]/gi, '_')
+      .trim();
+    invoiceNo = `INV-${cleanFn}`;
   }
 
   // 3. Date Regex (matches 26-Jul-2026, 26/07/2026, 2026-07-26)

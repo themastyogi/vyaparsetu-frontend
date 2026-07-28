@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Search, Plus, Camera, Mail,
-  Trash2, Link2, X, FileUp
+  Trash2, Link2, X, FileUp, Sparkles
 } from 'lucide-react';
 import { usePurchaseWizard } from '../components/purchase/usePurchaseWizard';
 import PurchaseWizard from '../components/purchase/PurchaseWizard';
@@ -27,8 +27,12 @@ export default function Purchases() {
   const { getPartyByName, vendors } = useMaster();
   const {
     companySettings, purchaseInvoices, salesInvoices,
-    deletePurchaseInvoice, postDraftPurchaseInvoice, linkSalesToPurchase,
+    deletePurchaseInvoice, postDraftPurchaseInvoice, linkSalesToPurchase, removeDuplicateDrafts,
   } = useAccounting();
+
+  useEffect(() => {
+    removeDuplicateDrafts();
+  }, [removeDuplicateDrafts]);
 
   const [filter,      setFilter]      = useState<'all' | 'posted' | 'draft'>('all');
   const [search,      setSearch]      = useState('');
@@ -154,6 +158,9 @@ export default function Purchases() {
             <FileUp size={15} style={{ color: 'var(--brand-primary)' }}/> Upload PDF Invoice
             <input type="file" accept=".pdf" onChange={handleDirectPDFUpload} style={{ display: 'none' }}/>
           </label>
+          <button className="btn-action btn-action-secondary" onClick={() => { removeDuplicateDrafts(); alert('Duplicate drafts cleaned!'); }} title="Remove any duplicate draft bills">
+            <Sparkles size={15} style={{ color: '#F59E0B' }}/> Clean Duplicates
+          </button>
           <button className="btn-action btn-action-secondary" onClick={() => setShowEmailInbox(true)} style={{ position: 'relative' }}>
             <Mail size={15} style={{ color: 'var(--brand-primary)' }}/> Email Inbox
             {draftCount > 0 && (

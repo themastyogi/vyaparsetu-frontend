@@ -91,7 +91,8 @@ ${rawText}`
         const resultData = await response.json();
         const jsonText = resultData.candidates?.[0]?.content?.parts?.[0]?.text;
         if (jsonText) {
-          const parsed = JSON.parse(jsonText);
+          const cleanJson = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+          const parsed = JSON.parse(cleanJson);
           return {
             vendorName: parsed.vendorName || 'Sahil Traders',
             vendorGstin: parsed.vendorGstin || '07ABCDE1234F1Z5',
