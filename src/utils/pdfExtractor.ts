@@ -281,7 +281,10 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
       lower.startsWith('gstin') || lower.startsWith('terms') || lower.startsWith('bank') ||
       lower.includes('cgst') || lower.includes('sgst') || lower.includes('igst') ||
       lower.includes('tax @') || lower.includes('gst @') || lower.includes('round off') ||
-      lower.includes('amount in words') || lower.includes('total tax') || lower.includes('tax amount')
+      lower.includes('amount in words') || lower.includes('total tax') || lower.includes('tax amount') ||
+      lower.includes('email:') || lower.includes('phone:') || lower.includes('mobile:') || lower.includes('tel:') ||
+      lower.includes('purchase order') || lower.includes('po-') || lower.includes('po no') || lower.includes('due date') ||
+      lower.includes('ifsc') || lower.includes('account no') || lower.includes('pan no')
     ) {
       continue;
     }
@@ -352,7 +355,12 @@ export function parseInvoiceText(text: string, fileName?: string): ExtractedInvo
           !lowerDesc.includes('sgst') &&
           !lowerDesc.includes('igst') &&
           !lowerDesc.includes('tax') &&
-          !lowerDesc.includes('total')
+          !lowerDesc.includes('total') &&
+          !lowerDesc.includes('email') &&
+          !lowerDesc.includes('phone') &&
+          !lowerDesc.includes('order') &&
+          !lowerDesc.includes('due date') &&
+          !lowerDesc.includes('address')
         ) {
           const itemAmt = amt > 0 ? amt : (qty * rate);
           const itemGst = Math.round(itemAmt * (gstRate / 100));
