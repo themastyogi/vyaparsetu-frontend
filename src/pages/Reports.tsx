@@ -7,7 +7,7 @@ import { useState, useMemo } from 'react';
 import {
   BarChart3, BookOpen, List, Scale, ChevronDown, ChevronUp,
   AlertCircle, CheckCircle2, Users, Clock, TrendingUp, Search,
-  IndianRupee, Link2, Building2, FileBarChart2, Droplets,
+  IndianRupee, Link2, Building2, FileBarChart2, Droplets, CheckSquare, Square, Upload
 } from 'lucide-react';
 import {
   useAccounting, type JournalEntry,
@@ -133,6 +133,20 @@ export default function Reports() {
   // Balance Sheet as-of
   const [bsAsOf, setBsAsOf] = useState(new Date().toISOString().split('T')[0]);
 
+  // Party Ledger Reconciliation State
+  const [reconciledMap, setReconciledMap] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem('vs_party_reconciliations') || '{}'); }
+    catch { return {}; }
+  });
+
+  const toggleReconciliation = (jeId: string) => {
+    setReconciledMap(prev => {
+      const next = { ...prev, [jeId]: !prev[jeId] };
+      localStorage.setItem('vs_party_reconciliations', JSON.stringify(next));
+      return next;
+    });
+  };
+
   // ── Computed ─────────────────────────────────────────────────
   const tb  = useMemo(() => getTrialBalance(),  [getTrialBalance,  journalEntries]);
   const gl  = useMemo(() => getGeneralLedger(), [getGeneralLedger, journalEntries]);
@@ -168,6 +182,41 @@ export default function Reports() {
   const plRows = plResult.rows;
   const plOpening = plResult.openingBalance;
   const plClosing = plResult.closingBalance;
+
+  const handleUploadStatement = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !plParty) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = (evt.target?.result as string) || '';
+      const lines = text.split('\n');
+      let matchedCount = 0;
+      const nextMap = { ...reconciledMap };
+
+      for (const line of lines) {
+        const clean = line.trim().toLowerCase();
+        if (!clean) continue;
+
+        for (const row of plRows) {
+          const refNoLower = row.refNo.toLowerCase();
+          const baseRef = refNoLower.startsWith('rev-') ? refNoLower.substring(4) : refNoLower;
+          
+          if (clean.includes(baseRef) || (row.debit > 0 && clean.includes(row.debit.toString())) || (row.credit > 0 && clean.includes(row.credit.toString()))) {
+            if (!nextMap[row.jeId]) {
+              nextMap[row.jeId] = true;
+              matchedCount++;
+            }
+          }
+        }
+      }
+
+      setReconciledMap(nextMap);
+      localStorage.setItem('vs_party_reconciliations', JSON.stringify(nextMap));
+      alert(`🎉 Party Reconciliation Complete!\n\n${matchedCount} ledger entries automatically matched with statement.`);
+    };
+    reader.readAsText(file);
+  };
 
   const isCustomer = useMemo(() => {
     if (!plParty) return false;
@@ -677,7 +726,7 @@ export default function Reports() {
               )}
 
               <div style={card}>
-                {/* Header info */}
+                {/* Header info & Reconciliation Actions */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
                   <div>
                     <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{plParty} — Account Ledger</h2>
@@ -685,12 +734,24 @@ export default function Reports() {
                       {plRows.length} transactions{plFrom || plTo ? ` · Filtered: ${plFrom || 'start'} → ${plTo || 'today'}` : ' · All dates'}
                     </div>
                   </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <label className="btn-action btn-action-secondary" style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', margin: 0, borderColor: 'var(--brand-primary)', color: 'var(--brand-primary)' }}>
+                      <Upload size={14}/> Upload Party Statement (CSV/Excel)
+                      <input type="file" accept=".csv,.txt,.json,.xlsx" onChange={handleUploadStatement} style={{ display: 'none' }}/>
+                    </label>
+
+                    <span style={{ fontSize: 11, fontWeight: 800, padding: '5px 12px', borderRadius: 16, background: 'rgba(16,185,129,0.12)', color: '#10B981', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <CheckCircle2 size={13}/> Reconciled: {plRows.filter(r => reconciledMap[r.jeId]).length} / {plRows.length}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="table-wrap">
                   <table className="data-table">
                     <thead>
                       <tr>
+                        <th style={{ width: 42, textAlign: 'center' }}>Match</th>
                         <th>Date</th><th>Entry Type</th><th>Reference</th>
                         <th style={{ textAlign: 'right' }}>Debit (₹)</th>
                         <th style={{ textAlign: 'right' }}>Credit (₹)</th>
@@ -700,6 +761,7 @@ export default function Reports() {
                     <tbody>
                       {/* Opening Balance Row */}
                       <tr style={{ background: 'var(--bg-elevated)', fontStyle: 'italic' }}>
+                        <td></td>
                         <td colSpan={5} style={{ fontSize: 12, color: 'var(--text-muted)', padding: '10px 12px', fontWeight: 600 }}>
                           Opening Balance {plFrom ? `(prior to ${plFrom})` : ''}
                         </td>
@@ -709,9 +771,16 @@ export default function Reports() {
                       </tr>
 
                       {plRows.length === 0
-                        ? <tr><td colSpan={6} className="empty-cell">No transactions found for this period</td></tr>
+                        ? <tr><td colSpan={7} className="empty-cell">No transactions found for this period</td></tr>
                         : plRows.map((r, i) => (
-                          <tr key={i}>
+                          <tr key={i} style={{ background: reconciledMap[r.jeId] ? 'rgba(16,185,129,0.04)' : 'transparent' }}>
+                            <td style={{ textAlign: 'center' }}>
+                              <button type="button" onClick={() => toggleReconciliation(r.jeId)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: reconciledMap[r.jeId] ? '#10B981' : 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                title={reconciledMap[r.jeId] ? 'Reconciled with Party Statement' : 'Click to mark as Reconciled'}>
+                                {reconciledMap[r.jeId] ? <CheckSquare size={17}/> : <Square size={17}/>}
+                              </button>
+                            </td>
                             <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-muted)' }}>{r.date}</td>
                             <td><EntryBadge type={r.entryType}/></td>
                             <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--brand-primary)', fontWeight: 700 }}>{r.refNo}</td>
