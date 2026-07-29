@@ -183,6 +183,17 @@ export default function Reports() {
   const plOpening = plResult.openingBalance;
   const plClosing = plResult.closingBalance;
 
+  const handleDownloadStatementTemplate = () => {
+    const csvContent = "Date,Reference No,Entry Type,Amount (₹)\n2026-07-25,ST/26-27/00125,Purchase Invoice,40474.00\n2026-07-25,ST/26-27/00201,Purchase Invoice,20532.00\n2026-07-29,PAY-2026-002,Payment Out,20532.00\n";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Party_Statement_Template.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleUploadStatement = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !plParty) return;
@@ -736,6 +747,10 @@ export default function Reports() {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <button type="button" onClick={handleDownloadStatementTemplate} className="btn-action btn-action-ghost" style={{ padding: '7px 12px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }} title="Download sample template for Party Statement Upload">
+                      📄 Download Template
+                    </button>
+
                     <label className="btn-action btn-action-secondary" style={{ padding: '7px 14px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', margin: 0, borderColor: 'var(--brand-primary)', color: 'var(--brand-primary)' }}>
                       <Upload size={14}/> Upload Party Statement (CSV/Excel)
                       <input type="file" accept=".csv,.txt,.json,.xlsx" onChange={handleUploadStatement} style={{ display: 'none' }}/>

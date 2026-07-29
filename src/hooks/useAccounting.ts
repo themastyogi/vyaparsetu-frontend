@@ -1125,18 +1125,21 @@ export function useAccounting() {
     const pis  = load<PurchaseInvoice[]>('vs_purchases', []);
     const dns  = load<DebitNote[]>('vs_debit_notes', []);
     const pmts = load<PaymentVoucher[]>('vs_payments', []);
-    const name = partyName.toLowerCase();
+    
+    const norm = (s: string) => (s || '').toLowerCase().trim().replace(/s$/, '').replace(/[^a-z0-9]/g, '');
+    const targetNorm = norm(partyName);
+
     type RawEntry = { date: string; entryType: string; refNo: string; debit: number; credit: number; jeId: string };
     const entries: RawEntry[] = [];
-    sis.filter(si => si.customer.toLowerCase() === name)
+    sis.filter(si => norm(si.customer) === targetNorm)
       .forEach(si => entries.push({ date: si.date, entryType: 'Sales Invoice', refNo: si.invoiceNo, debit: si.netTotal, credit: 0, jeId: si.id }));
-    dns.filter(dn => dn.party.toLowerCase() === name).forEach(dn => {
+    dns.filter(dn => norm(dn.party) === targetNorm).forEach(dn => {
       if (dn.type === 'Sales')
         entries.push({ date: dn.date, entryType: 'Sales Debit Note', refNo: dn.dnNo, debit: 0, credit: dn.netTotal, jeId: dn.id });
       else
         entries.push({ date: dn.date, entryType: 'Purchase Debit Note', refNo: dn.dnNo, debit: dn.netTotal, credit: 0, jeId: dn.id });
     });
-    pis.filter(pi => pi.vendorName.toLowerCase() === name)
+    pis.filter(pi => norm(pi.vendorName) === targetNorm)
       .forEach(pi => {
         entries.push({
           date: pi.date,
@@ -1161,7 +1164,7 @@ export function useAccounting() {
       });
     
     // Include Payment & Receipt Vouchers in Party Ledger!
-    pmts.filter(pmt => ((pmt as any).partyName || pmt.party || '').toLowerCase() === name)
+    pmts.filter(pmt => norm((pmt as any).partyName || pmt.party) === targetNorm)
       .forEach(pmt => {
         if (pmt.type === 'Payment') {
           // Payment to Vendor -> DEBIT vendor account (reduces vendor payable)
@@ -1225,7 +1228,7 @@ export function useAccounting() {
     });
 
     const parties = load<any[]>('vs_parties', []);
-    const partyMaster = parties.find(p => p.name.toLowerCase() === name);
+    const partyMaster = parties.find(p => norm(p.name) === targetNorm);
     let partyMasterOpBal = 0;
     if (partyMaster?.openingBalance) {
       partyMasterOpBal = partyMaster.openingBalanceType === 'Dr'

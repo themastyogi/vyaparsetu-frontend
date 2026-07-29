@@ -120,6 +120,77 @@ export default function ChartOfAccounts() {
     setShowForm(false);
   };
 
+  const handleDownloadOBTemplate = () => {
+    const csvContent = "Name,Category,Opening Balance (₹),Type\nSahil Trader,Party,50000.00,Cr\nRavi Enterprises,Party,120000.00,Dr\nHDFC Bank - A/C 8234,Bank,250000.00,Dr\nOffice Furniture & Fixtures,GL,75000.00,Dr\nCapital Account,GL,445000.00,Cr\n";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Opening_Balances_Template.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleUploadOB = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = (evt.target?.result as string) || '';
+      const lines = text.split('\n');
+      let partyUpdated = 0, bankUpdated = 0, glUpdated = 0;
+
+      const parties = JSON.parse(localStorage.getItem('vs_parties') || '[]');
+      const banks = JSON.parse(localStorage.getItem('vs_bank_accounts') || '[]');
+      const coaList = JSON.parse(localStorage.getItem('vs_coa') || '[]');
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const parts = line.split(',');
+        if (parts.length < 3) continue;
+
+        const name = parts[0].trim();
+        const category = parts[1].trim().toLowerCase();
+        const amount = parseFloat(parts[2].trim()) || 0;
+        const balType = (parts[3]?.trim().toUpperCase() === 'DR' ? 'Dr' : 'Cr') as 'Dr' | 'Cr';
+
+        if (category === 'party') {
+          const norm = (s: string) => (s || '').toLowerCase().trim().replace(/s$/, '').replace(/[^a-z0-9]/g, '');
+          const p = parties.find((x: any) => norm(x.name) === norm(name));
+          if (p) {
+            p.openingBalance = amount;
+            p.openingBalanceType = balType;
+            partyUpdated++;
+          }
+        } else if (category === 'bank') {
+          const b = banks.find((x: any) => x.bankName.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(x.bankName.toLowerCase()));
+          if (b) {
+            b.openingBalance = amount;
+            bankUpdated++;
+          }
+        } else {
+          const a = coaList.find((x: any) => x.name.toLowerCase() === name.toLowerCase() || x.code === name);
+          if (a) {
+            a.openingBalance = amount;
+            a.openingBalanceType = balType;
+            glUpdated++;
+          }
+        }
+      }
+
+      localStorage.setItem('vs_parties', JSON.stringify(parties));
+      localStorage.setItem('vs_bank_accounts', JSON.stringify(banks));
+      localStorage.setItem('vs_coa', JSON.stringify(coaList));
+      window.dispatchEvent(new Event('storage'));
+
+      alert(`🎉 Opening Balances Batch Upload Complete!\n\n• ${partyUpdated} Party Opening Balances updated\n• ${bankUpdated} Bank Account Opening Balances updated\n• ${glUpdated} G/L Account Opening Balances updated`);
+      window.location.reload();
+    };
+    reader.readAsText(file);
+  };
+
   const inp: React.CSSProperties = {
     width: '100%', padding: '10px 13px', borderRadius: 8,
     border: '1.5px solid var(--border-default)',
@@ -137,7 +208,14 @@ export default function ChartOfAccounts() {
           </h1>
           <p className="page-sub">{coa.length} accounts · Add your own or reset to the standard Indian Business COA</p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn-action btn-action-ghost" onClick={handleDownloadOBTemplate} title="Download sample template for batch uploading Opening Balances">
+            📄 Download OB Template
+          </button>
+          <label className="btn-action btn-action-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}>
+            📤 Upload Opening Balances (CSV/Excel)
+            <input type="file" accept=".csv,.txt,.json,.xlsx" onChange={handleUploadOB} style={{ display: 'none' }}/>
+          </label>
           <button className="btn-action btn-action-secondary" onClick={() => setResetConf(true)}>
             <RefreshCw size={14}/> Reset to Standard
           </button>
