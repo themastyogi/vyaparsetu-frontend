@@ -636,16 +636,21 @@ export function useAccounting() {
       return true;
     });
 
-    // Strict Thumb Rule: Deduplicate ALL purchase invoices by (status + vendorName + invoiceNo + netTotal)
-    const seen = new Set<string>();
-    const deduplicated: PurchaseInvoice[] = [];
-
+    // Strict Thumb Rule: Deduplicate ALL purchase invoices by (vendorName + invoiceNo)
+    // Priority: reversed > posted > draft
+    const map = new Map<string, PurchaseInvoice>();
     for (const inv of cleaned) {
-      const key = `${inv.status}|${inv.vendorName.toLowerCase().trim()}|${inv.invoiceNo ? inv.invoiceNo.toLowerCase().trim() : ''}|${Math.round(inv.netTotal)}`;
-      if (seen.has(key)) continue; // Purge duplicate fallback entries!
-      seen.add(key);
-      deduplicated.push(inv);
+      const key = `${inv.vendorName.toLowerCase().trim()}|${inv.invoiceNo ? inv.invoiceNo.toLowerCase().trim() : inv.id}`;
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, inv);
+      } else {
+        if (inv.status === 'reversed' || (inv.status === 'posted' && existing.status === 'draft')) {
+          map.set(key, inv);
+        }
+      }
     }
+    const deduplicated = Array.from(map.values());
 
     save('vs_purchases', deduplicated);
     return deduplicated;
@@ -1097,7 +1102,7 @@ export function useAccounting() {
       .forEach(pi => {
         entries.push({
           date: pi.date,
-          entryType: pi.status === 'reversed' ? 'Purchase Invoice (Reversed)' : 'Purchase Invoice',
+          entryType: 'Purchase Invoice',
           refNo: pi.invoiceNo,
           debit: 0,
           credit: pi.netTotal,
