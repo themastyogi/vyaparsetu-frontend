@@ -1060,11 +1060,33 @@ export function useAccounting() {
     const currentCoa = load<any[]>('vs_coa', DEFAULT_COA);
     const migratedCoa = migrateCOA(currentCoa.length === 0 ? DEFAULT_COA : currentCoa);
     const currentJEs  = load<JournalEntry[]>('vs_journal', []);
+
+    const normAcct = (s: string) => (s || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const matchAcct = (a: string, b: string) => {
+      const na = normAcct(a);
+      const nb = normAcct(b);
+      if (na === nb) return true;
+      if (na.includes('cash') && nb.includes('cash')) return true;
+      if (na.includes('bank') && nb.includes('bank')) return true;
+      if (na.includes('office') && nb.includes('office')) return true;
+      if (na.includes('rent') && nb.includes('rent')) return true;
+      return na.length > 3 && nb.length > 3 && (na.includes(nb) || nb.includes(na));
+    };
+
     return migratedCoa.map(acct => {
       let totalDebit = 0, totalCredit = 0;
+      const raw = acct as any;
+      if (raw.openingBalance) {
+        if (raw.openingBalanceType === 'Dr') totalDebit += raw.openingBalance;
+        else totalCredit += raw.openingBalance;
+      }
+
       for (const je of currentJEs)
         for (const line of je.lines)
-          if (line.account === acct.name) { totalDebit += line.debit; totalCredit += line.credit; }
+          if (matchAcct(line.account, acct.name) || matchAcct(line.account, acct.code)) { 
+            totalDebit += line.debit; 
+            totalCredit += line.credit; 
+          }
       return {
         account: acct.name, accountCode: acct.code, accountType: acct.type,
         accountGroup: acct.group, totalDebit, totalCredit, balance: totalDebit - totalCredit,
@@ -1077,9 +1099,22 @@ export function useAccounting() {
     const rows: Array<JournalEntry & { line: JournalLine; runningBalance: number }> = [];
     let running = 0;
     const sorted = [...currentJEs].sort((a, b) => a.date.localeCompare(b.date));
+
+    const normAcct = (s: string) => (s || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const matchAcct = (a: string, b: string) => {
+      const na = normAcct(a);
+      const nb = normAcct(b);
+      if (na === nb) return true;
+      if (na.includes('cash') && nb.includes('cash')) return true;
+      if (na.includes('bank') && nb.includes('bank')) return true;
+      if (na.includes('office') && nb.includes('office')) return true;
+      if (na.includes('rent') && nb.includes('rent')) return true;
+      return na.length > 3 && nb.length > 3 && (na.includes(nb) || nb.includes(na));
+    };
+
     for (const je of sorted)
       for (const line of je.lines)
-        if (line.account === accountName) { running += line.debit - line.credit; rows.push({ ...je, line, runningBalance: running }); }
+        if (matchAcct(line.account, accountName)) { running += line.debit - line.credit; rows.push({ ...je, line, runningBalance: running }); }
     return rows;
   }, []);
 

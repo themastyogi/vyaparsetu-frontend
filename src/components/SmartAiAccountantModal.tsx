@@ -52,29 +52,29 @@ export default function SmartAiAccountantModal({ onClose }: Props) {
 
       // 4. Account & Voucher Type Classification
       let entryType = 'Journal Voucher';
-      let debitAccount = 'Office Supplies';
+      let debitAccount = 'Office Expenses';
       let creditAccount = 'Bank Account';
 
       if (lower.includes('rent')) {
         entryType = 'Rent Expense';
-        debitAccount = 'Rent';
-        creditAccount = lower.includes('cash') ? 'Cash & Bank' : 'Bank Account';
+        debitAccount = 'Rent & Rates';
+        creditAccount = lower.includes('cash') ? 'Cash Account' : 'Bank Account';
       } else if (lower.includes('bank charge') || lower.includes('late fee') || lower.includes('bank charges')) {
         entryType = 'Bank Charges';
-        debitAccount = 'Freight & Charges';
+        debitAccount = 'Freight & Logistics';
         creditAccount = 'Bank Account';
       } else if (lower.includes('tea') || lower.includes('petty cash') || lower.includes('refreshment')) {
         entryType = 'Petty Cash Expense';
-        debitAccount = 'Office Supplies';
-        creditAccount = 'Cash & Bank';
+        debitAccount = 'Office Expenses';
+        creditAccount = 'Cash Account';
       } else if (lower.includes('salary') || lower.includes('wages')) {
         entryType = 'Salary Payment';
         debitAccount = 'Purchases';
         creditAccount = 'Bank Account';
       } else if (lower.includes('depreciation')) {
         entryType = 'Depreciation';
-        debitAccount = 'Freight & Charges';
-        creditAccount = 'Other Assets';
+        debitAccount = 'Freight & Logistics';
+        creditAccount = 'Office Furniture & Fixtures';
       }
 
       setParsedResult({
