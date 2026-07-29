@@ -420,9 +420,6 @@ export const DEFAULT_COA: Account[] = [
   { code: '7020', name: 'Depreciation',              type: 'Expense',   group: 'Depreciation' },
 ];
 
-// ── Seed purchase invoices (Empty by default for clean user experience) ────
-const SEED_PURCHASES: PurchaseInvoice[] = [];
-
 // ── Storage helpers ───────────────────────────────────────────────
 function load<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); return raw ? (JSON.parse(raw) as T) : fallback; }
@@ -625,37 +622,31 @@ export function useAccounting() {
   const [purchaseInvoices, setPIState] = useState<PurchaseInvoice[]>(() => {
     const stored = load<PurchaseInvoice[]>('vs_purchases', []);
     const cleaned = stored.filter(p => {
-      if (p.id.includes('pi-seed')) return false;
-      if (p.status === 'draft') {
-        if (p.id.includes('pi-draft') || p.id.includes('sample')) return false;
-        // Purge legacy draft cards with old fallback placeholder item descriptions
-        const firstItemDesc = p.items?.[0]?.description?.toLowerCase() || '';
-        if (
-          firstItemDesc.includes('supply of goods & services') ||
-          firstItemDesc.includes('it services / goods') ||
-          firstItemDesc.includes('services / goods as per tax invoice') ||
-          firstItemDesc.includes('goods & services as per invoice') ||
-          firstItemDesc.includes('line items from sample')
-        ) {
-          return false; // Automatically purge legacy fallback draft!
-        }
+      if (p.id.includes('pi-seed') || p.id.includes('sample')) return false;
+      const firstItemDesc = p.items?.[0]?.description?.toLowerCase() || '';
+      if (
+        firstItemDesc.includes('supply of goods & services') ||
+        firstItemDesc.includes('it services / goods') ||
+        firstItemDesc.includes('services / goods as per tax invoice') ||
+        firstItemDesc.includes('goods & services as per invoice') ||
+        firstItemDesc.includes('line items from sample')
+      ) {
+        return false; // Automatically purge legacy fallback mock entries!
       }
       return true;
     });
-    
-    const targetList = cleaned.length === 0 ? SEED_PURCHASES : cleaned;
+
+    // Strict Thumb Rule: Deduplicate ALL purchase invoices by (status + vendorName + invoiceNo + netTotal)
     const seen = new Set<string>();
     const deduplicated: PurchaseInvoice[] = [];
-    
-    for (const inv of targetList) {
-      if (inv.status === 'draft') {
-        const key = (inv.invoiceNo ? inv.invoiceNo.toLowerCase().trim() : '') + '|' + inv.vendorName.toLowerCase().trim() + '|' + Math.round(inv.netTotal);
-        if (seen.has(key)) continue; // Skip duplicate draft automatically!
-        seen.add(key);
-      }
+
+    for (const inv of cleaned) {
+      const key = `${inv.status}|${inv.vendorName.toLowerCase().trim()}|${inv.invoiceNo ? inv.invoiceNo.toLowerCase().trim() : ''}|${Math.round(inv.netTotal)}`;
+      if (seen.has(key)) continue; // Purge duplicate fallback entries!
+      seen.add(key);
       deduplicated.push(inv);
     }
-    
+
     save('vs_purchases', deduplicated);
     return deduplicated;
   });
@@ -1126,8 +1117,21 @@ export function useAccounting() {
         }
       });
     
-    // Sort all entries chronologically
-    const allSorted = [...entries].sort((a, b) => a.date.localeCompare(b.date) || a.refNo.localeCompare(b.refNo));
+    // Sort all entries chronologically, placing reversal (REV-) entries IMMEDIATELY after their original invoice!
+    const allSorted = [...entries].sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+
+      const baseA = a.refNo.startsWith('REV-') ? a.refNo.substring(4) : a.refNo;
+      const baseB = b.refNo.startsWith('REV-') ? b.refNo.substring(4) : b.refNo;
+
+      if (baseA !== baseB) return baseA.localeCompare(baseB);
+
+      // Tiebreaker for same reference: The original invoice MUST come first (Credit), followed by the reversal (REV-) (Debit)!
+      if (a.refNo.startsWith('REV-') && !b.refNo.startsWith('REV-')) return 1;
+      if (!a.refNo.startsWith('REV-') && b.refNo.startsWith('REV-')) return -1;
+
+      return 0;
+    });
 
     let openingBalance = 0;
     if (fromDate) {
