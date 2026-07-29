@@ -56,6 +56,58 @@ export default function Settings() {
     setTimeout(() => setToast(null), 4000);
   };
 
+  const handleDownloadBackup = () => {
+    const backupData: Record<string, any> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('vs_')) {
+        try { backupData[key] = JSON.parse(localStorage.getItem(key) || ''); }
+        catch { backupData[key] = localStorage.getItem(key); }
+      }
+    }
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `VyaparSetu_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setToast('Full system backup downloaded successfully!');
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleRestoreBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        Object.keys(parsed).forEach(k => {
+          localStorage.setItem(k, typeof parsed[k] === 'string' ? parsed[k] : JSON.stringify(parsed[k]));
+        });
+        alert('System Backup Restored Successfully! Reloading app...');
+        window.location.reload();
+      } catch {
+        alert('Invalid backup file format.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCleanTransactions = () => {
+    if (confirm('⚠️ WARNING: Clean Transactional Data?\n\nThis action will REMOVE all posted Purchase Bills, Sales Invoices, Payments, Receipts, and Journal Entries.\n\nYour Setup Data (Company Profile, Chart of Accounts, Master Parties & Items) will be PRESERVED.\n\nDo you want to proceed?')) {
+      localStorage.removeItem('vs_purchases');
+      localStorage.removeItem('vs_sales');
+      localStorage.removeItem('vs_payments');
+      localStorage.removeItem('vs_debit_notes');
+      localStorage.removeItem('vs_journal');
+      localStorage.removeItem('vs_brs_records');
+      alert('Transactional data cleaned! System reset to fresh setup state. Reloading...');
+      window.location.reload();
+    }
+  };
+
   return (
     <div style={{ padding: '24px 32px', maxWidth: 900, margin: '0 auto' }}>
       
@@ -207,6 +259,35 @@ export default function Settings() {
 
           {/* Card: AI Token Wallet & Usage Metering */}
           <AiTokenWalletCard />
+
+          {/* Card: System Backup, Restore & Data Cleanup */}
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-default)', padding: 24, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}>
+            <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <ShieldCheck size={20} style={{ color: 'var(--brand-primary)' }}/>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Data Backup, Restore &amp; Setup Reset</h3>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Export full database backups, restore state, or purge transactions for Year-End Reset.</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+              <button type="button" onClick={handleDownloadBackup} className="btn-action btn-action-secondary" style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                📥 Export Backup (.json)
+              </button>
+
+              <label className="btn-action btn-action-secondary" style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', margin: 0 }}>
+                📤 Restore Backup
+                <input type="file" accept=".json" onChange={handleRestoreBackup} style={{ display: 'none' }}/>
+              </label>
+
+              <button type="button" onClick={handleCleanTransactions} className="btn-action" style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#EF4444', borderColor: 'rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                🧹 Clean Transactions
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
+              * <strong>Clean Transactions</strong> keeps your Setup Data (Company Profile, Chart of Accounts, Master Parties &amp; Items) and wipes all transactions for a fresh financial year.
+            </div>
+          </div>
 
           {/* Card 3: User Access & Role Privileges */}
           <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-default)', padding: 24, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}>

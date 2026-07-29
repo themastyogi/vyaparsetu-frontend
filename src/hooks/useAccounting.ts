@@ -1224,7 +1224,16 @@ export function useAccounting() {
       return 0;
     });
 
-    let openingBalance = 0;
+    const parties = load<any[]>('vs_parties', []);
+    const partyMaster = parties.find(p => p.name.toLowerCase() === name);
+    let partyMasterOpBal = 0;
+    if (partyMaster?.openingBalance) {
+      partyMasterOpBal = partyMaster.openingBalanceType === 'Dr'
+        ? partyMaster.openingBalance
+        : -partyMaster.openingBalance;
+    }
+
+    let openingBalance = partyMasterOpBal;
     if (fromDate) {
       for (const e of allSorted) {
         if (e.date < fromDate) {

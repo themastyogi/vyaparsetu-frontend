@@ -14,6 +14,8 @@ export interface MasterParty {
   email?: string;
   paymentTerms?: string; // e.g. 'Net 15', 'Net 30', 'Due on Receipt'
   priority?: 'High' | 'Medium' | 'Low';
+  openingBalance?: number;
+  openingBalanceType?: 'Dr' | 'Cr';
 }
 
 export interface MasterItem {

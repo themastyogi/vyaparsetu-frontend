@@ -21,7 +21,8 @@ export default function Parties() {
 
   const [formParty, setFormParty] = useState({
     name: '', gstin: '', type: 'customer', state: '',
-    email: '', paymentTerms: 'Net 30', priority: 'Medium' as 'High' | 'Medium' | 'Low'
+    email: '', paymentTerms: 'Net 30', priority: 'Medium' as 'High' | 'Medium' | 'Low',
+    openingBalance: '', openingBalanceType: 'Cr' as 'Dr' | 'Cr'
   });
   const [saved, setSaved]     = useState(false);
 
@@ -33,7 +34,7 @@ export default function Parties() {
 
   const handleOpenAdd = () => {
     setEditingParty(null);
-    setFormParty({ name: '', gstin: '', type: 'customer', state: '', email: '', paymentTerms: 'Net 30', priority: 'Medium' });
+    setFormParty({ name: '', gstin: '', type: 'customer', state: '', email: '', paymentTerms: 'Net 30', priority: 'Medium', openingBalance: '', openingBalanceType: 'Cr' });
     setShowAdd(true);
   };
 
@@ -47,6 +48,8 @@ export default function Parties() {
       email: p.email || '',
       paymentTerms: p.paymentTerms || 'Net 30',
       priority: p.priority || 'Medium',
+      openingBalance: p.openingBalance ? String(p.openingBalance) : '',
+      openingBalanceType: p.openingBalanceType || 'Cr',
     });
     setShowAdd(true);
   };
@@ -54,9 +57,14 @@ export default function Parties() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     let nextList: MasterParty[];
+    const opBalNum = parseFloat(formParty.openingBalance) || 0;
 
     if (editingParty) {
-      nextList = partyList.map(p => p.id === editingParty.id ? { ...p, ...formParty } : p);
+      nextList = partyList.map(p => p.id === editingParty.id ? {
+        ...p, ...formParty,
+        openingBalance: opBalNum,
+        openingBalanceType: formParty.openingBalanceType
+      } : p);
     } else {
       const created: MasterParty = {
         id: 'p_' + Date.now().toString(36),
@@ -67,18 +75,21 @@ export default function Parties() {
         email: formParty.email,
         paymentTerms: formParty.paymentTerms,
         priority: formParty.priority,
+        openingBalance: opBalNum,
+        openingBalanceType: formParty.openingBalanceType,
       };
       nextList = [created, ...partyList];
     }
 
     setPartyList(nextList);
     localStorage.setItem('vs_parties', JSON.stringify(nextList));
+    window.dispatchEvent(new Event('storage'));
     setSaved(true);
     setTimeout(() => {
       setShowAdd(false);
       setSaved(false);
       setEditingParty(null);
-      setFormParty({ name: '', gstin: '', type: 'customer', state: '', email: '', paymentTerms: 'Net 30', priority: 'Medium' });
+      setFormParty({ name: '', gstin: '', type: 'customer', state: '', email: '', paymentTerms: 'Net 30', priority: 'Medium', openingBalance: '', openingBalanceType: 'Cr' });
     }, 1000);
   };
 
@@ -260,6 +271,22 @@ export default function Parties() {
                       <option value="High">🔴 High Priority</option>
                       <option value="Medium">🟡 Medium Priority</option>
                       <option value="Low">⚪ Low Priority</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="modal-row">
+                  <div className="field-group" style={{ flex: 2 }}>
+                    <label className="field-label">Opening Balance (₹)</label>
+                    <input type="number" step="0.01" className="field-input" value={formParty.openingBalance}
+                      onChange={e => setFormParty(v => ({...v, openingBalance: e.target.value}))} placeholder="0.00"/>
+                  </div>
+                  <div className="field-group" style={{ flex: 1 }}>
+                    <label className="field-label">Balance Type</label>
+                    <select className="field-input" value={formParty.openingBalanceType}
+                      onChange={e => setFormParty(v => ({...v, openingBalanceType: e.target.value as any}))}>
+                      <option value="Cr">Cr (Payable / Vendor)</option>
+                      <option value="Dr">Dr (Receivable / Customer)</option>
                     </select>
                   </div>
                 </div>
