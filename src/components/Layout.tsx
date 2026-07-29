@@ -4,12 +4,13 @@ import {
   LayoutDashboard, Users, Package, FileText,
   ShoppingCart, BarChart3, Settings, LogOut,
   Bell, Search, ChevronDown, Building2, ShieldCheck,
-  HelpCircle, Menu, X, BookOpen, Zap, CreditCard, Sun, Moon
+  HelpCircle, Menu, X, BookOpen, Zap, CreditCard, Sun, Moon, Bot, Sparkles
 } from 'lucide-react';
 import './Layout.css';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAccounting } from '../hooks/useAccounting';
 import { APP_VERSION, LAST_DEPLOY_TIMESTAMP } from '../config/version';
+import SmartAiAccountantModal from './SmartAiAccountantModal';
 
 const NAV_SECTIONS = [
   {
@@ -51,6 +52,7 @@ export default function Layout() {
   const { companySettings } = useAccounting();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('vs_theme') as 'light' | 'dark') || 'light';
@@ -204,6 +206,16 @@ export default function Layout() {
               <span className="gst-label">{companySettings.companyGstin || '29AABCV1234F1Z5'}</span>
             </div>
 
+            {/* Smart AI Accountant Bot Button */}
+            <button
+              type="button"
+              onClick={() => setShowAiModal(true)}
+              style={{ padding: '6px 12px', borderRadius: 8, background: 'linear-gradient(135deg, #6C47FF 0%, #3B82F6 100%)', color: '#fff', border: 'none', fontWeight: 800, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', boxShadow: '0 4px 12px rgba(108,71,255,0.3)' }}
+              title="Open Smart AI Accountant Bot for Natural Language Journal & Voucher Posting"
+            >
+              <Bot size={15}/> Smart AI Accountant <Sparkles size={13} style={{ color: '#FBBF24' }}/>
+            </button>
+
             {/* Central Application Version Badge */}
             <div 
               style={{ fontSize: 11, fontWeight: 800, padding: '4px 9px', borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontFamily: 'monospace' }}
@@ -239,6 +251,8 @@ export default function Layout() {
           <Outlet/>
         </main>
       </div>
+
+      {showAiModal && <SmartAiAccountantModal onClose={() => setShowAiModal(false)} />}
     </div>
   );
 }

@@ -940,6 +940,21 @@ export function useAccounting() {
     return reversedInv;
   }, []);
 
+  const postJournalEntry = useCallback((entry: Omit<JournalEntry, 'id' | 'createdAt'>) => {
+    const fullJE: JournalEntry = {
+      ...entry,
+      id: 'je_' + Date.now().toString(36),
+      createdAt: new Date().toISOString(),
+    };
+    setJEState(prev => {
+      const next = [fullJE, ...prev];
+      save('vs_journal', next);
+      window.dispatchEvent(new Event('journal_updated'));
+      return next;
+    });
+    return fullJE;
+  }, []);
+
   const clearAllDrafts = useCallback(() => {
     setPIState(prev => {
       const next = prev.filter(p => p.status !== 'draft');
@@ -1710,7 +1725,7 @@ export function useAccounting() {
     postSalesInvoice, deleteSalesInvoice,
     saveDraftPurchaseInvoice, postDraftPurchaseInvoice, postPurchaseInvoice, deletePurchaseInvoice, reversePurchaseInvoice, clearAllDrafts, removeDuplicateDrafts,
     postDebitNote, postDebitNotePair, postPurchaseInvoiceJE, linkSalesToPurchase,
-    recordPayment, deletePayment, reversePaymentVoucher,
+    recordPayment, deletePayment, reversePaymentVoucher, postJournalEntry,
     // Reports & BRS
     getGeneralLedger, getAccountLedger, getTrialBalance,
     getPartyLedger, getAgeing, getMarginReport,

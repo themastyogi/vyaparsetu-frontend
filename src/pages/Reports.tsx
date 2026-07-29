@@ -615,8 +615,11 @@ export default function Reports() {
       {tab === 'journal-entries' && (
         <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Journal Entries ({jeGroups.length})</h2>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Journal Entries ({jeGroups.length})</h2>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Double-entry General Ledger audit trail</div>
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
               {jeTypes.map(t => (
                 <button key={t} onClick={() => setJEFilter(t)}
                   style={{ padding: '5px 12px', borderRadius: 6, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', borderColor: jeFilter === t ? 'var(--brand-primary)' : 'var(--border-default)', background: jeFilter === t ? 'var(--brand-primary)' : 'var(--bg-elevated)', color: jeFilter === t ? '#fff' : 'var(--text-secondary)' }}>
