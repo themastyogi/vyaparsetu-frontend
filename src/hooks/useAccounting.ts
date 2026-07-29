@@ -433,6 +433,47 @@ function gstAccountName(rate: number, side: 'Input' | 'Output'): string {
   return `${side} GST ${rate}%`;
 }
 
+// ── Strict COA Route Enforcer ────────────────────────────────────
+function resolveCOARoute(accountName: string, defaultType: AccountType = 'Expense', defaultGroup: AccountGroup = 'Operating Expenses'): string {
+  const coa = load<Account[]>('vs_coa', DEFAULT_COA);
+  const norm = (s: string) => (s || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+  const target = norm(accountName);
+
+  // 1. Direct match in COA
+  const exact = coa.find(a => norm(a.name) === target || norm(a.code) === target);
+  if (exact) return exact.name;
+
+  // 2. Common accounting aliases mapping
+  if (target.includes('cash')) {
+    const cashAcct = coa.find(a => norm(a.name).includes('cash'));
+    if (cashAcct) return cashAcct.name;
+  }
+  if (target.includes('bank')) {
+    const bankAcct = coa.find(a => norm(a.name).includes('bank'));
+    if (bankAcct) return bankAcct.name;
+  }
+  if (target.includes('office')) {
+    const officeAcct = coa.find(a => norm(a.name).includes('office'));
+    if (officeAcct) return officeAcct.name;
+  }
+  if (target.includes('rent')) {
+    const rentAcct = coa.find(a => norm(a.name).includes('rent'));
+    if (rentAcct) return rentAcct.name;
+  }
+
+  // 3. Auto-Register missing account strictly in Chart of Accounts!
+  const newCode = (5000 + coa.length + 1).toString();
+  const newAccount: Account = {
+    code: newCode,
+    name: accountName,
+    type: defaultType,
+    group: defaultGroup,
+  };
+  save('vs_coa', [...coa, newAccount]);
+  window.dispatchEvent(new Event('storage'));
+  return newAccount.name;
+}
+
 // ────────────────────────────────────────────────────────────────
 //  Journal Entry builders
 // ────────────────────────────────────────────────────────────────
@@ -941,8 +982,13 @@ export function useAccounting() {
   }, []);
 
   const postJournalEntry = useCallback((entry: Omit<JournalEntry, 'id' | 'createdAt'>) => {
+    const routedLines = entry.lines.map(l => ({
+      ...l,
+      account: resolveCOARoute(l.account),
+    }));
     const fullJE: JournalEntry = {
       ...entry,
+      lines: routedLines,
       id: 'je_' + Date.now().toString(36),
       createdAt: new Date().toISOString(),
     };
