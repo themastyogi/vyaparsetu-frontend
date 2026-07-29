@@ -104,7 +104,7 @@ export default function Reports() {
   const {
     getTrialBalance, getGeneralLedger, getAccountLedger,
     journalEntries, getPartyLedger, getAgeing, getMarginReport,
-    salesInvoices, purchaseInvoices, debitNotes,
+    salesInvoices, purchaseInvoices, debitNotes, payments,
     getBalanceSheet, getProfitAndLoss, getCashFlow,
   } = useAccounting();
 
