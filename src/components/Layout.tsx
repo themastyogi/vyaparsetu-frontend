@@ -9,6 +9,7 @@ import {
 import './Layout.css';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAccounting } from '../hooks/useAccounting';
+import { APP_VERSION, LAST_DEPLOY_TIMESTAMP } from '../config/version';
 
 const NAV_SECTIONS = [
   {
@@ -202,6 +203,15 @@ export default function Layout() {
               <span className="gst-dot"/>
               <span className="gst-label">{companySettings.companyGstin || '29AABCV1234F1Z5'}</span>
             </div>
+
+            {/* Central Application Version Badge */}
+            <div 
+              style={{ fontSize: 11, fontWeight: 800, padding: '4px 9px', borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontFamily: 'monospace' }}
+              title={`VyaparSetu Enterprise · Last Deployed: ${LAST_DEPLOY_TIMESTAMP}`}
+            >
+              {APP_VERSION}
+            </div>
+
             <LanguageSwitcher />
             <button
               onClick={toggleTheme}
