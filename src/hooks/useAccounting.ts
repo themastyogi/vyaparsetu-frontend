@@ -1640,7 +1640,10 @@ export function useAccounting() {
     for (const je of currentJEs) {
       if (statementAsOf && je.date > statementAsOf) continue;
       for (const line of je.lines) {
-        if (line.account.toLowerCase() === bankGlName.toLowerCase() || line.account.toLowerCase().includes('bank')) {
+        const lineAcctLower = line.account.toLowerCase();
+        const isPureCashAccount = lineAcctLower === 'cash account' || lineAcctLower === 'cash' || lineAcctLower.includes('petty cash') || lineAcctLower.includes('cash in hand');
+        
+        if (!isPureCashAccount && (lineAcctLower === bankGlName.toLowerCase() || lineAcctLower.includes('bank'))) {
           bookBalance += line.debit - line.credit;
           const rec = brsRecords.find(r => r.jeId === je.id && r.bankAccountId === bankAccountId);
           items.push({
