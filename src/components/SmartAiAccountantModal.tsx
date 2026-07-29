@@ -45,33 +45,55 @@ export default function SmartAiAccountantModal({ onClose }: Props) {
         if (dateMatch) date = dateMatch[1];
       }
 
-      // 3. Party Extraction
-      let party = 'General';
+      // 3. Cheque / Reference Number & Party Extraction
+      const chqMatch = prompt.match(/(?:check|cheque|chq|ref|no\.?)\s*#?\s*(\w+)/i);
+      let party = chqMatch ? `Cheque No. ${chqMatch[1]}` : 'General';
       if (lower.includes('sahil trader')) party = 'SAHIL TRADER';
       else if (lower.includes('ravi enterprise')) party = 'Ravi Enterprises';
 
-      // 4. Account & Voucher Type Classification
+      // 4. Smart Financial Account & Voucher Classification Engine
       let entryType = 'Journal Voucher';
       let debitAccount = 'Office Expenses';
       let creditAccount = 'Bank Account';
 
-      if (lower.includes('rent')) {
+      // Cash Withdrawal / Petty Cash Top-Up (Contra Entry)
+      if (lower.includes('withdraw') || (lower.includes('petty cash') && (lower.includes('add') || lower.includes('transfer') || lower.includes('check') || lower.includes('cheque') || lower.includes('bank')))) {
+        entryType = 'Contra (Cash Withdrawal)';
+        debitAccount = 'Cash Account';
+        creditAccount = 'Bank Account';
+      }
+      // Cash Deposit to Bank (Contra Entry)
+      else if (lower.includes('deposit') && lower.includes('cash')) {
+        entryType = 'Contra (Cash Deposit)';
+        debitAccount = 'Bank Account';
+        creditAccount = 'Cash Account';
+      }
+      // Rent Payments
+      else if (lower.includes('rent')) {
         entryType = 'Rent Expense';
         debitAccount = 'Rent & Rates';
         creditAccount = lower.includes('cash') ? 'Cash Account' : 'Bank Account';
-      } else if (lower.includes('bank charge') || lower.includes('late fee') || lower.includes('bank charges')) {
+      }
+      // Bank Charges & Late Fees
+      else if (lower.includes('bank charge') || lower.includes('late fee') || lower.includes('bank charges')) {
         entryType = 'Bank Charges';
         debitAccount = 'Freight & Logistics';
         creditAccount = 'Bank Account';
-      } else if (lower.includes('tea') || lower.includes('petty cash') || lower.includes('refreshment')) {
+      }
+      // Petty Cash Expenses (Tea, Coffee, Snacks, Taxi)
+      else if (lower.includes('tea') || lower.includes('coffee') || lower.includes('snack') || lower.includes('taxi') || lower.includes('refreshment') || (lower.includes('paid') && lower.includes('petty cash'))) {
         entryType = 'Petty Cash Expense';
         debitAccount = 'Office Expenses';
         creditAccount = 'Cash Account';
-      } else if (lower.includes('salary') || lower.includes('wages')) {
+      }
+      // Salary & Wages
+      else if (lower.includes('salary') || lower.includes('wages')) {
         entryType = 'Salary Payment';
         debitAccount = 'Purchases';
         creditAccount = 'Bank Account';
-      } else if (lower.includes('depreciation')) {
+      }
+      // Depreciation
+      else if (lower.includes('depreciation')) {
         entryType = 'Depreciation';
         debitAccount = 'Freight & Logistics';
         creditAccount = 'Office Furniture & Fixtures';
@@ -153,15 +175,15 @@ export default function SmartAiAccountantModal({ onClose }: Props) {
                 rows={3}
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
-                placeholder='e.g. "I want to pay my rent of 25000 from bank to vendor SAHIL TRADER for the month of August, keep the posting date 1st August"'
+                placeholder='e.g. "Add 2000 rupees to petty cash for this month , withdraw against check 45922"'
                 style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
               />
               
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Try Prompts:</span>
+                <button type="button" onClick={() => setPrompt("Add 2000 rupees to petty cash for this month , withdraw against check 45922")} style={{ fontSize: 11, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '2px 8px', color: 'var(--brand-primary)', cursor: 'pointer' }}>Petty Cash Cheque</button>
                 <button type="button" onClick={() => setPrompt("i want to pay my rent of 25000 from bank to vendor SAHIL TRADER for the month of August , keep the posting date 1st August")} style={{ fontSize: 11, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '2px 8px', color: 'var(--brand-primary)', cursor: 'pointer' }}>Rent Payment</button>
                 <button type="button" onClick={() => setPrompt("i recived bank charges of 10 rupees against late fee , post it for today")} style={{ fontSize: 11, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '2px 8px', color: 'var(--brand-primary)', cursor: 'pointer' }}>Bank Charges</button>
-                <button type="button" onClick={() => setPrompt("paid petty cash 350 for office tea today")} style={{ fontSize: 11, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '2px 8px', color: 'var(--brand-primary)', cursor: 'pointer' }}>Petty Cash Tea</button>
               </div>
             </div>
 
