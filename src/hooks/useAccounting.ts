@@ -1082,11 +1082,49 @@ export function useAccounting() {
     return { rows, totalDebit, totalCredit, balanced: Math.abs(totalDebit - totalCredit) < 0.01 };
   }, [getGeneralLedger]);
 
+  const reversePaymentVoucher = useCallback((id: string) => {
+    let reversedVoucher: PaymentVoucher | undefined;
+    setPaymentsState(prev => {
+      const target = prev.find(p => p.id === id);
+      if (!target) return prev;
+      reversedVoucher = { ...target, status: 'reversed' as any };
+      const next = prev.map(p => p.id === id ? reversedVoucher! : p);
+      save('vs_payments', next);
+      window.dispatchEvent(new Event('payments_updated'));
+      return next;
+    });
+
+    if (reversedVoucher) {
+      const origLines: JournalLine[] = [];
+      if (reversedVoucher.type === 'Receipt') {
+        origLines.push({ account: reversedVoucher.bankAccount || 'Bank Account', debit: 0, credit: reversedVoucher.amount });
+        origLines.push({ account: 'Accounts Receivable', debit: reversedVoucher.amount, credit: 0 });
+      } else {
+        origLines.push({ account: reversedVoucher.bankAccount || 'Bank Account', debit: reversedVoucher.amount, credit: 0 });
+        origLines.push({ account: 'Accounts Payable', debit: 0, credit: reversedVoucher.amount });
+      }
+
+      const reversalJE: JournalEntry = {
+        id: 'je_rev_pmt_' + Date.now().toString(36),
+        date: reversedVoucher.date,
+        entryType: reversedVoucher.type === 'Receipt' ? 'Customer Receipt Reversal' : 'Vendor Payment Reversal',
+        relatedId: reversedVoucher.id,
+        relatedNo: 'REV-' + reversedVoucher.voucherNo,
+        party: (reversedVoucher as any).partyName || reversedVoucher.party,
+        lines: origLines,
+        createdAt: new Date().toISOString(),
+      };
+      setJEState(prev => { const next = [reversalJE, ...prev]; save('vs_journal', next); return next; });
+    }
+    return reversedVoucher;
+  }, []);
+
   // ── Party Ledger ──────────────────────────────────────────────
   const getPartyLedger = useCallback((partyName: string, fromDate?: string, toDate?: string): PartyLedgerResult => {
     const sis  = load<SalesInvoice[]>('vs_sales', []);
     const pis  = load<PurchaseInvoice[]>('vs_purchases', []);
     const dns  = load<DebitNote[]>('vs_debit_notes', []);
+    const pmts = load<PaymentVoucher[]>('vs_payments', []);
     const name = partyName.toLowerCase();
     type RawEntry = { date: string; entryType: string; refNo: string; debit: number; credit: number; jeId: string };
     const entries: RawEntry[] = [];
@@ -1119,6 +1157,54 @@ export function useAccounting() {
             credit: 0,
             jeId: 'rev_' + pi.id
           });
+        }
+      });
+    
+    // Include Payment & Receipt Vouchers in Party Ledger!
+    pmts.filter(pmt => ((pmt as any).partyName || pmt.party || '').toLowerCase() === name)
+      .forEach(pmt => {
+        if (pmt.type === 'Payment') {
+          // Payment to Vendor -> DEBIT vendor account (reduces vendor payable)
+          entries.push({
+            date: pmt.date,
+            entryType: 'Payment (Vendor)',
+            refNo: pmt.voucherNo,
+            debit: pmt.amount,
+            credit: 0,
+            jeId: pmt.id
+          });
+
+          if ((pmt as any).status === 'reversed') {
+            entries.push({
+              date: pmt.date,
+              entryType: 'Payment Reversal',
+              refNo: 'REV-' + pmt.voucherNo,
+              debit: 0,
+              credit: pmt.amount,
+              jeId: 'rev_' + pmt.id
+            });
+          }
+        } else {
+          // Receipt from Customer -> CREDIT customer account (reduces customer receivable)
+          entries.push({
+            date: pmt.date,
+            entryType: 'Receipt (Customer)',
+            refNo: pmt.voucherNo,
+            debit: 0,
+            credit: pmt.amount,
+            jeId: pmt.id
+          });
+
+          if ((pmt as any).status === 'reversed') {
+            entries.push({
+              date: pmt.date,
+              entryType: 'Receipt Reversal',
+              refNo: 'REV-' + pmt.voucherNo,
+              debit: pmt.amount,
+              credit: 0,
+              jeId: 'rev_' + pmt.id
+            });
+          }
         }
       });
     
@@ -1612,7 +1698,7 @@ export function useAccounting() {
     postSalesInvoice, deleteSalesInvoice,
     saveDraftPurchaseInvoice, postDraftPurchaseInvoice, postPurchaseInvoice, deletePurchaseInvoice, reversePurchaseInvoice, clearAllDrafts, removeDuplicateDrafts,
     postDebitNote, postDebitNotePair, postPurchaseInvoiceJE, linkSalesToPurchase,
-    recordPayment, deletePayment,
+    recordPayment, deletePayment, reversePaymentVoucher,
     // Reports & BRS
     getGeneralLedger, getAccountLedger, getTrialBalance,
     getPartyLedger, getAgeing, getMarginReport,

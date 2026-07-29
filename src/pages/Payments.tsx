@@ -11,7 +11,7 @@
 import { useState, useMemo } from 'react';
 import {
   CreditCard, ArrowDownLeft, ArrowUpRight, Sparkles, Search,
-  CheckCircle2, IndianRupee, Trash2, Building2, CheckSquare, Square, Plus, FileCheck
+  CheckCircle2, IndianRupee, Building2, CheckSquare, Square, Plus, FileCheck, RotateCcw, AlertCircle
 } from 'lucide-react';
 import { useAccounting } from '../hooks/useAccounting';
 import { useMaster } from '../hooks/useMaster';
@@ -23,7 +23,7 @@ type Tab = 'advisor' | 'receipts' | 'disbursements' | 'banks' | 'brs' | 'registe
 
 export default function Payments() {
   const {
-    payments, recordPayment, deletePayment, nextPaymentVoucherNo,
+    payments, recordPayment, reversePaymentVoucher, nextPaymentVoucherNo,
     getSmartPaymentSuggestions, bankAccounts, addBankAccount,
     getBankReconciliationSummary, toggleBRSClearance,
   } = useAccounting();
@@ -35,6 +35,7 @@ export default function Payments() {
   const [showModal, setShowModal] = useState(false);
   const [showAddBank, setShowAddBank] = useState(false);
   const [modalType, setModalType] = useState<'Receipt' | 'Payment'>('Receipt');
+  const [reversingVoucher, setReversingVoucher] = useState<any | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // BRS state
@@ -540,14 +541,59 @@ export default function Payments() {
                         ₹{f2(p.amount)}
                       </td>
                       <td>
-                        <button onClick={() => deletePayment(p.id)} className="btn-action btn-action-ghost" style={{ padding: '3px 8px', color: '#F87171' }}>
-                          <Trash2 size={13}/>
-                        </button>
+                        {(p as any).status === 'reversed' ? (
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', fontWeight: 600 }}>Reversed</span>
+                        ) : (
+                          <button onClick={() => setReversingVoucher(p)} className="btn-action btn-action-secondary" style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700, color: '#D97706', borderColor: 'rgba(217,119,6,0.3)', display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Reverse Payment Voucher">
+                            <RotateCcw size={12}/> Reverse
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User-Friendly Payment Reversal Modal */}
+      {reversingVoucher && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 460, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.4)', border: '1px solid var(--border-default)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706' }}>
+                <RotateCcw size={22}/>
+              </div>
+              <div>
+                <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>Confirm Voucher Reversal</h3>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>GAAP &amp; Indian Accounting Audit Trail Compliance</div>
+              </div>
+            </div>
+
+            <div style={{ background: 'var(--bg-elevated)', borderRadius: 10, padding: 14, border: '1px solid var(--border-subtle)', marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Are you sure you want to reverse {reversingVoucher.type} voucher <strong style={{ color: 'var(--brand-primary)' }}>{reversingVoucher.voucherNo}</strong> for <strong style={{ color: 'var(--text-primary)' }}>{reversingVoucher.partyName || reversingVoucher.party}</strong> (₹{f2(reversingVoucher.amount)})?
+              <div style={{ marginTop: 8, fontSize: 12, color: '#D97706', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <AlertCircle size={14}/> Reversing will post an offsetting reversal entry in your accounting ledger to preserve audit history.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button type="button" className="btn-action btn-action-ghost" onClick={() => setReversingVoucher(null)}>Cancel</button>
+              <button 
+                type="button" 
+                className="btn-action" 
+                style={{ background: '#D97706', color: '#fff', fontWeight: 800 }}
+                onClick={() => {
+                  reversePaymentVoucher(reversingVoucher.id);
+                  setReversingVoucher(null);
+                  setToastMsg(`Voucher ${reversingVoucher.voucherNo} successfully reversed.`);
+                  setTimeout(() => setToastMsg(null), 3000);
+                }}
+              >
+                <RotateCcw size={14}/> Confirm Reversal
+              </button>
             </div>
           </div>
         </div>
