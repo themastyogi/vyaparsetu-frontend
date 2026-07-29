@@ -164,14 +164,36 @@ export default function Reports() {
     return Array.from(m.values()).sort((a, b) => b.date.localeCompare(a.date));
   }, [filteredJEs]);
 
-  // All unique party names across all documents
+  // All unique normalized party names across Master Parties & Documents
   const allParties = useMemo(() => {
-    const s = new Set<string>();
-    salesInvoices.forEach(si => s.add(si.customer));
-    purchaseInvoices.forEach(pi => s.add(pi.vendorName));
-    debitNotes.forEach(dn => s.add(dn.party));
-    return Array.from(s).sort();
-  }, [salesInvoices, purchaseInvoices, debitNotes]);
+    const norm = (s: string) => (s || '').toLowerCase().trim().replace(/s$/, '').replace(/[^a-z0-9]/g, '');
+    const masterParties: any[] = JSON.parse(localStorage.getItem('vs_parties') || '[]');
+    
+    // Map normalized name -> canonical display name (prioritizing Master Party name)
+    const partyMap = new Map<string, string>();
+    
+    // 1. Add Master Parties first
+    for (const p of masterParties) {
+      if (p.name) partyMap.set(norm(p.name), p.name);
+    }
+    
+    // 2. Add document party names if not already present
+    const docNames: string[] = [];
+    salesInvoices.forEach(si => docNames.push(si.customer));
+    purchaseInvoices.forEach(pi => docNames.push(pi.vendorName));
+    debitNotes.forEach(dn => docNames.push(dn.party));
+    payments.forEach(pm => docNames.push((pm as any).partyName || pm.party));
+    
+    for (const name of docNames) {
+      if (!name) continue;
+      const key = norm(name);
+      if (!partyMap.has(key)) {
+        partyMap.set(key, name);
+      }
+    }
+
+    return Array.from(partyMap.values()).sort((a, b) => a.localeCompare(b));
+  }, [salesInvoices, purchaseInvoices, debitNotes, payments]);
 
   const filteredParties = allParties.filter(p => p.toLowerCase().includes(plInput.toLowerCase())).slice(0, 12);
 
