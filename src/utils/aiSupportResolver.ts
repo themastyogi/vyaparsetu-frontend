@@ -7,15 +7,32 @@
 export const resolveAiIntent = (q: string, activeModuleTitle = 'VyaparSetu'): string => {
   const queryLower = q.trim().toLowerCase();
 
-  // 1. Noise / Gibberish / Repeated Numbers / Short Input Filter
-  // e.g. "12222222222222222222222222222222222222", "aaaaaaa", "123", "???"
+  // 1. Keyboard Mash / Random Numbers / Spam Filter (e.g. "12222222", "zzzdsssssszz", "asdfghjk")
   const isNumericOnly = /^\d+$/.test(queryLower);
-  const isRepeatedChar = /^(.)\1{4,}$/.test(queryLower);
-  if (queryLower.length < 3 || isNumericOnly || isRepeatedChar) {
-    return 'I could not process that input. Please type a specific business question about your Invoices, Purchase Bills, GST Returns, or Bank Reconciliation!';
+  const hasFourConsecutiveIdentical = /(.)\1{3,}/.test(queryLower);
+  const noVowelsAndLong = queryLower.length >= 5 && !/[aeiouy]/.test(queryLower);
+  const isShortNoise = queryLower.length < 3;
+
+  if (isShortNoise || isNumericOnly || hasFourConsecutiveIdentical || noVowelsAndLong) {
+    return 'I noticed random characters or numbers in your message. Please type a clear question about your Sales Invoices, Purchase Bills, GST Filing, or Bank Reconciliation!';
   }
 
-  // 2. Code Flaw / Software Bug / Engineering Queries (e.g. "what is flaw in code")
+  // 2. Grievance / Unethical Practice / Wrong Company Practice (e.g. "wrong company", "wrong practice", "scam", "fraud", "unethical")
+  if (
+    queryLower.includes('wrong company') ||
+    queryLower.includes('wrong organization') ||
+    queryLower.includes('wrong practice') ||
+    queryLower.includes('scam') ||
+    queryLower.includes('fraud') ||
+    queryLower.includes('unethical') ||
+    queryLower.includes('cheating') ||
+    queryLower.includes('complaint') ||
+    queryLower.includes('grievance')
+  ) {
+    return 'VyaparSetu is committed to 100% transparency, ethical business operations, and statutory GST compliance. If you have an operational grievance or wish to report a concern regarding your organization account, please email our Nodal Compliance Officer directly at compliance@vyaparsetu.in or call Senior Escalations at Toll-Free 1800-8927-2738 (Option 4). All grievances are formally investigated within 24 business hours.';
+  }
+
+  // 3. Code Flaw / Software Bug / Engineering Queries (e.g. "what is flaw in code")
   if (
     queryLower.includes('flaw in code') ||
     queryLower.includes('code flaw') ||
@@ -27,16 +44,6 @@ export const resolveAiIntent = (q: string, activeModuleTitle = 'VyaparSetu'): st
     queryLower.includes('programming')
   ) {
     return 'VyaparSetu AI Support Assistant provides guidance on accounting, GST returns, and ledger operations. For software technical issues or bug reports, please contact our engineering helpdesk at support@vyaparsetu.in or Toll-Free 1800-8927-2738.';
-  }
-
-  // 3. Company Details / Switch Company (e.g. "vyapar setu is wrong company")
-  if (
-    queryLower.includes('wrong company') ||
-    queryLower.includes('change company') ||
-    queryLower.includes('switch company') ||
-    queryLower.includes('company settings')
-  ) {
-    return 'If you need to change your company details, GSTIN, address, or switch active companies: Click on your User Profile Avatar (top right) or Left Sidebar ➔ Company Settings.';
   }
 
   // 4. SHIELD 1: Anti-Hack & Code Injection / Prompt Hacking Protection
