@@ -68,22 +68,105 @@ export default function ManualJournalModal({ onClose }: Props) {
     onClose();
   };
 
+  const [partiesList] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem('vs_parties') || '[]'); }
+    catch { return []; }
+  });
+
+  const applySubledgerRoute = (route: string) => {
+    switch (route) {
+      case 'party-to-party':
+        setEntryType('Party Transfer');
+        setLines([
+          { account: 'Accounts Receivable', debit: '1000', credit: '0' },
+          { account: 'Accounts Payable', debit: '0', credit: '1000' },
+        ]);
+        break;
+      case 'party-to-expense':
+        setEntryType('Expense Voucher');
+        setLines([
+          { account: 'Office Expenses', debit: '1000', credit: '0' },
+          { account: 'Accounts Payable', debit: '0', credit: '1000' },
+        ]);
+        break;
+      case 'bank-to-party':
+        setEntryType('Vendor Payment');
+        setLines([
+          { account: 'Accounts Payable', debit: '1000', credit: '0' },
+          { account: 'Bank Account', debit: '0', credit: '1000' },
+        ]);
+        break;
+      case 'party-to-bank':
+        setEntryType('Customer Receipt');
+        setLines([
+          { account: 'Bank Account', debit: '1000', credit: '0' },
+          { account: 'Accounts Receivable', debit: '0', credit: '1000' },
+        ]);
+        break;
+      case 'bank-to-bank':
+        setEntryType('Inter-Bank Transfer');
+        setLines([
+          { account: 'Bank Account', debit: '1000', credit: '0' },
+          { account: 'Bank Account', debit: '0', credit: '1000' },
+        ]);
+        break;
+      case 'bank-to-cash':
+        setEntryType('Contra (Cash Withdrawal)');
+        setLines([
+          { account: 'Cash Account', debit: '1000', credit: '0' },
+          { account: 'Bank Account', debit: '0', credit: '1000' },
+        ]);
+        break;
+      case 'cash-to-bank':
+        setEntryType('Contra (Cash Deposit)');
+        setLines([
+          { account: 'Bank Account', debit: '1000', credit: '0' },
+          { account: 'Cash Account', debit: '0', credit: '1000' },
+        ]);
+        break;
+      case 'cash-to-expense':
+        setEntryType('Petty Cash Voucher');
+        setLines([
+          { account: 'Office Expenses', debit: '1000', credit: '0' },
+          { account: 'Cash Account', debit: '0', credit: '1000' },
+        ]);
+        break;
+    }
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 680, padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)', maxHeight: '90vh', overflowY: 'auto', animation: 'fade-in 0.2s' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 720, padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)', maxHeight: '90vh', overflowY: 'auto', animation: 'fade-in 0.2s' }}>
         
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(108,71,255,0.12)', color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <BookOpen size={22}/>
             </div>
             <div>
               <h3 style={{ fontSize: 17, fontWeight: 900, color: 'var(--text-primary)' }}>+ New Manual Journal Entry</h3>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Formal Double-Entry Voucher Posting</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Formal Subledger &amp; Double-Entry Voucher Posting</div>
             </div>
           </div>
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18 }}>✕</button>
+        </div>
+
+        {/* Subledger Quick Route Selector Bar */}
+        <div style={{ background: 'var(--bg-elevated)', borderRadius: 10, padding: '10px 14px', marginBottom: 18, border: '1px solid var(--border-subtle)' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+            🔀 Subledger Quick Route Presets:
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button type="button" onClick={() => applySubledgerRoute('party-to-party')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer' }}>🔄 Party to Party</button>
+            <button type="button" onClick={() => applySubledgerRoute('party-to-expense')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer' }}>🏢 Party to Expense</button>
+            <button type="button" onClick={() => applySubledgerRoute('bank-to-party')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer' }}>🏛️ Bank to Party</button>
+            <button type="button" onClick={() => applySubledgerRoute('party-to-bank')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer' }}>📥 Party to Bank</button>
+            <button type="button" onClick={() => applySubledgerRoute('bank-to-bank')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer' }}>🏦 Bank to Bank</button>
+            <button type="button" onClick={() => applySubledgerRoute('bank-to-cash')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer' }}>🏧 Bank to Cash (Withdrawal)</button>
+            <button type="button" onClick={() => applySubledgerRoute('cash-to-bank')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer' }}>💵 Cash to Bank (Deposit)</button>
+            <button type="button" onClick={() => applySubledgerRoute('cash-to-expense')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer' }}>☕ Cash to Expense</button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -99,6 +182,14 @@ export default function ManualJournalModal({ onClose }: Props) {
               <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Voucher Type</label>
               <select value={entryType} onChange={e => setEntryType(e.target.value)} style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}>
                 <option value="Journal Voucher">Journal Voucher</option>
+                <option value="Party Transfer">Party Transfer</option>
+                <option value="Expense Voucher">Expense Voucher</option>
+                <option value="Vendor Payment">Vendor Payment</option>
+                <option value="Customer Receipt">Customer Receipt</option>
+                <option value="Inter-Bank Transfer">Inter-Bank Transfer</option>
+                <option value="Contra (Cash Withdrawal)">Contra (Cash Withdrawal)</option>
+                <option value="Contra (Cash Deposit)">Contra (Cash Deposit)</option>
+                <option value="Petty Cash Voucher">Petty Cash Voucher</option>
                 <option value="Adjustment Entry">Adjustment Entry</option>
                 <option value="Accrual">Accrual Entry</option>
                 <option value="Depreciation">Depreciation</option>
@@ -114,13 +205,23 @@ export default function ManualJournalModal({ onClose }: Props) {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Party / Particulars Reference</label>
-              <input type="text" value={party} onChange={e => setParty(e.target.value)} placeholder="e.g. SAHIL TRADER, Internal Adjustment, Monthly Rent" style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}/>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Select Party Subledger / Reference</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {partiesList.length > 0 && (
+                  <select onChange={e => setParty(e.target.value)} style={{ padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 12, width: '40%' }}>
+                    <option value="">Select Party…</option>
+                    {partiesList.map((p: any) => (
+                      <option key={p.id || p.name} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                )}
+                <input type="text" value={party} onChange={e => setParty(e.target.value)} placeholder="e.g. SAHIL TRADER, Internal Adjustment" style={{ flex: 1, padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}/>
+              </div>
             </div>
 
             <div>
               <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Narration / Description</label>
-              <input type="text" value={narration} onChange={e => setNarration(e.target.value)} placeholder="e.g. Monthly rent adjustment for Aug 2026" style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}/>
+              <input type="text" value={narration} onChange={e => setNarration(e.target.value)} placeholder="e.g. Subledger transfer / adjustment" style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}/>
             </div>
           </div>
 
