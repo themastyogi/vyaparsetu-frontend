@@ -386,7 +386,7 @@ export default function HelpSupportModal({ onClose }: Props) {
     );
   }, [searchQuery]);
 
-  // AI Agent Answer Resolver
+  // AI Agent Answer Resolver with High-Precision Intent Matching
   const handleAskAi = (customPrompt?: string) => {
     const q = (customPrompt || aiQuestion).trim();
     if (!q) return;
@@ -397,18 +397,93 @@ export default function HelpSupportModal({ onClose }: Props) {
     let botResponse = '';
     const queryLower = q.toLowerCase();
 
-    if (queryLower.includes('itc') || queryLower.includes('gst') || queryLower.includes('tax credit')) {
-      botResponse = 'GST Input Tax Credit (ITC) is automatically calculated when you record a Purchase Bill with valid Vendor GSTIN. Intrastate purchases split into CGST + SGST, while Interstate purchases credit IGST. You can verify your monthly eligible ITC under Reports -> GST Summary against GSTR-2B.';
-    } else if (queryLower.includes('debit note') || queryLower.includes('return') || queryLower.includes('defective')) {
-      botResponse = 'To record a Purchase Return or price discount from a supplier: Go to Transactions -> Debit Notes -> Click "+ New Debit Note". Select the Vendor and original Purchase Bill reference. System will debit Accounts Payable and reverse inventory/purchase expenses.';
-    } else if (queryLower.includes('delete') || queryLower.includes('edit') || queryLower.includes('cancel')) {
-      botResponse = 'For accounting audit compliance, posted vouchers and bills cannot be deleted directly if locked in GST returns. However, normal users can post adjustment entries or Debit Notes to reverse amounts cleanly without breaking double-entry ledger balance!';
-    } else if (queryLower.includes('po') || queryLower.includes('order') || queryLower.includes('grn')) {
-      botResponse = 'Purchase Orders (PO) allow you to record vendor rate commitments. Once goods arrive, convert the PO into a Goods Receipt Note (GRN) to update physical stock, then convert to a Purchase Bill for Accounts Payable financial posting.';
-    } else if (queryLower.includes('contact') || queryLower.includes('phone') || queryLower.includes('support') || queryLower.includes('number')) {
-      botResponse = 'You can reach official VyaparSetu Customer Support at Toll-Free: 1800-VYAPAR-SETU (1800-8927-2738) or Email: support@vyaparsetu.in (Mon-Sat, 9am-8pm IST).';
-    } else {
-      botResponse = `Regarding "${q}": In VyaparSetu, all actions are governed by strict Double-Entry rules. Select the party or account in the module form, and the system automatically previews financial impact before posting. For deep assistance, call our support desk at 1800-8927-2738.`;
+    // 1. Handling Wrong Entry / Wrong Invoice / Mistakes / Reversals
+    if (
+      queryLower.includes('wrong') ||
+      queryLower.includes('mistake') ||
+      queryLower.includes('incorrect') ||
+      queryLower.includes('error') ||
+      queryLower.includes('accidental') ||
+      queryLower.includes('fault')
+    ) {
+      botResponse = `If you posted a wrong invoice, bill, or entry in VyaparSetu, here is the official step-by-step solution:
+
+1. 🧾 For Purchase Bills (Vendor Invoices): Go to "Transactions -> Debit Notes -> Click '+ New Debit Note'". Select the Vendor and the wrong Purchase Bill reference. This debits Accounts Payable and reverses the purchase expense & Input Tax Credit (ITC).
+
+2. 🛒 For Sales Invoices (Customer Invoices): Go to "Transactions -> Sales Invoices", locate the invoice, and click "Edit Invoice" or issue a "Credit Note". A Credit Note reverses customer receivables, output GST liability, and restores inventory stock.
+
+3. 📜 For Journal / Bank Entries: Go to "Finance -> Reports & Ledger", click "+ New Manual Journal", and post a Reversal Entry swapping Debit and Credit accounts.`;
+    }
+    // 2. Editing / Modifying Existing Records
+    else if (
+      queryLower.includes('edit') ||
+      queryLower.includes('modify') ||
+      queryLower.includes('change') ||
+      queryLower.includes('update')
+    ) {
+      botResponse = 'To edit a transaction or master record: Go to the respective module (Sales Invoices, Purchase Bills, or Parties). If the voucher is un-reconciled, click the "Edit" button on that line. If it is locked in a filed GST return, issue a Debit Note (for purchases) or Credit Note (for sales) to adjust the difference.';
+    }
+    // 3. Cancelling / Deleting Entries
+    else if (
+      queryLower.includes('cancel') ||
+      queryLower.includes('delete') ||
+      queryLower.includes('remove') ||
+      queryLower.includes('void')
+    ) {
+      botResponse = 'For GST compliance and double-entry audit integrity, posted vouchers cannot be silently deleted if reconciled. Instead, issue a Credit Note (for sales) or Debit Note (for purchases) to zero out the balance cleanly while preserving your audit trail.';
+    }
+    // 4. GST Input Tax Credit (ITC) & 2A/2B
+    else if (
+      queryLower.includes('itc') ||
+      queryLower.includes('gst') ||
+      queryLower.includes('tax credit') ||
+      queryLower.includes('2a') ||
+      queryLower.includes('2b')
+    ) {
+      botResponse = 'GST Input Tax Credit (ITC) is automatically calculated when you record a Purchase Bill with a valid Vendor GSTIN. CGST + SGST (Intrastate) or IGST (Interstate) credits to your Tax Asset account. Verify your monthly eligible ITC under Reports -> GST Summary against GSTR-2B.';
+    }
+    // 5. Debit Notes & Credit Notes
+    else if (
+      queryLower.includes('debit note') ||
+      queryLower.includes('credit note') ||
+      queryLower.includes('return')
+    ) {
+      botResponse = 'To record a Purchase Return: Go to Transactions -> Debit Notes -> Click "+ New Debit Note". To record a Sales Return: Go to Transactions -> Sales Invoices -> Issue Credit Note. System automatically updates inventory and subledger balances.';
+    }
+    // 6. PO & GRN Procurement Workflow
+    else if (
+      queryLower.includes('po') ||
+      queryLower.includes('purchase order') ||
+      queryLower.includes('grn') ||
+      queryLower.includes('goods receipt')
+    ) {
+      botResponse = 'Purchase Orders (PO) record vendor rate commitments. Goods Receipt Notes (GRN) verify warehouse receipt of physical stock before converting to a final Purchase Bill for Accounts Payable financial posting.';
+    }
+    // 7. Bank Payments, BRS & Cash
+    else if (
+      queryLower.includes('bank') ||
+      queryLower.includes('brs') ||
+      queryLower.includes('cash') ||
+      queryLower.includes('petty cash') ||
+      queryLower.includes('cheque') ||
+      queryLower.includes('utr')
+    ) {
+      botResponse = 'Bank reconciliation (BRS) compares your recorded bank vouchers against uploaded bank passbook statements. Pure cash / petty cash payments are excluded from BRS to keep bank statements 100% accurate.';
+    }
+    // 8. Contact & Helpdesk Info
+    else if (
+      queryLower.includes('contact') ||
+      queryLower.includes('phone') ||
+      queryLower.includes('support') ||
+      queryLower.includes('number') ||
+      queryLower.includes('helpdesk') ||
+      queryLower.includes('call')
+    ) {
+      botResponse = 'You can reach official VyaparSetu Customer Support at Toll-Free: 1800-8927-2738 (1800-VYAPAR-SETU) or Email: support@vyaparsetu.in (Monday-Saturday, 9am-8pm IST).';
+    }
+    // 9. Smart Module-Aware Fallback
+    else {
+      botResponse = `Regarding "${q}": In VyaparSetu, all actions in the ${activeContent.title} module are governed by strict Double-Entry accounting rules. You can perform actions by clicking the action buttons at the top of the screen. For personal assistance with your specific workflow, contact our support desk at Toll-Free 1800-8927-2738.`;
     }
 
     setChatHistory(prev => [...prev, userMsg, { sender: 'agent', text: botResponse, time: timeStr }]);
@@ -675,6 +750,9 @@ export default function HelpSupportModal({ onClose }: Props) {
 
               {/* Quick Prompt Suggestions */}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => handleAskAi('i have posted wrong invoice, what i need to do')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', cursor: 'pointer' }}>
+                  🚨 Posted a wrong invoice / bill?
+                </button>
                 <button type="button" onClick={() => handleAskAi('How to record debit note for returned goods?')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border-default)', color: 'var(--brand-primary)', cursor: 'pointer' }}>
                   💡 How to record Debit Note?
                 </button>
