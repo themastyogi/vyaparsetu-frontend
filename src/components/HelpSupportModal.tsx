@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 
 interface Props {
   onClose: () => void;
+  onPopout?: () => void;
 }
 
 type ModeDepth = 'basic' | 'deep';
@@ -343,7 +344,7 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
   }
 };
 
-export default function HelpSupportModal({ onClose }: Props) {
+export default function HelpSupportModal({ onClose, onPopout }: Props) {
   const location = useLocation();
 
   // Detect current screen from route
@@ -648,6 +649,71 @@ export default function HelpSupportModal({ onClose }: Props) {
                 );
               })}
             </div>
+
+            {/* ════════════════════════════════════════════════════════════════
+               VYAPARSETU AI SUPPORT ASSISTANT BOT (LEFT SIDEBAR LOCATION)
+               ════════════════════════════════════════════════════════════════ */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(108,71,255,0.06) 0%, rgba(16,185,129,0.06) 100%)', border: '1.5px solid var(--brand-primary)', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10, marginTop: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Bot size={18} style={{ color: 'var(--brand-primary)' }}/>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-primary)' }}>AI Support Agent</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#10B981', background: 'rgba(16,185,129,0.12)', padding: '2px 6px', borderRadius: 4 }}>● Live</span>
+                  {onPopout && (
+                    <button
+                      type="button"
+                      onClick={onPopout}
+                      style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--brand-primary)', background: 'var(--brand-primary)', color: '#fff', fontSize: 10, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                      title="Popout chat into a floating corner widget"
+                    >
+                      ↗️ Popout
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Chat Message Stream */}
+              <div style={{ maxHeight: 150, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--bg-card)', borderRadius: 8, padding: 8, border: '1px solid var(--border-subtle)' }}>
+                {chatHistory.map((msg, i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
+                    <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 2 }}>{msg.sender === 'user' ? 'You' : 'Agent'} · {msg.time}</div>
+                    <div style={{ background: msg.sender === 'user' ? 'var(--brand-primary)' : 'var(--bg-elevated)', color: msg.sender === 'user' ? '#fff' : 'var(--text-primary)', padding: '6px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, maxWidth: '90%', border: msg.sender === 'agent' ? '1px solid var(--border-default)' : 'none', lineHeight: 1.4 }}>
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Quick Prompt Suggestions */}
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => handleAskAi('i have posted wrong invoice, what i need to do')} style={{ fontSize: 10, fontWeight: 700, padding: '3px 6px', borderRadius: 6, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', cursor: 'pointer' }}>
+                  🚨 Posted wrong invoice?
+                </button>
+                <button type="button" onClick={() => handleAskAi('How to record debit note for returned goods?')} style={{ fontSize: 10, fontWeight: 700, padding: '3px 6px', borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border-default)', color: 'var(--brand-primary)', cursor: 'pointer' }}>
+                  💡 Debit Note?
+                </button>
+                <button type="button" onClick={() => handleAskAi('How to claim ITC for GST on purchase bills?')} style={{ fontSize: 10, fontWeight: 700, padding: '3px 6px', borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border-default)', color: 'var(--brand-primary)', cursor: 'pointer' }}>
+                  💡 Claim ITC?
+                </button>
+              </div>
+
+              {/* Prompt Input Form */}
+              <form onSubmit={e => { e.preventDefault(); handleAskAi(); }} style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="text"
+                  placeholder="Ask AI Support Agent..."
+                  value={aiQuestion}
+                  onChange={e => setAiQuestion(e.target.value)}
+                  style={{ flex: 1, padding: '7px 10px', borderRadius: 6, border: '1.5px solid var(--border-default)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 11, fontWeight: 600 }}
+                />
+                <button type="submit" style={{ padding: '7px 12px', borderRadius: 6, background: 'linear-gradient(135deg, #6C47FF 0%, #3B82F6 100%)', color: '#fff', border: 'none', fontWeight: 800, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Send size={12}/> Send
+                </button>
+              </form>
+            </div>
           </div>
 
           {/* Right Topic Details & Support Agent Body */}
@@ -782,61 +848,6 @@ export default function HelpSupportModal({ onClose }: Props) {
 
               </div>
             )}
-
-            {/* ════════════════════════════════════════════════════════════════
-               INTERACTIVE VYAPARSETU AI SUPPORT ASSISTANT BOT
-               ════════════════════════════════════════════════════════════════ */}
-            <div style={{ background: 'linear-gradient(135deg, rgba(108,71,255,0.06) 0%, rgba(16,185,129,0.06) 100%)', border: '1.5px solid var(--brand-primary)', borderRadius: 12, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Bot size={20} style={{ color: 'var(--brand-primary)' }}/>
-                  <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-primary)' }}>VyaparSetu AI Support Assistant</span>
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 800, color: '#10B981', background: 'rgba(16,185,129,0.12)', padding: '3px 8px', borderRadius: 6 }}>● Live Instant Agent</span>
-              </div>
-
-              {/* Chat Message Stream */}
-              <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--bg-elevated)', borderRadius: 8, padding: 12, border: '1px solid var(--border-subtle)' }}>
-                {chatHistory.map((msg, i) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 2 }}>{msg.sender === 'user' ? 'You' : 'VyaparSetu Support Agent'} · {msg.time}</div>
-                    <div style={{ background: msg.sender === 'user' ? 'var(--brand-primary)' : 'var(--bg-card)', color: msg.sender === 'user' ? '#fff' : 'var(--text-primary)', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, maxWidth: '85%', border: msg.sender === 'agent' ? '1px solid var(--border-default)' : 'none', lineHeight: 1.5 }}>
-                      {msg.text}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Quick Prompt Suggestions */}
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => handleAskAi('i have posted wrong invoice, what i need to do')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', cursor: 'pointer' }}>
-                  🚨 Posted a wrong invoice / bill?
-                </button>
-                <button type="button" onClick={() => handleAskAi('How to record debit note for returned goods?')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border-default)', color: 'var(--brand-primary)', cursor: 'pointer' }}>
-                  💡 How to record Debit Note?
-                </button>
-                <button type="button" onClick={() => handleAskAi('How to claim ITC for GST on purchase bills?')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border-default)', color: 'var(--brand-primary)', cursor: 'pointer' }}>
-                  💡 Claim GST Input Tax Credit (ITC)?
-                </button>
-                <button type="button" onClick={() => handleAskAi('Can I edit posted purchase bills?')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border-default)', color: 'var(--brand-primary)', cursor: 'pointer' }}>
-                  💡 Can I edit posted bills?
-                </button>
-              </div>
-
-              {/* Prompt Input Form */}
-              <form onSubmit={e => { e.preventDefault(); handleAskAi(); }} style={{ display: 'flex', gap: 8 }}>
-                <input
-                  type="text"
-                  placeholder="Type any specific question about VyaparSetu..."
-                  value={aiQuestion}
-                  onChange={e => setAiQuestion(e.target.value)}
-                  style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 12, fontWeight: 600 }}
-                />
-                <button type="submit" style={{ padding: '9px 16px', borderRadius: 8, background: 'linear-gradient(135deg, #6C47FF 0%, #3B82F6 100%)', color: '#fff', border: 'none', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Send size={14}/> Ask Agent
-                </button>
-              </form>
-            </div>
 
             {/* ════════════════════════════════════════════════════════════════
                CONTACT VYAPARSETU SUPPORT & HELPDESK CARD

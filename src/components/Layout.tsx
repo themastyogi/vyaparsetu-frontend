@@ -56,6 +56,7 @@ export default function Layout() {
   const [showAiModal, setShowAiModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isPoppedOutAi, setIsPoppedOutAi] = useState(false);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('vs_theme') as 'light' | 'dark') || 'light';
@@ -337,7 +338,31 @@ export default function Layout() {
       </div>
 
       {showAiModal && <SmartAiAccountantModal onClose={() => setShowAiModal(false)} />}
-      {showHelpModal && <HelpSupportModal onClose={() => setShowHelpModal(false)} />}
+      {showHelpModal && (
+        <HelpSupportModal
+          onClose={() => setShowHelpModal(false)}
+          onPopout={() => {
+            setShowHelpModal(false);
+            setIsPoppedOutAi(true);
+          }}
+        />
+      )}
+
+      {/* Floating AI Support Assistant Trigger when Popped Out */}
+      {isPoppedOutAi && (
+        <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1500 }}>
+          <button
+            type="button"
+            onClick={() => {
+              setIsPoppedOutAi(false);
+              setShowHelpModal(true);
+            }}
+            style={{ padding: '12px 18px', borderRadius: 30, background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#fff', border: 'none', fontWeight: 900, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', boxShadow: '0 8px 24px rgba(16,185,129,0.4)', animation: 'fade-in 0.2s' }}
+          >
+            <Bot size={18}/> 💬 AI Support Agent (Active)
+          </button>
+        </div>
+      )}
     </div>
   );
 }
