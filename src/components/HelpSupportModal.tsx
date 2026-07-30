@@ -481,9 +481,34 @@ export default function HelpSupportModal({ onClose }: Props) {
     ) {
       botResponse = 'You can reach official VyaparSetu Customer Support at Toll-Free: 1800-8927-2738 (1800-VYAPAR-SETU) or Email: support@vyaparsetu.in (Monday-Saturday, 9am-8pm IST).';
     }
-    // 9. Smart Module-Aware Fallback
+    // 9. Off-Topic / Irrelevant Query Filter Guardrail
+    else if (
+      queryLower.includes('weather') ||
+      queryLower.includes('recipe') ||
+      queryLower.includes('pizza') ||
+      queryLower.includes('movie') ||
+      queryLower.includes('sports') ||
+      queryLower.includes('cricket') ||
+      queryLower.includes('joke') ||
+      queryLower.includes('song') ||
+      queryLower.includes('capital') ||
+      queryLower.includes('who are you')
+    ) {
+      botResponse = 'I am the specialized VyaparSetu AI Support Assistant, focused strictly on Accounting, GST Returns, Procurement, BRS, and Business Management. Please ask any question about your invoices, bills, payments, or ledger reports!';
+    }
+    // 10. Greetings & Friendly Interactions
+    else if (
+      queryLower === 'hi' ||
+      queryLower === 'hello' ||
+      queryLower === 'hey' ||
+      queryLower.startsWith('hi ') ||
+      queryLower.startsWith('hello ')
+    ) {
+      botResponse = 'Hello! Welcome to VyaparSetu Support. How can I assist you with your invoices, GST filing, purchase bills, or accounting today?';
+    }
+    // 11. Smart Module-Aware Domain Assistant Fallback
     else {
-      botResponse = `Regarding "${q}": In VyaparSetu, all actions in the ${activeContent.title} module are governed by strict Double-Entry accounting rules. You can perform actions by clicking the action buttons at the top of the screen. For personal assistance with your specific workflow, contact our support desk at Toll-Free 1800-8927-2738.`;
+      botResponse = `Regarding your query "${q}": In VyaparSetu, all transactions in the ${activeContent.title} module adhere strictly to Double-Entry GST accounting rules. You can use the action buttons at the top of the screen or type a specific keyword like "edit invoice", "claim ITC", or "wrong bill" for detailed steps. You can also reach our support desk at Toll-Free 1800-8927-2738.`;
     }
 
     setChatHistory(prev => [...prev, userMsg, { sender: 'agent', text: botResponse, time: timeStr }]);
