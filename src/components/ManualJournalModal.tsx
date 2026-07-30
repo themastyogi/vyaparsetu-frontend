@@ -61,6 +61,54 @@ export default function ManualJournalModal({ onClose }: Props) {
     return 'Journal Voucher';
   }, [lines, party]);
 
+  const handlePickParty = (partyName: string) => {
+    if (!partyName) return;
+    setParty(partyName);
+
+    const foundParty = partiesList.find(p => p.name === partyName);
+    const pType = (foundParty?.type || 'customer').toLowerCase();
+
+    const currentAmt = lines[0]?.debit || lines[0]?.credit || '1000';
+
+    // If Customer -> Customer Receipt (Debit Bank/Cash, Credit Accounts Receivable)
+    if (pType.includes('customer')) {
+      setLines([
+        { account: selectedBank || 'Bank Account', debit: currentAmt, credit: '0' },
+        { account: 'Accounts Receivable', debit: '0', credit: currentAmt },
+      ]);
+    } 
+    // If Vendor -> Vendor Payment (Debit Accounts Payable, Credit Bank/Cash)
+    else {
+      setLines([
+        { account: 'Accounts Payable', debit: currentAmt, credit: '0' },
+        { account: selectedBank || 'Bank Account', debit: '0', credit: currentAmt },
+      ]);
+    }
+  };
+
+  const handlePickBank = (bankName: string) => {
+    if (!bankName) return;
+    setSelectedBank(bankName);
+    setParty(prev => (prev === 'General' ? bankName : `${prev} [${bankName}]`));
+
+    const currentAmt = lines[0]?.debit || lines[0]?.credit || '1000';
+
+    setLines(prev => {
+      if (prev.length < 2) {
+        return [
+          { account: bankName, debit: currentAmt, credit: '0' },
+          { account: 'Cash Account', debit: '0', credit: currentAmt },
+        ];
+      }
+      return prev.map(l => {
+        if (l.account.toLowerCase().includes('bank') || l.account.toLowerCase().includes('cash')) {
+          return { ...l, account: bankName };
+        }
+        return l;
+      });
+    });
+  };
+
   const addLine = () => {
     setLines(prev => [...prev, { account: coa[0]?.name || 'Office Expenses', debit: '0', credit: '0' }]);
   };
@@ -485,12 +533,12 @@ export default function ManualJournalModal({ onClose }: Props) {
               </div>
             </div>
 
-            {/* Quick Party & Bank Pickers Row */}
+            {/* Quick Party & Bank Pickers Row with Dynamic Table Binders */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               <div>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Pick Party Master</label>
                 <select
-                  onChange={e => { if (e.target.value) setParty(e.target.value); }}
+                  onChange={e => handlePickParty(e.target.value)}
                   style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 12, fontWeight: 600 }}
                 >
                   <option value="">-- Select Party Master --</option>
@@ -503,12 +551,12 @@ export default function ManualJournalModal({ onClose }: Props) {
               <div>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Pick Bank Account</label>
                 <select
-                  onChange={e => { if (e.target.value) setParty(prev => (prev === 'General' ? '' : prev) + ` [${e.target.value}]`); }}
+                  onChange={e => handlePickBank(e.target.value)}
                   style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 12, fontWeight: 600 }}
                 >
                   <option value="">-- Select Bank Account --</option>
                   {banksList.map((b: any) => (
-                    <option key={b.id || b.accountName} value={b.accountName}>{b.accountName} ({b.bankName})</option>
+                    <option key={b.id || b.accountName} value={b.glAccountName || b.accountName}>{b.accountName} ({b.bankName})</option>
                   ))}
                 </select>
               </div>
