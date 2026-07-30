@@ -124,6 +124,44 @@ export default function ManualJournalModal({ onClose }: Props) {
     });
   };
 
+  const generateLaymanImpact = () => {
+    const numAmt = parseFloat(viewMode === 'easy' ? amount : (lines[0]?.debit || lines[0]?.credit || '0')) || 0;
+    if (numAmt <= 0) return 'Enter an amount to preview exact financial impact.';
+
+    const amtFormatted = `₹${numAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+    if (viewMode === 'easy') {
+      const bankOrCashName = paymentMode === 'Bank Account' ? selectedBank : 'Cash Account';
+      const partyNameStr = selectedParty || 'selected party';
+
+      switch (easyAction) {
+        case 'pay-vendor':
+          return `Posting this voucher will DECREASE your ${bankOrCashName} balance by ${amtFormatted} and DECREASE your ${partyNameStr} Outstanding Payable balance by ${amtFormatted}.`;
+        case 'receive-customer':
+          return `Posting this voucher will INCREASE your ${bankOrCashName} balance by ${amtFormatted} and DECREASE your ${partyNameStr} Outstanding Receivable balance by ${amtFormatted}.`;
+        case 'pay-expense':
+          return `Posting this voucher will INCREASE your ${selectedExpense} expense total by ${amtFormatted} and DECREASE your ${bankOrCashName} balance by ${amtFormatted}.`;
+        case 'withdraw-cash':
+          return `Posting this voucher will INCREASE your Cash in Hand by ${amtFormatted} and DECREASE your ${selectedBank} balance by ${amtFormatted}.`;
+        case 'deposit-cash':
+          return `Posting this voucher will INCREASE your ${selectedBank} balance by ${amtFormatted} and DECREASE your Cash in Hand by ${amtFormatted}.`;
+        case 'party-transfer':
+          return `Posting this voucher will TRANSFER ${amtFormatted} from ${selectedParty || 'Party A'} to ${toParty || 'Party B'}.`;
+      }
+    } else {
+      const line0 = lines[0];
+      const line1 = lines[1];
+      if (!line0 || !line1) return 'Balanced double-entry ready to post.';
+
+      const partyStr = party && party !== 'General' ? party : 'the selected account';
+      const line0IsDebit = (parseFloat(line0.debit) || 0) > 0;
+      const line0Amt = line0IsDebit ? (parseFloat(line0.debit) || 0) : (parseFloat(line0.credit) || 0);
+      const fAmt = `₹${line0Amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+      return `Posting this entry will DEBIT (${line0.account}) by ${fAmt} and CREDIT (${line1.account}) by ${fAmt} for ${partyStr}.`;
+    }
+  };
+
   const addLine = () => {
     setLines(prev => [...prev, { account: coa[0]?.name || 'Office Expenses', debit: '0', credit: '0' }]);
   };
@@ -511,6 +549,19 @@ export default function ManualJournalModal({ onClose }: Props) {
 
             </div>
 
+            {/* Layman Financial Impact Summary Card */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(59,130,246,0.08) 100%)', border: '1.5px solid rgba(16,185,129,0.3)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <Info size={20} style={{ color: '#10B981', flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
+                  💡 Plain English Financial Impact (What will happen on posting):
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                  {generateLaymanImpact()}
+                </div>
+              </div>
+            </div>
+
             {/* Post Voucher Button */}
             <button
               type="submit"
@@ -648,6 +699,19 @@ export default function ManualJournalModal({ onClose }: Props) {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Layman Financial Impact Summary Card */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(59,130,246,0.08) 100%)', border: '1.5px solid rgba(16,185,129,0.3)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <Info size={20} style={{ color: '#10B981', flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
+                  💡 Plain English Financial Impact (What will happen on posting):
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                  {generateLaymanImpact()}
+                </div>
+              </div>
             </div>
 
             {/* Balance Verification Footer */}
