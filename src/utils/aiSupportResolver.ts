@@ -38,7 +38,146 @@ export const resolveAiIntent = (q: string, activeModuleTitle = 'VyaparSetu'): st
 - Real-time Subledger to General Ledger (GL) Auto-Sync.`;
   }
 
-  // 3. Grievance / Unethical Practice / Wrong Company Practice (e.g. "wrong company", "wrong practice", "scam", "fraud", "unethical")
+  // 3. Vendor Payment Procedure (Fix for "how do i do payment to my vendor")
+  if (
+    queryLower.includes('payment to my vendor') ||
+    queryLower.includes('pay vendor') ||
+    queryLower.includes('vendor payment') ||
+    queryLower.includes('payment to vendor') ||
+    queryLower.includes('pay my vendor') ||
+    queryLower.includes('pay supplier') ||
+    queryLower.includes('payment vendor')
+  ) {
+    return `💳 How to Record a Vendor Payment in VyaparSetu:
+
+1. Go to "Transactions -> Payments & Bank Reconciliation" (or click "+ New Manual Journal").
+2. Select Action: "Pay Vendor (Accounts Payable)".
+3. Select Vendor Name from your party subledger.
+4. Select Bank Account (HDFC/ICICI/SBI) or Cash Account.
+5. Select the open Purchase Bill reference and enter Payment Amount & UTR / Cheque Number.
+6. Click "Post Voucher". 
+
+This debits Accounts Payable (reducing vendor liability) and credits Bank/Cash automatically.`;
+  }
+
+  // 4. Customer Receipt Procedure (e.g. "how to receive payment from customer")
+  if (
+    queryLower.includes('receive payment from customer') ||
+    queryLower.includes('receive customer payment') ||
+    queryLower.includes('customer receipt') ||
+    queryLower.includes('customer payment') ||
+    queryLower.includes('receive payment')
+  ) {
+    return `💰 How to Record a Customer Payment Receipt in VyaparSetu:
+
+1. Go to "Transactions -> Payments & Bank Reconciliation" (or click "+ New Manual Journal").
+2. Select Action: "Receive from Customer (Accounts Receivable)".
+3. Select Customer Name and your receiving Bank or Cash account.
+4. Select the open Sales Invoice reference and enter the Received Amount & Cheque/UTR reference.
+5. Click "Post Voucher".
+
+This debits Bank/Cash and credits Accounts Receivable (reducing customer outstanding balance).`;
+  }
+
+  // 5. Creating Sales Invoice Procedure
+  if (
+    queryLower.includes('create sales invoice') ||
+    queryLower.includes('make sales invoice') ||
+    queryLower.includes('make bill') ||
+    queryLower.includes('raise invoice') ||
+    queryLower.includes('create invoice') ||
+    queryLower.includes('sales bill')
+  ) {
+    return `🛒 How to Create a Sales Invoice:
+
+1. Go to "Transactions -> Sales Invoices" and click "+ Create Sales Invoice".
+2. Select Customer Name, Invoice Date, and GST Place of Supply.
+3. Add Line Items: select Product/Service, HSN/SAC Code, Quantity, Rate, and GST % rate.
+4. CGST + SGST (Intrastate) or IGST (Interstate) is auto-calculated.
+5. Click "Save & Post Invoice". Automatically updates stock quantity and customer subledger.`;
+  }
+
+  // 6. Recording Purchase Bill Procedure
+  if (
+    queryLower.includes('record purchase bill') ||
+    queryLower.includes('add purchase bill') ||
+    queryLower.includes('enter purchase') ||
+    queryLower.includes('vendor bill') ||
+    queryLower.includes('purchase invoice')
+  ) {
+    return `🧾 How to Record a Purchase Bill:
+
+1. Go to "Transactions -> Purchase Bills" and click "+ Record Purchase Bill".
+2. Select Vendor Name, Vendor Invoice Number, and Bill Date.
+3. Add Purchased Items or Expense category with HSN/SAC and GST % rate.
+4. System auto-calculates eligible Input Tax Credit (ITC).
+5. Click "Post Purchase Bill". Increases warehouse inventory and vendor Accounts Payable balance.`;
+  }
+
+  // 7. Performing Bank Reconciliation (BRS) Procedure
+  if (
+    queryLower.includes('do brs') ||
+    queryLower.includes('bank reconciliation') ||
+    queryLower.includes('reconcile bank') ||
+    queryLower.includes('reconcile statement')
+  ) {
+    return `🏦 How to Perform Bank Reconciliation (BRS):
+
+1. Go to "Finance -> Bank Reconciliation (BRS)".
+2. Select your Bank Account and Upload Bank Passbook CSV/Statement.
+3. Match system vouchers against uploaded bank statement lines using UTR/Cheque No & Amount.
+4. Click "Match & Reconcile". Unmatched lines show under Pending Clearance. Note: Pure cash/petty cash payments are excluded from BRS to maintain 100% bank statement accuracy.`;
+  }
+
+  // 8. Adding New Party (Customer/Vendor) Procedure
+  if (
+    queryLower.includes('add customer') ||
+    queryLower.includes('add vendor') ||
+    queryLower.includes('add party') ||
+    queryLower.includes('create party') ||
+    queryLower.includes('new party')
+  ) {
+    return `👤 How to Add a Customer or Vendor Party:
+
+1. Go to "Master -> Parties & Subledgers" and click "+ Add New Party".
+2. Enter Party Name, GSTIN, Phone Number, Billing Address, and Opening Balance.
+3. Select Party Type: "Customer", "Vendor", or "Both (Dual-Role)".
+4. Click "Save Party". Party is immediately ready for invoicing or payment routing.`;
+  }
+
+  // 9. Adding New Inventory Item Procedure
+  if (
+    queryLower.includes('add item') ||
+    queryLower.includes('add product') ||
+    queryLower.includes('create item') ||
+    queryLower.includes('new product') ||
+    queryLower.includes('inventory item')
+  ) {
+    return `📦 How to Add an Inventory Item or Product:
+
+1. Go to "Master -> Inventory & Items" and click "+ Add Item".
+2. Enter Item Name, HSN Code, Unit of Measure (Pcs/Kg/Mtr), Sale Price, Purchase Price, and GST % Rate.
+3. Enter Opening Stock Quantity and Stock Unit Cost Value.
+4. Click "Save Item". Automatically tracks inventory valuation and reorder levels.`;
+  }
+
+  // 10. GST Reports & Filing Procedure
+  if (
+    queryLower.includes('gstr-1') ||
+    queryLower.includes('gstr-3b') ||
+    queryLower.includes('gst filing') ||
+    queryLower.includes('gst report') ||
+    queryLower.includes('file gst')
+  ) {
+    return `📊 How to Access GST Reports & Filing Data:
+
+1. Go to "Reports -> GST Compliance & Summary".
+2. Select Filing Period (e.g. Current Month or Quarter).
+3. Review "GSTR-1" (B2B/B2C Outward Sales tax liability) and "GSTR-3B" (Eligible ITC vs Net Tax Payable).
+4. Click "Export GST JSON" or "Export Excel" to upload directly to the GST portal.`;
+  }
+
+  // 11. Grievance / Unethical Practice / Wrong Company Practice (e.g. "wrong company", "wrong practice", "scam", "fraud", "unethical")
   if (
     queryLower.includes('wrong company') ||
     queryLower.includes('wrong organization') ||
