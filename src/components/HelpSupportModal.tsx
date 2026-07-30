@@ -397,8 +397,42 @@ export default function HelpSupportModal({ onClose }: Props) {
     let botResponse = '';
     const queryLower = q.toLowerCase();
 
-    // 1. Handling Wrong Entry / Wrong Invoice / Mistakes / Reversals
+    // SHIELD 1: Anti-Hack & Code Injection / Prompt Hacking Protection
     if (
+      queryLower.includes('<script') ||
+      queryLower.includes('eval(') ||
+      queryLower.includes('drop table') ||
+      queryLower.includes('select * from') ||
+      queryLower.includes('javascript:') ||
+      queryLower.includes('system prompt') ||
+      queryLower.includes('ignore previous instructions') ||
+      queryLower.includes('hack') ||
+      queryLower.includes('inject')
+    ) {
+      botResponse = '🚨 Security Policy Alert: Input contains restricted code patterns or security override attempts. All inputs to VyaparSetu AI Assistant are sanitized under strict Zero-Trust Enterprise Security protocols.';
+    }
+    // SHIELD 2: Zero-Trust Credential & Password Protection
+    else if (
+      queryLower.includes('password') ||
+      queryLower.includes('secret') ||
+      queryLower.includes('admin login') ||
+      queryLower.includes('db_pass') ||
+      queryLower.includes('private key')
+    ) {
+      botResponse = '🔒 Security Policy: Admin credentials, passwords, and encryption keys are strictly confidential and protected by Zero-Trust security. VyaparSetu AI Support Assistant never stores or discloses sensitive credentials. Use Company Settings or the official login recovery link if needed.';
+    }
+    // SHIELD 3: Direct Transaction Execution Scope Boundary (Guidance vs Execution)
+    else if (
+      queryLower.startsWith('post my') ||
+      queryLower.startsWith('create my') ||
+      queryLower.startsWith('delete my') ||
+      queryLower.includes('post purchase invoice') ||
+      queryLower.includes('post invoice for me')
+    ) {
+      botResponse = 'ℹ️ Action Scope Notice: The Help & Support Assistant provides read-only step-by-step guidance. To post a Purchase Bill, please use the official form under "Transactions -> Purchase Bills -> + Record Purchase Bill" or click the "Smart AI Accountant" bot button in the top bar to record natural language vouchers securely with user review!';
+    }
+    // 1. Handling Wrong Entry / Wrong Invoice / Mistakes / Reversals
+    else if (
       queryLower.includes('wrong') ||
       queryLower.includes('mistake') ||
       queryLower.includes('incorrect') ||
