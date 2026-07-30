@@ -55,6 +55,7 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('vs_theme') as 'light' | 'dark') || 'light';
@@ -101,22 +102,26 @@ export default function Layout() {
       {/* Company switcher */}
       {(!collapsed || mobile) && (
         <div className="sidebar-company">
-          <Building2 size={14} className="company-icon"/>
-          <span className="company-name">Sharma Traders Pvt Ltd</span>
-          <ChevronDown size={13} className="company-chevron"/>
+          <Building2 size={16} className="comp-ico"/>
+          <span className="comp-name">{companySettings.companyName || 'VyaparSetu Enterprises'}</span>
         </div>
       )}
 
+      {/* Nav */}
       <nav className="sidebar-nav">
-        {NAV_SECTIONS.map(section => (
-          <div key={section.label}>
-            <div className="nav-group-label">{(!collapsed || mobile) && section.label}</div>
-            {section.items.map(item => (
+        {NAV_SECTIONS.map(sec => (
+          <div key={sec.label} className="nav-section">
+            {(!collapsed || mobile) && (
+              <div className="nav-section-label">{sec.label}</div>
+            )}
+            {sec.items.map(item => (
               <button
                 key={item.path}
-                id={`nav-${item.key.replace('nav.','')}`}
-                className={`nav-item ${isActive(item.path) ? 'nav-item-active' : ''}`}
-                onClick={() => { navigate(item.path); if (mobile) setMobileOpen(false); }}
+                className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
+                onClick={() => {
+                  navigate(item.path);
+                  if (mobile) setMobileOpen(false);
+                }}
                 title={collapsed && !mobile ? item.label : undefined}
               >
                 <span className="nav-icon">{item.icon}</span>
@@ -129,12 +134,16 @@ export default function Layout() {
 
       {/* Bottom */}
       <div className="sidebar-bottom">
-        {(!collapsed || mobile) && (
-          <div className="sidebar-help">
-            <HelpCircle size={14}/>
-            <span>Help &amp; Support</span>
-          </div>
-        )}
+        <div
+          className="sidebar-help"
+          onClick={() => setShowHelpModal(true)}
+          style={{ cursor: 'pointer', background: 'rgba(16,185,129,0.1)', border: '1.5px solid rgba(16,185,129,0.3)', borderRadius: 8, padding: '8px 12px', color: '#10B981', fontWeight: 800, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, transition: 'all 0.15s' }}
+          title="Open Screen-Specific Layman Help & Technical Knowledge Base"
+        >
+          <HelpCircle size={16}/>
+          {(!collapsed || mobile) && <span>Help &amp; Support</span>}
+        </div>
+
         <div className="sidebar-user">
           <div className="user-avatar">VK</div>
           {(!collapsed || mobile) && (
@@ -197,7 +206,7 @@ export default function Layout() {
             </div>
           </div>
 
-          <div className="topbar-right">
+          <div className="topbar-right" style={{ position: 'relative' }}>
             <div
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 8, background: 'rgba(108,71,255,0.08)', border: '1px solid rgba(108,71,255,0.2)', color: 'var(--brand-primary)', fontWeight: 700, fontSize: 12 }}
             >
@@ -207,16 +216,6 @@ export default function Layout() {
               <span className="gst-dot"/>
               <span className="gst-label">{companySettings.companyGstin || '29AABCV1234F1Z5'}</span>
             </div>
-
-            {/* Help & Support Knowledge Base Button */}
-            <button
-              type="button"
-              onClick={() => setShowHelpModal(true)}
-              style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1.5px solid rgba(16,185,129,0.3)', color: '#10B981', fontWeight: 800, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
-              title="Open Screen-Specific Layman Help &amp; Technical Knowledge Base"
-            >
-              <HelpCircle size={15}/> Help &amp; Support
-            </button>
 
             {/* Smart AI Accountant Bot Button */}
             <button
@@ -228,32 +227,105 @@ export default function Layout() {
               <Bot size={15}/> Smart AI Accountant <Sparkles size={13} style={{ color: '#FBBF24' }}/>
             </button>
 
-            {/* Central Application Version Badge */}
-            <div 
-              style={{ fontSize: 11, fontWeight: 800, padding: '4px 9px', borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontFamily: 'monospace' }}
-              title={`VyaparSetu Enterprise · Last Deployed: ${LAST_DEPLOY_TIMESTAMP}`}
-            >
-              {APP_VERSION}
-            </div>
-
-            <LanguageSwitcher />
-            <button
-              onClick={toggleTheme}
-              className="topbar-icon-btn"
-              title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '6px 10px', borderRadius: 8 }}
-            >
-              {theme === 'light' ? <Moon size={16} style={{ color: '#6C47FF' }}/> : <Sun size={16} style={{ color: '#FBBF24' }}/>}
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                {theme === 'light' ? 'Dark' : 'Light'}
-              </span>
-            </button>
             <button id="notifications-btn" className="topbar-icon-btn" aria-label="Notifications">
               <Bell size={17}/>
               <span className="notif-dot"/>
             </button>
-            <div className="topbar-avatar" title={companySettings.companyName}>
-              {companySettings.companyName ? companySettings.companyName.substring(0, 2).toUpperCase() : 'VK'}
+
+            {/* User Avatar Button & Dropdown Menu */}
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen(prev => !prev)}
+                className="topbar-avatar"
+                style={{ border: '2px solid var(--brand-primary)', cursor: 'pointer', background: 'var(--brand-primary)', color: '#fff', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                title="User Profile & Quick Settings Menu"
+              >
+                {companySettings.companyName ? companySettings.companyName.substring(0, 2).toUpperCase() : 'VK'}
+              </button>
+
+              {userMenuOpen && (
+                <div
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    width: 240,
+                    background: 'var(--bg-card)',
+                    borderRadius: 12,
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.35)',
+                    border: '1px solid var(--border-default)',
+                    padding: 12,
+                    zIndex: 1200,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    animation: 'fade-in 0.15s'
+                  }}
+                >
+                  {/* User Profile Header */}
+                  <div style={{ paddingBottom: 8, borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--brand-primary)', color: '#fff', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
+                      VK
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>Vikas Kumar</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Business Owner · Admin</div>
+                    </div>
+                  </div>
+
+                  {/* Help & Support Button */}
+                  <button
+                    type="button"
+                    onClick={() => { setShowHelpModal(true); setUserMenuOpen(false); }}
+                    style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: 'rgba(16,185,129,0.08)', color: '#10B981', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <HelpCircle size={16}/> Help &amp; Support
+                  </button>
+
+                  {/* Theme Switcher Toggle */}
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {theme === 'light' ? <Moon size={16} style={{ color: '#6C47FF' }}/> : <Sun size={16} style={{ color: '#FBBF24' }}/>}
+                      <span>Theme ({theme === 'light' ? 'Dark' : 'Light'})</span>
+                    </div>
+                  </button>
+
+                  {/* Language Switcher */}
+                  <div style={{ padding: '4px 6px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4 }}>Language Preference</div>
+                    <LanguageSwitcher />
+                  </div>
+
+                  {/* Company Settings */}
+                  <button
+                    type="button"
+                    onClick={() => { navigate('/dashboard/settings'); setUserMenuOpen(false); }}
+                    style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <Settings size={16}/> Company Settings
+                  </button>
+
+                  {/* Logout */}
+                  <button
+                    type="button"
+                    onClick={() => { logout(); setUserMenuOpen(false); }}
+                    style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: 'rgba(239,68,68,0.08)', color: '#F87171', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <LogOut size={16}/> Logout
+                  </button>
+
+                  {/* App Version Footer */}
+                  <div style={{ paddingTop: 6, borderTop: '1px solid var(--border-subtle)', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'monospace' }}>
+                    VyaparSetu {APP_VERSION}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
