@@ -11,6 +11,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import { useAccounting } from '../hooks/useAccounting';
 import { APP_VERSION, LAST_DEPLOY_TIMESTAMP } from '../config/version';
 import SmartAiAccountantModal from './SmartAiAccountantModal';
+import HelpSupportModal from './HelpSupportModal';
 
 const NAV_SECTIONS = [
   {
@@ -53,6 +54,7 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('vs_theme') as 'light' | 'dark') || 'light';
@@ -206,6 +208,16 @@ export default function Layout() {
               <span className="gst-label">{companySettings.companyGstin || '29AABCV1234F1Z5'}</span>
             </div>
 
+            {/* Help & Support Knowledge Base Button */}
+            <button
+              type="button"
+              onClick={() => setShowHelpModal(true)}
+              style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1.5px solid rgba(16,185,129,0.3)', color: '#10B981', fontWeight: 800, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+              title="Open Screen-Specific Layman Help &amp; Technical Knowledge Base"
+            >
+              <HelpCircle size={15}/> Help &amp; Support
+            </button>
+
             {/* Smart AI Accountant Bot Button */}
             <button
               type="button"
@@ -253,6 +265,7 @@ export default function Layout() {
       </div>
 
       {showAiModal && <SmartAiAccountantModal onClose={() => setShowAiModal(false)} />}
+      {showHelpModal && <HelpSupportModal onClose={() => setShowHelpModal(false)} />}
     </div>
   );
 }
