@@ -61,27 +61,41 @@ export default function ManualJournalModal({ onClose }: Props) {
     return 'Journal Voucher';
   }, [lines, party]);
 
-  const handlePickParty = (partyName: string) => {
+  const [bothRole, setBothRole] = useState<'customer' | 'vendor'>('customer');
+
+  const resolveBankCOAName = (rawBankName: string) => {
+    if (!rawBankName) return coa.find(a => a.type === 'Asset' && a.name.toLowerCase().includes('bank'))?.name || 'Bank Account';
+    const clean = rawBankName.replace(/[\(\)]/g, '').trim().toLowerCase();
+    const exact = coa.find(a => a.name.toLowerCase() === clean);
+    if (exact) return exact.name;
+    const partial = coa.find(a => a.name.toLowerCase().includes('hdfc') || (a.type === 'Asset' && a.name.toLowerCase().includes('bank')));
+    if (partial) return partial.name;
+    return 'Bank Account';
+  };
+
+  const handlePickParty = (partyName: string, forceRole?: 'customer' | 'vendor') => {
     if (!partyName) return;
     setParty(partyName);
 
     const foundParty = partiesList.find(p => p.name === partyName);
-    const pType = (foundParty?.type || 'customer').toLowerCase();
+    const rawType = (foundParty?.type || 'customer').toLowerCase();
+    const effectiveRole = forceRole || (rawType === 'both' ? bothRole : (rawType.includes('vendor') ? 'vendor' : 'customer'));
 
     const currentAmt = lines[0]?.debit || lines[0]?.credit || '1000';
+    const bankAccountName = resolveBankCOAName(selectedBank);
 
-    // If Customer -> Customer Receipt (Debit Bank/Cash, Credit Accounts Receivable)
-    if (pType.includes('customer')) {
+    // If Customer -> Customer Receipt (Debit Bank, Credit Accounts Receivable)
+    if (effectiveRole === 'customer') {
       setLines([
-        { account: selectedBank || 'Bank Account', debit: currentAmt, credit: '0' },
+        { account: bankAccountName, debit: currentAmt, credit: '0' },
         { account: 'Accounts Receivable', debit: '0', credit: currentAmt },
       ]);
     } 
-    // If Vendor -> Vendor Payment (Debit Accounts Payable, Credit Bank/Cash)
+    // If Vendor -> Vendor Payment (Debit Accounts Payable, Credit Bank)
     else {
       setLines([
         { account: 'Accounts Payable', debit: currentAmt, credit: '0' },
-        { account: selectedBank || 'Bank Account', debit: '0', credit: currentAmt },
+        { account: bankAccountName, debit: '0', credit: currentAmt },
       ]);
     }
   };
@@ -89,6 +103,7 @@ export default function ManualJournalModal({ onClose }: Props) {
   const handlePickBank = (bankName: string) => {
     if (!bankName) return;
     setSelectedBank(bankName);
+    const bankCOAName = resolveBankCOAName(bankName);
     setParty(prev => (prev === 'General' ? bankName : `${prev} [${bankName}]`));
 
     const currentAmt = lines[0]?.debit || lines[0]?.credit || '1000';
@@ -96,13 +111,13 @@ export default function ManualJournalModal({ onClose }: Props) {
     setLines(prev => {
       if (prev.length < 2) {
         return [
-          { account: bankName, debit: currentAmt, credit: '0' },
-          { account: 'Cash Account', debit: '0', credit: currentAmt },
+          { account: bankCOAName, debit: currentAmt, credit: '0' },
+          { account: 'Accounts Receivable', debit: '0', credit: currentAmt },
         ];
       }
       return prev.map(l => {
         if (l.account.toLowerCase().includes('bank') || l.account.toLowerCase().includes('cash')) {
-          return { ...l, account: bankName };
+          return { ...l, account: bankCOAName };
         }
         return l;
       });
@@ -546,6 +561,24 @@ export default function ManualJournalModal({ onClose }: Props) {
                     <option key={p.id || p.name} value={p.name}>{p.name} ({p.type || 'Party'})</option>
                   ))}
                 </select>
+                {partiesList.find(p => p.name === party)?.type === 'both' && (
+                  <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => { setBothRole('customer'); handlePickParty(party, 'customer'); }}
+                      style={{ flex: 1, fontSize: 10, fontWeight: 800, padding: '3px 6px', borderRadius: 4, border: 'none', cursor: 'pointer', background: bothRole === 'customer' ? '#10B981' : 'var(--bg-card)', color: bothRole === 'customer' ? '#fff' : 'var(--text-secondary)' }}
+                    >
+                      📥 Customer (A/R)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setBothRole('vendor'); handlePickParty(party, 'vendor'); }}
+                      style={{ flex: 1, fontSize: 10, fontWeight: 800, padding: '3px 6px', borderRadius: 4, border: 'none', cursor: 'pointer', background: bothRole === 'vendor' ? '#F87171' : 'var(--bg-card)', color: bothRole === 'vendor' ? '#fff' : 'var(--text-secondary)' }}
+                    >
+                      📤 Vendor (A/P)
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div>
