@@ -550,15 +550,10 @@ export default function ManualJournalModal({ onClose }: Props) {
             </div>
 
             {/* Layman Financial Impact Summary Card */}
-            <div style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(59,130,246,0.08) 100%)', border: '1.5px solid rgba(16,185,129,0.3)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <Info size={20} style={{ color: '#10B981', flexShrink: 0, marginTop: 2 }} />
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
-                  💡 Plain English Financial Impact (What will happen on posting):
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                  {generateLaymanImpact()}
-                </div>
+            <div style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(59,130,246,0.08) 100%)', border: '1.5px solid rgba(16,185,129,0.3)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Info size={18} style={{ color: '#10B981', flexShrink: 0 }} />
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                {generateLaymanImpact()}
               </div>
             </div>
 
@@ -702,15 +697,10 @@ export default function ManualJournalModal({ onClose }: Props) {
             </div>
 
             {/* Layman Financial Impact Summary Card */}
-            <div style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(59,130,246,0.08) 100%)', border: '1.5px solid rgba(16,185,129,0.3)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <Info size={20} style={{ color: '#10B981', flexShrink: 0, marginTop: 2 }} />
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
-                  💡 Plain English Financial Impact (What will happen on posting):
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                  {generateLaymanImpact()}
-                </div>
+            <div style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(59,130,246,0.08) 100%)', border: '1.5px solid rgba(16,185,129,0.3)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Info size={18} style={{ color: '#10B981', flexShrink: 0 }} />
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                {generateLaymanImpact()}
               </div>
             </div>
 
