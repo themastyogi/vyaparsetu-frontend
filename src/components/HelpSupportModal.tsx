@@ -39,26 +39,42 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
       whatIsIt: 'VyaparSetu is engineered with Zero-Trust Data Privacy & Financial Data Integrity standards. All stored company ledgers, GSTIN credentials, bank statements, and party subledgers are 100% encrypted and protected against unauthorized access.',
       processesAndSteps: [
         {
-          title: '1. Data Privacy & Zero-Knowledge Security',
+          title: '1. 🇪🇺 EU GDPR Compliance (General Data Protection Regulation)',
           steps: [
-            'AES-256 Bit Encryption at rest for all database ledgers, bank credentials, and customer records.',
-            'TLS 1.3 Encryption in transit across all browser-to-server API communications.',
-            'Multi-Tenant Isolation: Zero cross-tenant data leakage between organizations.',
-            'Zero-Knowledge AI: Financial data is processed in read-only sessions and never shared with third-party ad networks or public AI training pipelines.'
+            'Right to Erasure (Right to be Forgotten): Business master PII can be purged upon verified DPO request.',
+            'Data Portability (Article 20): Export complete ledgers, vouchers, and audit trails in machine-readable JSON, CSV, and Excel formats anytime.',
+            'Lawful Basis & Purpose Limitation: Financial PII processing is strictly scoped to contract execution and accounting compliance.',
+            'Data Protection Officer (DPO): Dedicated escalation contact at dpo@vyaparsetu.in.'
           ]
         },
         {
-          title: '2. Financial Data Integrity & Auditability',
+          title: '2. 🇮🇳 India DPDP Act 2023 (Digital Personal Data Protection Act)',
           steps: [
-            'Mandatory Double-Entry Balance Rule: System enforces Sum(Debits) = Sum(Credits) on every voucher before posting.',
-            'Immutable Audit Trail: Reconciled vouchers or entries locked in filed GST returns cannot be silently deleted. Adjustments require audited Debit/Credit Notes or Reversal Journals.',
+            'Notice & Consent Manager: Clear statutory notices for collection of GSTIN, PAN, Phone, and Email identifiers.',
+            'Data Principal Rights: Right to access summary of processed financial PII and request correction of master party details.',
+            'Statutory Harmonization: PII retention aligned with Section 36 of CGST Act (7-year statutory audit retention requirement).'
+          ]
+        },
+        {
+          title: '3. 🇺🇸 US Privacy Regulations (CCPA / CPRA & SOC 2 Type II)',
+          steps: [
+            'CCPA / CPRA Opt-Out ("Do Not Sell My Personal Information"): 100% Zero-Commercialization policy — financial data is NEVER sold, rented, or monetized.',
+            'SOC 2 Type II Aligned Data Governance: AES-256 field-level encryption at rest, TLS 1.3 in transit, and RBAC access controls.',
+            'Zero-Knowledge AI Privacy: Prompts and financial ledgers are kept in isolated sessions and excluded from public model training.'
+          ]
+        },
+        {
+          title: '4. ⚖️ Financial Data Integrity & Double-Entry Equilibrium',
+          steps: [
+            'Mandatory Double-Entry Rule: Enforces Sum(Debits) = Sum(Credits) on every posted voucher.',
+            'Immutable Audit Trail: Reconciled vouchers or entries locked in filed GST returns cannot be silently overwritten. Adjustments require audited Debit/Credit Notes or Reversal Journals.',
             'Real-time Subledger to General Ledger (GL) Auto-Synchronization.'
           ]
         }
       ],
       rulesAndLimits: [
-        'Data privacy policy complies with statutory Indian Data Protection (DPDP) and GST Audit guidelines.',
-        'Zero-trust password and credential disclosure protection.'
+        'Complies with EU GDPR, India DPDP Act 2023, US CCPA/CPRA, and statutory CGST Section 36 audit retention.',
+        'Zero-trust credential protection: passwords, secret keys, and DB tokens are never exposed in UI or AI responses.'
       ],
       proTips: [
         'Assign Role-Based Access Control (RBAC) to restrict billing staff from viewing confidential P&L reports.'

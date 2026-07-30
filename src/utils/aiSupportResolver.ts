@@ -17,25 +17,33 @@ export const resolveAiIntent = (q: string, activeModuleTitle = 'VyaparSetu'): st
     return 'I noticed random characters or numbers in your message. Please type a clear question about your Sales Invoices, Purchase Bills, GST Filing, or Bank Reconciliation!';
   }
 
-  // 2. Data Privacy & Data Integrity Query Handler
+  // 2. Global Data Privacy (GDPR, India DPDP 2023, US CCPA/CPRA) & Data Integrity Handler
   if (
     queryLower.includes('privacy') ||
+    queryLower.includes('gdpr') ||
+    queryLower.includes('dpdp') ||
+    queryLower.includes('ccpa') ||
+    queryLower.includes('cpra') ||
     queryLower.includes('integrity') ||
     queryLower.includes('data protection') ||
     queryLower.includes('encryption')
   ) {
-    return `In VyaparSetu, Data Privacy & Data Integrity are governed by strict enterprise architecture:
+    return `In VyaparSetu, Data Privacy & Data Integrity comply with global regulatory frameworks (EU GDPR, India DPDP Act 2023, US CCPA/CPRA):
 
-1. 🔒 Data Privacy & Security:
-- AES-256 Bit Encryption at rest for all stored ledgers, bank credentials, and GSTIN records.
-- TLS 1.3 Encrypted Channels for all API transmissions.
-- Multi-Tenant Isolation: Zero cross-tenant data leakage.
-- Zero-Knowledge AI: Financial data is processed locally in read-only sessions and never shared with third parties.
+1. 🇪🇺 EU GDPR Compliance:
+- Right to Erasure & Data Portability (Article 20): Export complete ledgers & audit trails in JSON/CSV anytime.
+- Lawful Basis & DPO Contact: Contact DPO at dpo@vyaparsetu.in.
 
-2. ⚖️ Data Integrity & Auditability:
-- Mandatory Double-Entry Balance Rule: System enforces Sum(Debits) = Sum(Credits) on every voucher.
-- Immutable Audit Trail: Reconciled vouchers cannot be silently deleted. Adjustments require audited Debit/Credit Notes or Reversal Journals.
-- Real-time Subledger to General Ledger (GL) Auto-Sync.`;
+2. 🇮🇳 India DPDP Act 2023:
+- Statutory Consent Manager & Data Principal Rights for GSTIN, PAN, Phone, and Email PII.
+- Statutory Harmonization with CGST Act Section 36 (7-year statutory audit retention).
+
+3. 🇺🇸 US Privacy Regulations (CCPA / CPRA & SOC 2 Type II):
+- 100% Zero-Commercialization: Financial PII is NEVER sold, rented, or monetized.
+- AES-256 Bit Encryption at rest and TLS 1.3 in transit. Zero-Knowledge AI session isolation.
+
+4. ⚖️ Financial Data Integrity:
+- Mandatory Double-Entry Balance Rule (Debits = Credits) & Immutable Audit Trails.`;
   }
 
   // 3. Vendor Payment Procedure (Fix for "how do i do payment to my vendor")
