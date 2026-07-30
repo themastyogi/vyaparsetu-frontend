@@ -189,7 +189,7 @@ export default function ManualJournalModal({ onClose }: Props) {
             </div>
             <div>
               <h3 style={{ fontSize: 17, fontWeight: 900, color: 'var(--text-primary)' }}>Create Accounting Voucher</h3>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Quick "Click-Click" Voucher &amp; Journal Entry Engine</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Smart Accounting Voucher &amp; Journal Entry Engine</div>
             </div>
           </div>
 
@@ -200,21 +200,21 @@ export default function ManualJournalModal({ onClose }: Props) {
               onClick={() => setViewMode('easy')}
               style={{ padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 800, border: 'none', cursor: 'pointer', background: viewMode === 'easy' ? 'var(--brand-primary)' : 'transparent', color: viewMode === 'easy' ? '#fff' : 'var(--text-secondary)' }}
             >
-              ⚡ Easy Click-Click
+              ⚡ Smart Express Mode
             </button>
             <button
               type="button"
               onClick={() => setViewMode('advanced')}
               style={{ padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 800, border: 'none', cursor: 'pointer', background: viewMode === 'advanced' ? 'var(--brand-primary)' : 'transparent', color: viewMode === 'advanced' ? '#fff' : 'var(--text-secondary)' }}
             >
-              ⚙️ Pro Accountant Table
+              📜 Standard Double-Entry
             </button>
             <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, marginLeft: 10 }}>✕</button>
           </div>
         </div>
 
         {/* ════════════════════════════════════════════════════════════════
-            EASY CLICK-CLICK MODE (Default for Normal Users)
+            SMART EXPRESS MODE (Default for Business Users)
             ════════════════════════════════════════════════════════════════ */}
         {viewMode === 'easy' ? (
           <form onSubmit={handleEasySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -222,7 +222,7 @@ export default function ManualJournalModal({ onClose }: Props) {
             {/* Action Cards Grid */}
             <div>
               <label style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, display: 'block' }}>
-                1. Select Transaction Action ("Click-Click"):
+                1. Select Voucher Action (Auto Double-Entry):
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                 
@@ -440,7 +440,7 @@ export default function ManualJournalModal({ onClose }: Props) {
               className="btn-action btn-action-primary"
               style={{ width: '100%', padding: '14px', borderRadius: 10, fontSize: 15, fontWeight: 900, background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
-              ⚡ Post Voucher ("Click-Click")
+              ⚡ Post Voucher
             </button>
 
           </form>
