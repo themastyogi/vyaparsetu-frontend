@@ -348,19 +348,47 @@ export default function Layout() {
         />
       )}
 
-      {/* Floating AI Support Assistant Trigger when Popped Out */}
+      {/* Global Floating AI Support Assistant Window (Spacious 440px Popout) */}
       {isPoppedOutAi && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1500 }}>
-          <button
-            type="button"
-            onClick={() => {
-              setIsPoppedOutAi(false);
-              setShowHelpModal(true);
-            }}
-            style={{ padding: '12px 18px', borderRadius: 30, background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#fff', border: 'none', fontWeight: 900, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', boxShadow: '0 8px 24px rgba(16,185,129,0.4)', animation: 'fade-in 0.2s' }}
-          >
-            <Bot size={18}/> 💬 AI Support Agent (Active)
-          </button>
+        <div style={{ position: 'fixed', bottom: 20, right: 20, width: 440, height: 560, zIndex: 1500, background: 'var(--bg-card)', borderRadius: 16, boxShadow: '0 24px 64px rgba(0,0,0,0.45)', border: '1.5px solid var(--brand-primary)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fade-in 0.2s' }}>
+          {/* Popout Header */}
+          <div style={{ padding: '14px 18px', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Bot size={20}/>
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 900 }}>VyaparSetu AI Support Agent</div>
+                <div style={{ fontSize: 11, opacity: 0.9, fontWeight: 700 }}>● Live Floating Assistant</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => { setIsPoppedOutAi(false); setShowHelpModal(true); }}
+                style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: '#fff', borderRadius: 6, padding: '4px 9px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                title="Dock back to full Knowledge Base modal"
+              >
+                ↙️ Dock
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPoppedOutAi(false)}
+                style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 18, fontWeight: 800 }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Embedded Help Modal Component in Popout View */}
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <HelpSupportModal
+              onClose={() => setIsPoppedOutAi(false)}
+              onPopout={() => {}}
+            />
+          </div>
         </div>
       )}
     </div>

@@ -552,7 +552,7 @@ export default function HelpSupportModal({ onClose, onPopout }: Props) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 960, height: '90vh', boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fade-in 0.2s' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 1060, height: '90vh', boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fade-in 0.2s' }}>
         
         {/* Header */}
         <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-elevated)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -591,7 +591,7 @@ export default function HelpSupportModal({ onClose, onPopout }: Props) {
         </div>
 
         {/* Modal Main Body Grid (Sidebar + Content) */}
-        <div style={{ display: 'grid', gridTemplateColumns: '270px 1fr', flex: 1, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', flex: 1, overflow: 'hidden' }}>
           
           {/* Left Sidebar Topics Menu */}
           <div style={{ background: 'var(--bg-elevated)', borderRight: '1px solid var(--border-subtle)', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
