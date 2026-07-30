@@ -7,12 +7,13 @@ import { useState, useMemo } from 'react';
 import {
   BarChart3, BookOpen, List, Scale, ChevronDown, ChevronUp,
   AlertCircle, CheckCircle2, Users, Clock, TrendingUp, Search,
-  IndianRupee, Link2, Building2, FileBarChart2, Droplets, CheckSquare, Square, Upload
+  IndianRupee, Link2, Building2, FileBarChart2, Droplets, CheckSquare, Square, Upload, Plus
 } from 'lucide-react';
 import {
   useAccounting, type JournalEntry,
   type BSSection, type PLRow, type CashFlowSection,
 } from '../hooks/useAccounting';
+import ManualJournalModal from '../components/ManualJournalModal';
 
 const f2 = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
@@ -132,6 +133,9 @@ export default function Reports() {
   const [plToDate,   setPlToDate]   = useState(new Date().toISOString().split('T')[0]);
   // Balance Sheet as-of
   const [bsAsOf, setBsAsOf] = useState(new Date().toISOString().split('T')[0]);
+
+  // Manual Journal Entry Modal state
+  const [showManualJournal, setShowManualJournal] = useState(false);
 
   // Party Ledger Reconciliation State
   const [reconciledMap, setReconciledMap] = useState<Record<string, boolean>>(() => {
@@ -619,13 +623,24 @@ export default function Reports() {
               <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Journal Entries ({jeGroups.length})</h2>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Double-entry General Ledger audit trail</div>
             </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              {jeTypes.map(t => (
-                <button key={t} onClick={() => setJEFilter(t)}
-                  style={{ padding: '5px 12px', borderRadius: 6, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', borderColor: jeFilter === t ? 'var(--brand-primary)' : 'var(--border-default)', background: jeFilter === t ? 'var(--brand-primary)' : 'var(--bg-elevated)', color: jeFilter === t ? '#fff' : 'var(--text-secondary)' }}>
-                  {t}
-                </button>
-              ))}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setShowManualJournal(true)}
+                className="btn-action btn-action-primary"
+                style={{ padding: '6px 14px', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <Plus size={14}/> + New Manual Journal
+              </button>
+
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                {jeTypes.map(t => (
+                  <button key={t} onClick={() => setJEFilter(t)}
+                    style={{ padding: '5px 12px', borderRadius: 6, border: '1.5px solid', fontSize: 12, fontWeight: 600, cursor: 'pointer', borderColor: jeFilter === t ? 'var(--brand-primary)' : 'var(--border-default)', background: jeFilter === t ? 'var(--brand-primary)' : 'var(--bg-elevated)', color: jeFilter === t ? '#fff' : 'var(--text-secondary)' }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1284,6 +1299,7 @@ export default function Reports() {
           </div>
         </div>
       )}
+      {showManualJournal && <ManualJournalModal onClose={() => setShowManualJournal(false)} />}
     </div>
   );
 }

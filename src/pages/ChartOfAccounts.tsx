@@ -14,6 +14,7 @@ import {
   type AccountType,
   type AccountGroup,
 } from '../hooks/useAccounting';
+import ManualJournalModal from '../components/ManualJournalModal';
 import './Parties.css';
 
 // ── Type config ───────────────────────────────────────────────────
@@ -65,6 +66,7 @@ export default function ChartOfAccounts() {
   const [editCode,    setEditCode]    = useState<string | null>(null);
   const [deleteConf,  setDeleteConf]  = useState<string | null>(null);
   const [resetConf,   setResetConf]   = useState(false);
+  const [showManualJournal, setShowManualJournal] = useState(false);
   const [form, setForm] = useState<{ code: string; name: string; type: AccountType; group: AccountGroup }>({
     code: '', name: '', type: 'Expense', group: 'Operating Expenses',
   });
@@ -209,6 +211,9 @@ export default function ChartOfAccounts() {
           <p className="page-sub">{coa.length} accounts · Add your own or reset to the standard Indian Business COA</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn-action btn-action-secondary" onClick={() => setShowManualJournal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <BookOpen size={14}/> + New Manual Journal
+          </button>
           <button className="btn-action btn-action-ghost" onClick={handleDownloadOBTemplate} title="Download sample template for batch uploading Opening Balances">
             📄 Download OB Template
           </button>
@@ -419,6 +424,7 @@ export default function ChartOfAccounts() {
           </div>
         </div>
       )}
+      {showManualJournal && <ManualJournalModal onClose={() => setShowManualJournal(false)} />}
     </div>
   );
 }
