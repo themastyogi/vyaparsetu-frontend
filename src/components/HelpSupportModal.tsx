@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, BookOpen, HelpCircle, ShieldAlert, Sparkles, ChevronRight, Landmark, Users, Package, ShoppingCart, FileText, BarChart3, Phone, Send, Bot } from 'lucide-react';
+import { Search, BookOpen, HelpCircle, ShieldAlert, ShieldCheck, Sparkles, ChevronRight, Landmark, Users, Package, ShoppingCart, FileText, BarChart3, Phone, Send, Bot } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { resolveAiIntent } from '../utils/aiSupportResolver';
 
@@ -30,6 +30,53 @@ interface ScreenHelpContent {
 }
 
 const HELP_DATABASE: Record<string, ScreenHelpContent> = {
+  'data-privacy': {
+    id: 'data-privacy',
+    title: '🔒 Data Privacy, Security & Integrity Policy',
+    category: 'ENTERPRISE GOVERNANCE & SECURITY',
+    icon: ShieldCheck,
+    businessUser: {
+      whatIsIt: 'VyaparSetu is engineered with Zero-Trust Data Privacy & Financial Data Integrity standards. All stored company ledgers, GSTIN credentials, bank statements, and party subledgers are 100% encrypted and protected against unauthorized access.',
+      processesAndSteps: [
+        {
+          title: '1. Data Privacy & Zero-Knowledge Security',
+          steps: [
+            'AES-256 Bit Encryption at rest for all database ledgers, bank credentials, and customer records.',
+            'TLS 1.3 Encryption in transit across all browser-to-server API communications.',
+            'Multi-Tenant Isolation: Zero cross-tenant data leakage between organizations.',
+            'Zero-Knowledge AI: Financial data is processed in read-only sessions and never shared with third-party ad networks or public AI training pipelines.'
+          ]
+        },
+        {
+          title: '2. Financial Data Integrity & Auditability',
+          steps: [
+            'Mandatory Double-Entry Balance Rule: System enforces Sum(Debits) = Sum(Credits) on every voucher before posting.',
+            'Immutable Audit Trail: Reconciled vouchers or entries locked in filed GST returns cannot be silently deleted. Adjustments require audited Debit/Credit Notes or Reversal Journals.',
+            'Real-time Subledger to General Ledger (GL) Auto-Synchronization.'
+          ]
+        }
+      ],
+      rulesAndLimits: [
+        'Data privacy policy complies with statutory Indian Data Protection (DPDP) and GST Audit guidelines.',
+        'Zero-trust password and credential disclosure protection.'
+      ],
+      proTips: [
+        'Assign Role-Based Access Control (RBAC) to restrict billing staff from viewing confidential P&L reports.'
+      ]
+    },
+    advancedGuide: {
+      technicalArch: 'Cryptographic tenant boundary isolation with AES-256 field-level payload encryption and immutable audit log hashing.',
+      coaGLMapping: [
+        'Security Standard: ISO/IEC 27001 & SOC 2 Type II Aligned Data Governance',
+        'Transport Security: Mandatory HSTS & TLS 1.3 Encryption',
+        'Database Security: AES-256 Key Ring Rotation & Automated Daily Offsite Backups'
+      ],
+      controlFlow: [
+        'Tenant Auth Verification -> RBAC Policy Evaluator -> Cryptographic Decryption -> View Rendering'
+      ],
+      auditTrail: 'All administrative, voucher posting, and security events are recorded in an append-only cryptographic audit log with user timestamp and IP hash.'
+    }
+  },
   'purchases': {
     id: 'purchases',
     title: 'Purchase Bills & Procurement Workflow',
