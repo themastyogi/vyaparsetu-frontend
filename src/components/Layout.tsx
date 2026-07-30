@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Package, FileText,
   ShoppingCart, BarChart3, Settings, LogOut,
-  Bell, Search, ChevronDown, Building2, ShieldCheck,
+  Bell, Search, Building2, ShieldCheck,
   HelpCircle, Menu, X, BookOpen, Zap, CreditCard, Sun, Moon, Bot, Sparkles
 } from 'lucide-react';
 import './Layout.css';
@@ -321,7 +321,7 @@ export default function Layout() {
                   </button>
 
                   {/* App Version Footer */}
-                  <div style={{ paddingTop: 6, borderTop: '1px solid var(--border-subtle)', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'monospace' }}>
+                  <div title={`Last Deployed: ${LAST_DEPLOY_TIMESTAMP}`} style={{ paddingTop: 6, borderTop: '1px solid var(--border-subtle)', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'monospace' }}>
                     VyaparSetu {APP_VERSION}
                   </div>
                 </div>
