@@ -46,7 +46,33 @@ export const resolveAiIntent = (q: string, activeModuleTitle = 'VyaparSetu'): st
 - Mandatory Double-Entry Balance Rule (Debits = Credits) & Immutable Audit Trails.`;
   }
 
-  // 3. Vendor Payment Procedure (Fix for "how do i do payment to my vendor")
+  // 3. Legal Terms, Terms of Service & SLA Notice
+  if (
+    queryLower.includes('legal') ||
+    queryLower.includes('terms of service') ||
+    queryLower.includes('terms') ||
+    queryLower.includes('sla') ||
+    queryLower.includes('disclaimer') ||
+    queryLower.includes('jurisdiction')
+  ) {
+    return `⚖️ VyaparSetu Official Legal Terms & Compliance Notice:
+
+1. 📜 Terms of Service & SLA:
+- Enterprise 99.9% Uptime SLA commitment for cloud accounting ledgers.
+- Acceptable Use Policy: Anti-money laundering & zero-tolerance for fraudulent invoice manipulation.
+
+2. ⚖️ Statutory Legal Compliance:
+- Indian Companies Act 2013 (Sec 128): Mandatory accrual double-entry accounting.
+- CGST Act 2017 (Sec 36): Mandatory 72-month statutory audit log retention.
+- E-Invoicing Payload Standards aligned with NIC government API specs.
+
+3. 🧑‍⚖️ Official Legal Contacts:
+- Nodal Legal Counsel: legal@vyaparsetu.in
+- Data Protection Officer (DPO): dpo@vyaparsetu.in
+- Governing Law: Jurisdiction of Courts of New Delhi, India.`;
+  }
+
+  // 4. Vendor Payment Procedure (Fix for "how do i do payment to my vendor")
   if (
     queryLower.includes('payment to my vendor') ||
     queryLower.includes('pay vendor') ||

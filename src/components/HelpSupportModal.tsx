@@ -30,6 +30,68 @@ interface ScreenHelpContent {
 }
 
 const HELP_DATABASE: Record<string, ScreenHelpContent> = {
+  'legal-terms': {
+    id: 'legal-terms',
+    title: '⚖️ Legal Terms, Terms of Service & Compliance Notice',
+    category: 'LEGAL & REGULATORY GOVERNANCE',
+    icon: Landmark,
+    businessUser: {
+      whatIsIt: 'VyaparSetu operates under official Enterprise Terms of Service, Statutory Accounting Laws (Indian Companies Act 2013 & CGST Act 2017), and International Business Legal Standards.',
+      processesAndSteps: [
+        {
+          title: '1. 📜 Terms of Service & SLA Commitment',
+          steps: [
+            'Enterprise SLA: 99.9% Application Uptime SLA guarantee for cloud accounting ledgers.',
+            'Authorized Account Usage: Accounts are non-transferable and reserved for registered business entities.',
+            'Acceptable Use Policy: Zero tolerance for fraudulent invoice creation, money laundering, or illegal tax evasion.'
+          ]
+        },
+        {
+          title: '2. ⚖️ Statutory Accounting & Legal Compliance',
+          steps: [
+            'Double-Entry Accounting Law: Complies with Section 128 of Indian Companies Act 2013 (Mandatory Accrual Double-Entry Maintenance).',
+            'GST Law Compliance: Complies with Section 36 of CGST Act 2017 (Mandatory 72-month / 6-year statutory record retention).',
+            'E-Invoicing & E-Way Bill Standards: Aligned with National Informatics Centre (NIC) e-Invoice API payload specifications.'
+          ]
+        },
+        {
+          title: '3. 🛡️ Intellectual Property & Limitation of Liability',
+          steps: [
+            'Intellectual Property: All software code, UI designs, and AI algorithms are proprietary property of VyaparSetu Technologies Pvt Ltd.',
+            'Tax Filing Disclaimer: Users retain full legal responsibility for verifying tax returns before final submission to government portals.'
+          ]
+        },
+        {
+          title: '4. 🧑‍⚖️ Official Legal Contacts',
+          steps: [
+            'Nodal Legal Counsel: legal@vyaparsetu.in',
+            'Data Protection Officer (DPO): dpo@vyaparsetu.in',
+            'Nodal Compliance Officer: compliance@vyaparsetu.in',
+            'Official Helpdesk Hotline: 1800-8927-2738 (Toll-Free)'
+          ]
+        }
+      ],
+      rulesAndLimits: [
+        'Governing Law: Jurisdiction of New Delhi, India for statutory disputes.',
+        'Terms updated periodically to align with updated GST Council notifications and Data Protection laws.'
+      ],
+      proTips: [
+        'Download monthly ledger backups under Reports -> General Ledger for your organization legal compliance archives.'
+      ]
+    },
+    advancedGuide: {
+      technicalArch: 'Statutory legal compliance framework integrated into software data validation layers and multi-tenant authorization hooks.',
+      coaGLMapping: [
+        'Statutory Mandate: Indian Companies Act 2013 (Sec 128) & CGST Act 2017 (Sec 36)',
+        'Legal Counsel: Office of Nodal Counsel, VyaparSetu Technologies Pvt Ltd',
+        'Jurisdiction: Courts of New Delhi, India'
+      ],
+      controlFlow: [
+        'User Auth -> Legal Terms Acceptance Check -> Data Access Enforcement -> Audit Hash Logging'
+      ],
+      auditTrail: 'All legal terms acceptances, consent logs, and structural data modifications are recorded in an append-only legal audit log.'
+    }
+  },
   'data-privacy': {
     id: 'data-privacy',
     title: '🔒 Data Privacy, Security & Integrity Policy',
