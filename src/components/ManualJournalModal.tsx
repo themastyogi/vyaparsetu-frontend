@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Trash2, CheckCircle2, AlertCircle, ArrowRightLeft, CreditCard, ArrowDownLeft, ArrowUpRight, Landmark, Wallet } from 'lucide-react';
 import { useAccounting, type JournalLine } from '../hooks/useAccounting';
 
@@ -39,13 +39,27 @@ export default function ManualJournalModal({ onClose }: Props) {
   const [narration, setNarration] = useState('');
 
   // ── ADVANCED PRO MODE STATE ───────────────────────────────────────
-  const [entryType, setEntryType] = useState('Journal Voucher');
   const [relatedNo, setRelatedNo] = useState(() => 'JV-' + Math.floor(100000 + Math.random() * 900000));
   const [party, setParty] = useState('General');
   const [lines, setLines] = useState<Array<{ account: string; debit: string; credit: string }>>([
     { account: coa[0]?.name || 'Office Expenses', debit: '1000', credit: '0' },
     { account: coa[1]?.name || 'Cash Account', debit: '0', credit: '1000' },
   ]);
+
+  // Automatic Voucher Type Inference engine
+  const autoVoucherType = useMemo(() => {
+    const acctNames = lines.map(l => l.account.toLowerCase());
+    const hasCash = acctNames.some(n => n.includes('cash'));
+    const hasBank = acctNames.some(n => n.includes('bank'));
+    const hasExpense = acctNames.some(n => n.includes('expense') || n.includes('rent') || n.includes('purchase') || n.includes('depreciation') || n.includes('freight'));
+    const hasParty = party && party !== 'General';
+
+    if (hasCash && hasBank) return 'Contra (Cash Withdrawal/Deposit)';
+    if (hasExpense) return 'Expense Voucher';
+    if (hasParty && (hasBank || hasCash)) return 'Vendor Payment / Customer Receipt';
+    if (hasParty) return 'Party Transfer / Adjustment';
+    return 'Journal Voucher';
+  }, [lines, party]);
 
   const addLine = () => {
     setLines(prev => [...prev, { account: coa[0]?.name || 'Office Expenses', debit: '0', credit: '0' }]);
@@ -166,7 +180,7 @@ export default function ManualJournalModal({ onClose }: Props) {
 
     postJournalEntry({
       date,
-      entryType,
+      entryType: autoVoucherType,
       relatedId: 'manual_' + Date.now().toString(36),
       relatedNo: relatedNo.trim() || ('JV-' + Date.now().toString().slice(-6)),
       party: (party.trim() || 'General') + (narration.trim() ? ` (${narration.trim()})` : ''),
@@ -179,7 +193,7 @@ export default function ManualJournalModal({ onClose }: Props) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 720, padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)', maxHeight: '92vh', overflowY: 'auto', animation: 'fade-in 0.2s' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 740, padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)', maxHeight: '92vh', overflowY: 'auto', animation: 'fade-in 0.2s' }}>
         
         {/* Header with Mode Switcher */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -446,33 +460,23 @@ export default function ManualJournalModal({ onClose }: Props) {
           </form>
         ) : (
           /* ════════════════════════════════════════════════════════════════
-             ADVANCED PRO MODE (Manual Debit/Credit Table for Accountants)
+             STANDARD DOUBLE-ENTRY MODE (Multi-Line General Journal)
              ════════════════════════════════════════════════════════════════ */
           <form onSubmit={handleAdvancedSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             
-            {/* Metadata Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            {/* Metadata Row with Automatic Voucher Type Badge */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: 12 }}>
               <div>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Posting Date *</label>
                 <input type="date" required value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}/>
               </div>
 
+              {/* Automated Inferred Voucher Type Badge */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Voucher Type</label>
-                <select value={entryType} onChange={e => setEntryType(e.target.value)} style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}>
-                  <option value="Journal Voucher">Journal Voucher</option>
-                  <option value="Party Transfer">Party Transfer</option>
-                  <option value="Expense Voucher">Expense Voucher</option>
-                  <option value="Vendor Payment">Vendor Payment</option>
-                  <option value="Customer Receipt">Customer Receipt</option>
-                  <option value="Inter-Bank Transfer">Inter-Bank Transfer</option>
-                  <option value="Contra (Cash Withdrawal)">Contra (Cash Withdrawal)</option>
-                  <option value="Contra (Cash Deposit)">Contra (Cash Deposit)</option>
-                  <option value="Petty Cash Voucher">Petty Cash Voucher</option>
-                  <option value="Adjustment Entry">Adjustment Entry</option>
-                  <option value="Accrual">Accrual Entry</option>
-                  <option value="Depreciation">Depreciation</option>
-                </select>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Auto Inferred Voucher Type</label>
+                <div style={{ background: 'rgba(108,71,255,0.08)', border: '1.5px solid var(--brand-primary)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--brand-primary)' }}>{autoVoucherType}</div>
+                </div>
               </div>
 
               <div>
@@ -481,16 +485,43 @@ export default function ManualJournalModal({ onClose }: Props) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {/* Quick Party & Bank Pickers Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Party / Particulars Reference</label>
-                <input type="text" value={party} onChange={e => setParty(e.target.value)} placeholder="e.g. SAHIL TRADER, Internal Adjustment" style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}/>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Pick Party Master</label>
+                <select
+                  onChange={e => { if (e.target.value) setParty(e.target.value); }}
+                  style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 12, fontWeight: 600 }}
+                >
+                  <option value="">-- Select Party Master --</option>
+                  {partiesList.map((p: any) => (
+                    <option key={p.id || p.name} value={p.name}>{p.name} ({p.type || 'Party'})</option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Narration / Description</label>
-                <input type="text" value={narration} onChange={e => setNarration(e.target.value)} placeholder="e.g. Subledger transfer / adjustment" style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}/>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Pick Bank Account</label>
+                <select
+                  onChange={e => { if (e.target.value) setParty(prev => (prev === 'General' ? '' : prev) + ` [${e.target.value}]`); }}
+                  style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 12, fontWeight: 600 }}
+                >
+                  <option value="">-- Select Bank Account --</option>
+                  {banksList.map((b: any) => (
+                    <option key={b.id || b.accountName} value={b.accountName}>{b.accountName} ({b.bankName})</option>
+                  ))}
+                </select>
               </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Party / Particulars Reference</label>
+                <input type="text" value={party} onChange={e => setParty(e.target.value)} placeholder="e.g. SAHIL TRADER, HDFC Bank" style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}/>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Narration / Description</label>
+              <input type="text" value={narration} onChange={e => setNarration(e.target.value)} placeholder="e.g. Subledger transfer / adjustment" style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: 13 }}/>
             </div>
 
             {/* Double Entry Lines Table */}
