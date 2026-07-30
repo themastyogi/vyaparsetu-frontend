@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, AlertCircle, ArrowRightLeft, CreditCard, ArrowDownLeft, ArrowUpRight, Landmark, Wallet } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, AlertCircle, ArrowRightLeft, CreditCard, ArrowDownLeft, ArrowUpRight, Landmark, Wallet, Info } from 'lucide-react';
 import { useAccounting, type JournalLine } from '../hooks/useAccounting';
 
 interface Props {
