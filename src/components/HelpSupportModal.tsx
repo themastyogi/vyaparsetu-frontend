@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, BookOpen, HelpCircle, ShieldAlert, Sparkles, ChevronRight, Landmark, Users, Package, ShoppingCart, FileText, BarChart3 } from 'lucide-react';
+import { Search, BookOpen, HelpCircle, ShieldAlert, Sparkles, ChevronRight, Landmark, Users, Package, ShoppingCart, FileText, BarChart3, Phone, Send, Bot } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 interface Props {
@@ -13,13 +13,13 @@ interface ScreenHelpContent {
   title: string;
   category: string;
   icon: any;
-  layman: {
+  businessUser: {
     whatIsIt: string;
-    howToAdd: string[];
+    processesAndSteps: { title: string; steps: string[] }[];
     rulesAndLimits: string[];
     proTips: string[];
   };
-  deepDive: {
+  advancedGuide: {
     technicalArch: string;
     coaGLMapping: string[];
     controlFlow: string[];
@@ -28,19 +28,98 @@ interface ScreenHelpContent {
 }
 
 const HELP_DATABASE: Record<string, ScreenHelpContent> = {
+  'purchases': {
+    id: 'purchases',
+    title: 'Purchase Bills & Procurement Workflow',
+    category: 'PROCUREMENT & VENDORS',
+    icon: FileText,
+    businessUser: {
+      whatIsIt: 'The Purchase & Procurement module manages the complete vendor purchase lifecycle — from Purchase Orders (PO) and Goods Receipt Notes (GRN) to Vendor Purchase Bills, Input Tax Credit (ITC 2A/2B) claiming, Debit Notes (Purchase Returns), and Vendor Accounts Payable aging.',
+      processesAndSteps: [
+        {
+          title: '1. Purchase Orders (PO) & Vendor Requisitions',
+          steps: [
+            'Click "+ Record Purchase Bill" or navigate to PO creation.',
+            'Select Supplier/Vendor from Party Master.',
+            'Enter item quantities, agreed unit rates, and delivery dates.',
+            'System generates a PO reference number for vendor tracking.'
+          ]
+        },
+        {
+          title: '2. Goods Receipt Note (GRN) & Physical Stock Receipt',
+          steps: [
+            'When goods arrive at warehouse, verify items against the vendor delivery challan.',
+            'System automatically updates physical stock inventory upon GRN confirmation.',
+            'Discrepancies in quantity or damaged goods are flagged before final bill posting.'
+          ]
+        },
+        {
+          title: '3. Vendor Purchase Bills & GST Input Tax Credit (ITC 2A/2B)',
+          steps: [
+            'Enter Vendor Bill Serial No., Invoice Date, and Vendor GSTIN.',
+            'Map purchased line items to Inventory Asset or Purchase Expense accounts.',
+            'System calculates CGST + SGST (Intra-state) or IGST (Inter-state) ITC tax credit.',
+            'Verifies Input Tax Credit eligibility against GSTR-2B monthly auto-drafted returns.'
+          ]
+        },
+        {
+          title: '4. Debit Notes & Purchase Return Vouchers',
+          steps: [
+            'If returning defective goods or receiving price adjustments from vendor, click "Debit Notes".',
+            'Select original Purchase Bill reference and items returned.',
+            'System posts Debit Note voucher: Debits Vendor Accounts Payable and Credits Inventory/Purchase Return.'
+          ]
+        },
+        {
+          title: '5. Vendor Accounts Payable & Payment Aging',
+          steps: [
+            'View outstanding vendor dues broken down by aging slabs (Current, 1-30 Days, 31-60 Days, >90 Days).',
+            'Post vendor payments via Bank Transfer / Cheque with 1 click.'
+          ]
+        }
+      ],
+      rulesAndLimits: [
+        'Normal users can record purchase bills, generate POs, and record debit notes.',
+        'Posted purchase bills automatically credit Vendor Accounts Payable and debit Inventory/Expense GL accounts.',
+        'Input Tax Credit (ITC) requires valid Vendor GSTIN matching GSTR-2B returns.'
+      ],
+      proTips: [
+        'Always enter exact Vendor Invoice Number to enable automated 2A/2B GST reconciliation.',
+        'Use Debit Notes instead of deleting purchase bills to preserve full GST audit trail compliance.'
+      ]
+    },
+    advancedGuide: {
+      technicalArch: 'Purchase transactions generate multi-line GL journal entries enforcing perpetual inventory valuation and Input Tax Credit (ITC) asset routing.',
+      coaGLMapping: [
+        'Dr. Inventory Asset (1020) / Purchase Expense (5010)',
+        'Dr. Input CGST Asset (1030) / Input SGST Asset (1031) / Input IGST Asset (1032)',
+        'Cr. Accounts Payable Vendor Subledger (2010)'
+      ],
+      controlFlow: [
+        'Purchase Bill Form -> GSTR-2B Validation -> Stock Ledger Incrementor -> COA Multi-line Journal Generator -> Vendor Payable Ledger.'
+      ],
+      auditTrail: 'Vendor bill numbers, UTR transaction hashes, and GSTR-2B mismatch flags are archived for GST audit readiness.'
+    }
+  },
+
   'chart-of-accounts': {
     id: 'chart-of-accounts',
     title: 'Chart of Accounts (COA)',
     category: 'FINANCE & GL',
     icon: BookOpen,
-    layman: {
+    businessUser: {
       whatIsIt: 'The Chart of Accounts is the master list of all financial buckets in your business (Assets, Liabilities, Income, Expenses, Equity). Think of it like your digital filing cabinet where every rupee spent, earned, or owed gets recorded cleanly.',
-      howToAdd: [
-        'Click "+ Add New Account" button at top right.',
-        'Select the Account Type (e.g. Expense, Asset, Liability, Revenue).',
-        'Enter a clean Account Name (e.g. "Internet & WiFi Expense" or "Office Rent").',
-        'Specify Opening Balance if migrating from another software.',
-        'Click "Save Account" to register it in your Chart of Accounts.'
+      processesAndSteps: [
+        {
+          title: 'Adding & Configuring Accounts',
+          steps: [
+            'Click "+ Add New Account" button at top right.',
+            'Select the Account Type (e.g. Expense, Asset, Liability, Revenue).',
+            'Enter a clean Account Name (e.g. "Internet & WiFi Expense" or "Office Rent").',
+            'Specify Opening Balance if migrating from another software.',
+            'Click "Save Account" to register it in your Chart of Accounts.'
+          ]
+        }
       ],
       rulesAndLimits: [
         'Normal users CAN add new sub-accounts or edit account display names.',
@@ -52,7 +131,7 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
         'Group similar expenses under standard categories (e.g. Office Expenses, Utility Bills).'
       ]
     },
-    deepDive: {
+    advancedGuide: {
       technicalArch: 'VyaparSetu enforces a strict 4-digit GL coding structure: 1000s (Assets), 2000s (Liabilities), 3000s (Equity), 4000s (Revenue), 5000s (COGS), 6000s (Expenses).',
       coaGLMapping: [
         'Automatic GL Route Enforcer (resolveCOARoute) verifies 100% of journal entries against vs_coa.',
@@ -71,13 +150,18 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
     title: 'Reports & General Ledger',
     category: 'FINANCE & AUDIT',
     icon: BarChart3,
-    layman: {
+    businessUser: {
       whatIsIt: 'This section displays your real-time financial statements (Profit & Loss, Balance Sheet, Trial Balance, General Ledger, Cash Flow). Everything is calculated live from your double-entry vouchers.',
-      howToAdd: [
-        'Select the report tab (e.g. General Ledger, Profit & Loss, Trial Balance).',
-        'Use the Date Range filter to view specific months or financial years.',
-        'Click "+ New Manual Journal" if you need to post an adjustment entry.',
-        'Click "Export PDF" or "Export Excel" to download reports for your accountant or GST file.'
+      processesAndSteps: [
+        {
+          title: 'Generating & Exporting Reports',
+          steps: [
+            'Select the report tab (e.g. General Ledger, Profit & Loss, Trial Balance).',
+            'Use the Date Range filter to view specific months or financial years.',
+            'Click "+ New Manual Journal" if you need to post an adjustment entry.',
+            'Click "Export PDF" or "Export Excel" to download reports for your accountant or GST file.'
+          ]
+        }
       ],
       rulesAndLimits: [
         'Normal users can view reports and post manual accounting vouchers.',
@@ -88,7 +172,7 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
         'Use the General Ledger filter to inspect line-by-line history of any specific party or bank.'
       ]
     },
-    deepDive: {
+    advancedGuide: {
       technicalArch: 'Financial statements are dynamically aggregated in memory using transactional double-entry line sums from localStorage key vs_journal.',
       coaGLMapping: [
         'P&L Accounts: 4000s (Revenue) minus 5000s/6000s (Expenses).',
@@ -106,14 +190,19 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
     title: 'Parties & Subledgers',
     category: 'MASTERS',
     icon: Users,
-    layman: {
+    businessUser: {
       whatIsIt: 'The Parties directory stores all your Customers, Vendors (Suppliers), and Dual-Role partners. Every party gets an automatic subledger linked to your Chart of Accounts.',
-      howToAdd: [
-        'Click "+ Add New Party" button.',
-        'Enter Party Name, Email Address, and GSTIN (if registered).',
-        'Choose Party Type: "Customer", "Vendor", or "Both (Customer & Vendor)".',
-        'Set Payment Terms (e.g. Net 30, Due on Receipt) and Opening Balance.',
-        'Click "Save Party".'
+      processesAndSteps: [
+        {
+          title: 'Managing Parties & Dual Roles',
+          steps: [
+            'Click "+ Add New Party" button.',
+            'Enter Party Name, Email Address, and GSTIN (if registered).',
+            'Choose Party Type: "Customer", "Vendor", or "Both (Customer & Vendor)".',
+            'Set Payment Terms (e.g. Net 30, Due on Receipt) and Opening Balance.',
+            'Click "Save Party".'
+          ]
+        }
       ],
       rulesAndLimits: [
         'If a party buys from you AND sells to you, select "Both (Customer & Vendor)".',
@@ -123,7 +212,7 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
         'Always provide a valid email address so VyaparSetu can automatically email payment receipts and invoice acknowledgments.'
       ]
     },
-    deepDive: {
+    advancedGuide: {
       technicalArch: 'Party master records are stored under vs_parties. Subledger balances map directly to Accounts Receivable (1010) or Accounts Payable (2010).',
       coaGLMapping: [
         'Customers -> Subledger under Accounts Receivable (Asset).',
@@ -142,14 +231,19 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
     title: 'Inventory & Items',
     category: 'MASTERS',
     icon: Package,
-    layman: {
+    businessUser: {
       whatIsIt: 'The Items directory manages all products, goods, and services that you sell or purchase. Stock levels update automatically whenever invoices or bills are created.',
-      howToAdd: [
-        'Click "+ Add Item" button.',
-        'Enter Item Name, SKU/HSN Code, and Unit of Measure (Pcs, Kg, Box).',
-        'Specify Selling Price, Purchase Price, and GST Tax Rate (e.g. 18%).',
-        'Enter Opening Stock Quantity.',
-        'Click "Save Item".'
+      processesAndSteps: [
+        {
+          title: 'Item & Inventory Setup',
+          steps: [
+            'Click "+ Add Item" button.',
+            'Enter Item Name, SKU/HSN Code, and Unit of Measure (Pcs, Kg, Box).',
+            'Specify Selling Price, Purchase Price, and GST Tax Rate (e.g. 18%).',
+            'Enter Opening Stock Quantity.',
+            'Click "Save Item".'
+          ]
+        }
       ],
       rulesAndLimits: [
         'Items with opening stock automatically post Opening Inventory asset balance.',
@@ -159,7 +253,7 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
         'Keep HSN/SAC codes updated for seamless GST return filing.'
       ]
     },
-    deepDive: {
+    advancedGuide: {
       technicalArch: 'Items are stored under vs_items with perpetual inventory valuation support.',
       coaGLMapping: [
         'Inventory Asset (1020), Sales Revenue (4010), Cost of Goods Sold (5010), Tax Accounts (Output GST / Input Tax Credit).'
@@ -176,14 +270,19 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
     title: 'Sales Invoices',
     category: 'TRANSACTIONS',
     icon: ShoppingCart,
-    layman: {
+    businessUser: {
       whatIsIt: 'Create and manage tax invoices for your customers. VyaparSetu automatically calculates GST, posts double-entry vouchers, and emails receipt acknowledgments.',
-      howToAdd: [
-        'Click "+ Create Sales Invoice".',
-        'Select Customer from dropdown (or add a new customer).',
-        'Pick items, set quantities and discounts.',
-        'Verify GST calculation (CGST + SGST or IGST).',
-        'Click "Post Invoice".'
+      processesAndSteps: [
+        {
+          title: 'Creating Sales Invoices',
+          steps: [
+            'Click "+ Create Sales Invoice".',
+            'Select Customer from dropdown (or add a new customer).',
+            'Pick items, set quantities and discounts.',
+            'Verify GST calculation (CGST + SGST or IGST).',
+            'Click "Post Invoice".'
+          ]
+        }
       ],
       rulesAndLimits: [
         'Posted invoices automatically update Customer Receivable balance and Inventory stock.',
@@ -193,7 +292,7 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
         'Use Smart Express Voucher mode if you received direct bank/cash payment for the sale.'
       ]
     },
-    deepDive: {
+    advancedGuide: {
       technicalArch: 'Invoices generate multi-line GL journal entries debiting Accounts Receivable and crediting Sales Account & Output Tax Liabilities.',
       coaGLMapping: [
         'Dr. Accounts Receivable (1010), Cr. Sales Revenue (4010), Cr. Output CGST/SGST/IGST Payable (2020).'
@@ -205,62 +304,33 @@ const HELP_DATABASE: Record<string, ScreenHelpContent> = {
     }
   },
 
-  'purchases': {
-    id: 'purchases',
-    title: 'Purchase Bills & Vendor Invoices',
-    category: 'TRANSACTIONS',
-    icon: FileText,
-    layman: {
-      whatIsIt: 'Record purchase bills from your suppliers and vendors. Claims Input Tax Credit (ITC) for GST and updates stock inventory.',
-      howToAdd: [
-        'Click "+ Record Purchase Bill".',
-        'Select Vendor from party list.',
-        'Enter Vendor Bill No. and Date.',
-        'Add purchased items and prices.',
-        'Click "Save Purchase Bill".'
-      ],
-      rulesAndLimits: [
-        'Purchase bills increase Accounts Payable (money you owe to vendor) and increase inventory stock.',
-        'Input Tax Credit (ITC) is automatically credited to your Tax Asset account.'
-      ],
-      proTips: [
-        'Verify Vendor GSTIN to ensure eligibility for Input Tax Credit.'
-      ]
-    },
-    deepDive: {
-      technicalArch: 'Purchase bills generate double-entry records debiting Inventory/Expenses & Input Tax Credit, and crediting Accounts Payable.',
-      coaGLMapping: [
-        'Dr. Inventory Asset (1020) / Purchase Expense (5010), Dr. Input CGST/SGST ITC Asset (1030), Cr. Accounts Payable (2010).'
-      ],
-      controlFlow: [
-        'Purchase Form -> ITC Claim Engine -> COA Voucher Generator -> Vendor Ledger update.'
-      ],
-      auditTrail: 'Vendor bill serial reference linked for 2A/2B GST reconciliation.'
-    }
-  },
-
   'payments': {
     id: 'payments',
     title: 'Payments & Bank Reconciliation',
     category: 'FINANCE & BANKING',
     icon: Landmark,
-    layman: {
+    businessUser: {
       whatIsIt: 'Manage bank payments, customer receipts, petty cash, and bank reconciliation statements (BRS).',
-      howToAdd: [
-        'Click "+ New Manual Journal" or "Open Smart AI Accountant".',
-        'Select action: Pay Vendor, Receive Customer, Withdraw Cash, or Deposit Cash.',
-        'Pick Bank Account and Party Name.',
-        'Enter Amount and click "Post Voucher".'
+      processesAndSteps: [
+        {
+          title: 'Posting Payments & Reconciliation',
+          steps: [
+            'Click "+ New Manual Journal" or "Open Smart AI Accountant".',
+            'Select action: Pay Vendor, Receive Customer, Withdraw Cash, or Deposit Cash.',
+            'Pick Bank Account and Party Name.',
+            'Enter Amount and click "Post Voucher".'
+          ]
+        }
       ],
       rulesAndLimits: [
         'Pure Cash / Petty cash transactions are excluded from Bank Reconciliation (BRS) so your bank statement stays 100% accurate.',
-        'Vouchers preview exact layman financial impact before posting.'
+        'Vouchers preview exact financial impact before posting.'
       ],
       proTips: [
         'Use "Smart AI Accountant" to type natural prompts like "Paid 2000 cash for tea" or "Withdraw 5000 from HDFC cheque 45922".'
       ]
     },
-    deepDive: {
+    advancedGuide: {
       technicalArch: 'Bank vouchers route through resolveCOARoute and update vs_brs_records for bank reconciliation matching.',
       coaGLMapping: [
         'Dr./Cr. Bank GL Account (1002), Dr./Cr. AR/AP (1010/2010), Dr./Cr. Cash Account (1001).'
@@ -286,14 +356,24 @@ export default function HelpSupportModal({ onClose }: Props) {
     if (path.includes('sales')) return 'sales';
     if (path.includes('purchases')) return 'purchases';
     if (path.includes('payments') || path.includes('debit-notes')) return 'payments';
-    return 'chart-of-accounts'; // Default fallback
+    return 'purchases'; // Default fallback
   }, [location.pathname]);
 
   const [selectedScreen, setSelectedScreen] = useState<string>(currentScreenKey);
   const [modeDepth, setModeDepth] = useState<ModeDepth>('basic');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const activeContent = HELP_DATABASE[selectedScreen] || HELP_DATABASE['chart-of-accounts'];
+  // Interactive AI Support Assistant Chat state
+  const [aiQuestion, setAiQuestion] = useState('');
+  const [chatHistory, setChatHistory] = useState<Array<{ sender: 'user' | 'agent'; text: string; time: string }>>([
+    {
+      sender: 'agent',
+      text: 'Hello! I am your VyaparSetu AI Support Assistant. Ask me any specific question about Purchase Bills, GST ITC, Bank Payments, or Accounting rules!',
+      time: 'Just now'
+    }
+  ]);
+
+  const activeContent = HELP_DATABASE[selectedScreen] || HELP_DATABASE['purchases'];
   const ActiveIcon = activeContent.icon;
 
   const filteredTopics = useMemo(() => {
@@ -302,23 +382,52 @@ export default function HelpSupportModal({ onClose }: Props) {
     return Object.values(HELP_DATABASE).filter(h => 
       h.title.toLowerCase().includes(q) ||
       h.category.toLowerCase().includes(q) ||
-      h.layman.whatIsIt.toLowerCase().includes(q)
+      h.businessUser.whatIsIt.toLowerCase().includes(q)
     );
   }, [searchQuery]);
 
+  // AI Agent Answer Resolver
+  const handleAskAi = (customPrompt?: string) => {
+    const q = (customPrompt || aiQuestion).trim();
+    if (!q) return;
+
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const userMsg = { sender: 'user' as const, text: q, time: timeStr };
+
+    let botResponse = '';
+    const queryLower = q.toLowerCase();
+
+    if (queryLower.includes('itc') || queryLower.includes('gst') || queryLower.includes('tax credit')) {
+      botResponse = 'GST Input Tax Credit (ITC) is automatically calculated when you record a Purchase Bill with valid Vendor GSTIN. Intrastate purchases split into CGST + SGST, while Interstate purchases credit IGST. You can verify your monthly eligible ITC under Reports -> GST Summary against GSTR-2B.';
+    } else if (queryLower.includes('debit note') || queryLower.includes('return') || queryLower.includes('defective')) {
+      botResponse = 'To record a Purchase Return or price discount from a supplier: Go to Transactions -> Debit Notes -> Click "+ New Debit Note". Select the Vendor and original Purchase Bill reference. System will debit Accounts Payable and reverse inventory/purchase expenses.';
+    } else if (queryLower.includes('delete') || queryLower.includes('edit') || queryLower.includes('cancel')) {
+      botResponse = 'For accounting audit compliance, posted vouchers and bills cannot be deleted directly if locked in GST returns. However, normal users can post adjustment entries or Debit Notes to reverse amounts cleanly without breaking double-entry ledger balance!';
+    } else if (queryLower.includes('po') || queryLower.includes('order') || queryLower.includes('grn')) {
+      botResponse = 'Purchase Orders (PO) allow you to record vendor rate commitments. Once goods arrive, convert the PO into a Goods Receipt Note (GRN) to update physical stock, then convert to a Purchase Bill for Accounts Payable financial posting.';
+    } else if (queryLower.includes('contact') || queryLower.includes('phone') || queryLower.includes('support') || queryLower.includes('number')) {
+      botResponse = 'You can reach official VyaparSetu Customer Support at Toll-Free: 1800-VYAPAR-SETU (1800-8927-2738) or Email: support@vyaparsetu.in (Mon-Sat, 9am-8pm IST).';
+    } else {
+      botResponse = `Regarding "${q}": In VyaparSetu, all actions are governed by strict Double-Entry rules. Select the party or account in the module form, and the system automatically previews financial impact before posting. For deep assistance, call our support desk at 1800-8927-2738.`;
+    }
+
+    setChatHistory(prev => [...prev, userMsg, { sender: 'agent', text: botResponse, time: timeStr }]);
+    setAiQuestion('');
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 900, height: '88vh', boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fade-in 0.2s' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 960, height: '90vh', boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fade-in 0.2s' }}>
         
         {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-elevated)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-elevated)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #6C47FF 0%, #3B82F6 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <HelpCircle size={24}/>
             </div>
             <div>
               <h3 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>VyaparSetu Help &amp; Support Knowledge Base</h3>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Context-Aware Screen Guides &amp; Layman Documentation</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Official Screen Workflows &amp; Business Process Documentation</div>
             </div>
           </div>
 
@@ -331,23 +440,23 @@ export default function HelpSupportModal({ onClose }: Props) {
                 onClick={() => setModeDepth('basic')}
                 style={{ padding: '6px 14px', borderRadius: 6, fontSize: 12, fontWeight: 800, border: 'none', cursor: 'pointer', background: modeDepth === 'basic' ? '#10B981' : 'transparent', color: modeDepth === 'basic' ? '#fff' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}
               >
-                🟢 Basic Business Owner Guide
+                🟢 Business User Guide
               </button>
               <button
                 type="button"
                 onClick={() => setModeDepth('deep')}
                 style={{ padding: '6px 14px', borderRadius: 6, fontSize: 12, fontWeight: 800, border: 'none', cursor: 'pointer', background: modeDepth === 'deep' ? '#6C47FF' : 'transparent', color: modeDepth === 'deep' ? '#fff' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}
               >
-                🎓 Deep-Dive Guide (Accountants)
+                🎓 Advanced Accounting &amp; Process Guide
               </button>
             </div>
 
-            <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20 }}>✕</button>
+            <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 22 }}>✕</button>
           </div>
         </div>
 
         {/* Modal Main Body Grid (Sidebar + Content) */}
-        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', flex: 1, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '270px 1fr', flex: 1, overflow: 'hidden' }}>
           
           {/* Left Sidebar Topics Menu */}
           <div style={{ background: 'var(--bg-elevated)', borderRight: '1px solid var(--border-subtle)', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
@@ -364,7 +473,7 @@ export default function HelpSupportModal({ onClose }: Props) {
             </div>
 
             <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 4 }}>
-              Select Screen Topic:
+              Select Module Guide:
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -380,9 +489,9 @@ export default function HelpSupportModal({ onClose }: Props) {
                     style={{
                       padding: '10px 12px',
                       borderRadius: 8,
-                      border: `1.5px solid ${isSelected ? 'var(--brand-primary)' : 'transparent'}`,
-                      background: isSelected ? 'rgba(108,71,255,0.08)' : 'transparent',
-                      color: isSelected ? 'var(--brand-primary)' : 'var(--text-primary)',
+                      border: `1.5px solid ${isSelected ? '#10B981' : 'transparent'}`,
+                      background: isSelected ? 'rgba(16,185,129,0.08)' : 'transparent',
+                      color: isSelected ? '#10B981' : 'var(--text-primary)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
@@ -407,16 +516,16 @@ export default function HelpSupportModal({ onClose }: Props) {
             </div>
           </div>
 
-          {/* Right Topic Details Body */}
-          <div style={{ padding: 28, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24, background: 'var(--bg-card)' }}>
+          {/* Right Topic Details & Support Agent Body */}
+          <div style={{ padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24, background: 'var(--bg-card)' }}>
             
             {/* Topic Header Card */}
-            <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(108,71,255,0.1)', color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 18, border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(16,185,129,0.12)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ActiveIcon size={24}/>
               </div>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{activeContent.category} MODULE</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{activeContent.category} MODULE</div>
                 <h2 style={{ fontSize: 20, fontWeight: 900, color: 'var(--text-primary)', margin: '2px 0 0 0' }}>{activeContent.title} Guide</h2>
               </div>
             </div>
@@ -424,42 +533,47 @@ export default function HelpSupportModal({ onClose }: Props) {
             {/* Mode Content Render */}
             {modeDepth === 'basic' ? (
               /* ════════════════════════════════════════════════════════════════
-                 BASIC BUSINESS OWNER LAYMAN GUIDE
+                 BUSINESS USER GUIDE
                  ════════════════════════════════════════════════════════════════ */
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 
-                {/* What is this screen */}
+                {/* Module Overview */}
                 <div style={{ background: 'rgba(16,185,129,0.06)', border: '1.5px solid rgba(16,185,129,0.25)', borderRadius: 12, padding: 18 }}>
                   <h4 style={{ fontSize: 14, fontWeight: 800, color: '#10B981', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    💡 What is {activeContent.title}? (In Simple Terms)
+                    💡 Module Overview &amp; Purpose:
                   </h4>
                   <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6, margin: 0, fontWeight: 500 }}>
-                    {activeContent.layman.whatIsIt}
+                    {activeContent.businessUser.whatIsIt}
                   </p>
                 </div>
 
-                {/* How to add / use this screen */}
-                <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 18, border: '1px solid var(--border-subtle)' }}>
-                  <h4 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 12px 0' }}>
-                    📌 How to Use &amp; Perform Actions:
+                {/* Workflow Processes & Steps */}
+                <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 18, border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <h4 style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    📌 Official Process Steps &amp; Workflows:
                   </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {activeContent.layman.howToAdd.map((step, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: 'var(--text-primary)', fontWeight: 600 }}>
-                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--brand-primary)', color: '#fff', fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</span>
-                        <span style={{ marginTop: 2 }}>{step}</span>
+                  {activeContent.businessUser.processesAndSteps.map((proc, pIdx) => (
+                    <div key={pIdx} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: 14, border: '1px solid var(--border-default)' }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#10B981', marginBottom: 8 }}>{proc.title}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {proc.steps.map((step, sIdx) => (
+                          <div key={sIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
+                            <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--brand-primary)', color: '#fff', fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{sIdx + 1}</span>
+                            <span>{step}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Rules & What Normal Users Cannot Do */}
+                {/* Rules & System Safety */}
                 <div style={{ background: 'rgba(239,68,68,0.06)', borderRadius: 12, padding: 18, border: '1.5px solid rgba(239,68,68,0.2)' }}>
                   <h4 style={{ fontSize: 14, fontWeight: 800, color: '#F87171', margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <ShieldAlert size={18}/> Rules, Safety &amp; Restrictions for Normal Users:
+                    <ShieldAlert size={18}/> Rules &amp; Safety Guidelines for Business Users:
                   </h4>
                   <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {activeContent.layman.rulesAndLimits.map((rule, idx) => (
+                    {activeContent.businessUser.rulesAndLimits.map((rule, idx) => (
                       <li key={idx} style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600, lineHeight: 1.5 }}>
                         {rule}
                       </li>
@@ -470,10 +584,10 @@ export default function HelpSupportModal({ onClose }: Props) {
                 {/* Pro Tips */}
                 <div style={{ background: 'rgba(59,130,246,0.06)', borderRadius: 12, padding: 18, border: '1.5px solid rgba(59,130,246,0.2)' }}>
                   <h4 style={{ fontSize: 14, fontWeight: 800, color: '#60A5FA', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Sparkles size={18}/> Business Best Practices &amp; Pro Tips:
+                    <Sparkles size={18}/> Business Best Practices:
                   </h4>
                   <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {activeContent.layman.proTips.map((tip, idx) => (
+                    {activeContent.businessUser.proTips.map((tip, idx) => (
                       <li key={idx} style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600 }}>
                         {tip}
                       </li>
@@ -484,7 +598,7 @@ export default function HelpSupportModal({ onClose }: Props) {
               </div>
             ) : (
               /* ════════════════════════════════════════════════════════════════
-                 DEEP-DIVE TECHNICAL & ACCOUNTANT GUIDE
+                 ADVANCED ACCOUNTING & PROCESS GUIDE
                  ════════════════════════════════════════════════════════════════ */
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 
@@ -493,7 +607,7 @@ export default function HelpSupportModal({ onClose }: Props) {
                     ⚙️ Technical Architecture &amp; System Flow:
                   </h4>
                   <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6, margin: 0, fontFamily: 'monospace' }}>
-                    {activeContent.deepDive.technicalArch}
+                    {activeContent.advancedGuide.technicalArch}
                   </p>
                 </div>
 
@@ -502,7 +616,7 @@ export default function HelpSupportModal({ onClose }: Props) {
                     📊 Chart of Accounts GL Mapping Rules:
                   </h4>
                   <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {activeContent.deepDive.coaGLMapping.map((item, idx) => (
+                    {activeContent.advancedGuide.coaGLMapping.map((item, idx) => (
                       <li key={idx} style={{ fontSize: 13, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
                         {item}
                       </li>
@@ -515,7 +629,7 @@ export default function HelpSupportModal({ onClose }: Props) {
                     🔄 Subledger Control Flow:
                   </h4>
                   <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {activeContent.deepDive.controlFlow.map((item, idx) => (
+                    {activeContent.advancedGuide.controlFlow.map((item, idx) => (
                       <li key={idx} style={{ fontSize: 13, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
                         {item}
                       </li>
@@ -528,12 +642,93 @@ export default function HelpSupportModal({ onClose }: Props) {
                     🛡️ Audit Trail &amp; Compliance Integrity:
                   </h4>
                   <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
-                    {activeContent.deepDive.auditTrail}
+                    {activeContent.advancedGuide.auditTrail}
                   </p>
                 </div>
 
               </div>
             )}
+
+            {/* ════════════════════════════════════════════════════════════════
+               INTERACTIVE VYAPARSETU AI SUPPORT ASSISTANT BOT
+               ════════════════════════════════════════════════════════════════ */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(108,71,255,0.06) 0%, rgba(16,185,129,0.06) 100%)', border: '1.5px solid var(--brand-primary)', borderRadius: 12, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Bot size={20} style={{ color: 'var(--brand-primary)' }}/>
+                  <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-primary)' }}>VyaparSetu AI Support Assistant</span>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#10B981', background: 'rgba(16,185,129,0.12)', padding: '3px 8px', borderRadius: 6 }}>● Live Instant Agent</span>
+              </div>
+
+              {/* Chat Message Stream */}
+              <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--bg-elevated)', borderRadius: 8, padding: 12, border: '1px solid var(--border-subtle)' }}>
+                {chatHistory.map((msg, i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 2 }}>{msg.sender === 'user' ? 'You' : 'VyaparSetu Support Agent'} · {msg.time}</div>
+                    <div style={{ background: msg.sender === 'user' ? 'var(--brand-primary)' : 'var(--bg-card)', color: msg.sender === 'user' ? '#fff' : 'var(--text-primary)', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, maxWidth: '85%', border: msg.sender === 'agent' ? '1px solid var(--border-default)' : 'none', lineHeight: 1.5 }}>
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Quick Prompt Suggestions */}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => handleAskAi('How to record debit note for returned goods?')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border-default)', color: 'var(--brand-primary)', cursor: 'pointer' }}>
+                  💡 How to record Debit Note?
+                </button>
+                <button type="button" onClick={() => handleAskAi('How to claim ITC for GST on purchase bills?')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border-default)', color: 'var(--brand-primary)', cursor: 'pointer' }}>
+                  💡 Claim GST Input Tax Credit (ITC)?
+                </button>
+                <button type="button" onClick={() => handleAskAi('Can I edit posted purchase bills?')} style={{ fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border-default)', color: 'var(--brand-primary)', cursor: 'pointer' }}>
+                  💡 Can I edit posted bills?
+                </button>
+              </div>
+
+              {/* Prompt Input Form */}
+              <form onSubmit={e => { e.preventDefault(); handleAskAi(); }} style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="text"
+                  placeholder="Type any specific question about VyaparSetu..."
+                  value={aiQuestion}
+                  onChange={e => setAiQuestion(e.target.value)}
+                  style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1.5px solid var(--border-default)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 12, fontWeight: 600 }}
+                />
+                <button type="submit" style={{ padding: '9px 16px', borderRadius: 8, background: 'linear-gradient(135deg, #6C47FF 0%, #3B82F6 100%)', color: '#fff', border: 'none', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Send size={14}/> Ask Agent
+                </button>
+              </form>
+            </div>
+
+            {/* ════════════════════════════════════════════════════════════════
+               CONTACT VYAPARSETU SUPPORT & HELPDESK CARD
+               ════════════════════════════════════════════════════════════════ */}
+            <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 18, border: '1.5px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Phone size={16} style={{ color: '#10B981' }}/> Contact VyaparSetu Official Support &amp; Helpdesk:
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 8, border: '1px solid var(--border-default)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>Toll-Free Hotline</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#10B981', marginTop: 2 }}>1800-8927-2738</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>(1800-VYAPAR-SETU)</div>
+                </div>
+
+                <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 8, border: '1px solid var(--border-default)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>Email Support</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--brand-primary)', marginTop: 2 }}>support@vyaparsetu.in</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>helpdesk@vyaparsetu.in</div>
+                </div>
+
+                <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 8, border: '1px solid var(--border-default)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>Support Hours</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>Mon – Sat (9 AM – 8 PM)</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Dedicated Enterprise Account Manager</div>
+                </div>
+              </div>
+            </div>
 
           </div>
 
