@@ -122,15 +122,21 @@ export default function CompanyProfileModal({ isOpen, onClose }: CompanyProfileM
             <input type="email" required value={form.inboundEmail} onChange={e => setForm(f => ({ ...f, inboundEmail: e.target.value }))} placeholder="e.g. themastyogi@gmail.com or billing@yourcompany.com" className="field-input" style={{ fontWeight: 800, background: 'var(--bg-card)' }}/>
           </div>
 
-          {/* WhatsApp Ingestion Number Card */}
+          {/* WhatsApp Ingestion Number & Mode Card */}
           <div style={{ background: 'rgba(16,185,129,0.08)', padding: 16, borderRadius: 12, border: '1px solid rgba(16,185,129,0.2)' }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: '#10B981', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <MessageSquare size={16}/> Dedicated WhatsApp Ingestion Number *
+              <MessageSquare size={16}/> Dedicated WhatsApp Ingestion Channel
             </div>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, lineHeight: '1.4' }}>
               Vendors send PDF / Photo invoices to this WhatsApp Business number. AI Vision extracts items &amp; ingests bills automatically.
             </p>
-            <input type="text" required value={form.whatsAppNumber} onChange={e => setForm(f => ({ ...f, whatsAppNumber: e.target.value }))} placeholder="e.g. +91 80000 73887" className="field-input" style={{ fontWeight: 800, background: 'var(--bg-card)', color: '#10B981' }}/>
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>WhatsApp Business Ingestion Phone Number:</label>
+              <input type="text" required value={form.whatsAppNumber} onChange={e => setForm(f => ({ ...f, whatsAppNumber: e.target.value }))} placeholder="e.g. +91 80000 73887" className="field-input" style={{ fontWeight: 800, background: 'var(--bg-card)', color: '#10B981' }}/>
+            </div>
+            <div style={{ fontSize: 11, background: 'var(--bg-card)', padding: '8px 12px', borderRadius: 8, color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+              ⚡ <strong>Zero Setup Required:</strong> By default, VyaparSetu provides pre-configured Meta-Verified Cloud WhatsApp Numbers. You do <em>NOT</em> need to create a Meta App unless you want a custom company-branded number!
+            </div>
           </div>
 
           {/* Contact Email & Address */}
