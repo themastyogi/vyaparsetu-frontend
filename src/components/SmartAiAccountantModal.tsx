@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Bot, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useAccounting, type JournalLine } from '../hooks/useAccounting';
+import { parseAccountingPrompt } from '../utils/aiAccountantParser';
 
 interface Props {
   onClose: () => void;
@@ -27,89 +28,10 @@ export default function SmartAiAccountantModal({ onClose }: Props) {
     setIsAnalyzing(true);
 
     setTimeout(() => {
-      const lower = prompt.toLowerCase();
-      const todayStr = new Date().toISOString().split('T')[0];
-
-      // 1. Amount Extraction
-      const amtMatch = prompt.match(/(?:₹|rs\.?|rupees|amount)?\s*(\d+(?:\.\d+)?)/i);
-      const amount = amtMatch ? parseFloat(amtMatch[1]) : 1000;
-
-      // 2. Date Extraction
-      let date = todayStr;
-      if (lower.includes('1st august') || lower.includes('1 august')) date = '2026-08-01';
-      else if (lower.includes('yesterday')) {
-        const y = new Date(); y.setDate(y.getDate() - 1);
-        date = y.toISOString().split('T')[0];
-      } else {
-        const dateMatch = prompt.match(/\b(\d{4}-\d{2}-\d{2})\b/);
-        if (dateMatch) date = dateMatch[1];
-      }
-
-      // 3. Cheque / Reference Number & Party Extraction
-      const chqMatch = prompt.match(/(?:check|cheque|chq|ref|no\.?)\s*#?\s*(\w+)/i);
-      let party = chqMatch ? `Cheque No. ${chqMatch[1]}` : 'General';
-      if (lower.includes('sahil trader')) party = 'SAHIL TRADER';
-      else if (lower.includes('ravi enterprise')) party = 'Ravi Enterprises';
-
-      // 4. Smart Financial Account & Voucher Classification Engine
-      let entryType = 'Journal Voucher';
-      let debitAccount = 'Office Expenses';
-      let creditAccount = 'Bank Account';
-
-      // Cash Withdrawal / Petty Cash Top-Up (Contra Entry)
-      if (lower.includes('withdraw') || (lower.includes('petty cash') && (lower.includes('add') || lower.includes('transfer') || lower.includes('check') || lower.includes('cheque') || lower.includes('bank')))) {
-        entryType = 'Contra (Cash Withdrawal)';
-        debitAccount = 'Cash Account';
-        creditAccount = 'Bank Account';
-      }
-      // Cash Deposit to Bank (Contra Entry)
-      else if (lower.includes('deposit') && lower.includes('cash')) {
-        entryType = 'Contra (Cash Deposit)';
-        debitAccount = 'Bank Account';
-        creditAccount = 'Cash Account';
-      }
-      // Rent Payments
-      else if (lower.includes('rent')) {
-        entryType = 'Rent Expense';
-        debitAccount = 'Rent & Rates';
-        creditAccount = lower.includes('cash') ? 'Cash Account' : 'Bank Account';
-      }
-      // Bank Charges & Late Fees
-      else if (lower.includes('bank charge') || lower.includes('late fee') || lower.includes('bank charges')) {
-        entryType = 'Bank Charges';
-        debitAccount = 'Freight & Logistics';
-        creditAccount = 'Bank Account';
-      }
-      // Petty Cash Expenses (Tea, Coffee, Snacks, Taxi)
-      else if (lower.includes('tea') || lower.includes('coffee') || lower.includes('snack') || lower.includes('taxi') || lower.includes('refreshment') || (lower.includes('paid') && lower.includes('petty cash'))) {
-        entryType = 'Petty Cash Expense';
-        debitAccount = 'Office Expenses';
-        creditAccount = 'Cash Account';
-      }
-      // Salary & Wages
-      else if (lower.includes('salary') || lower.includes('wages')) {
-        entryType = 'Salary Payment';
-        debitAccount = 'Purchases';
-        creditAccount = 'Bank Account';
-      }
-      // Depreciation
-      else if (lower.includes('depreciation')) {
-        entryType = 'Depreciation';
-        debitAccount = 'Freight & Logistics';
-        creditAccount = 'Office Furniture & Fixtures';
-      }
-
-      setParsedResult({
-        entryType,
-        date,
-        amount,
-        party,
-        debitAccount,
-        creditAccount,
-        narration: `AI Bot Auto-Posting: ${prompt.trim()}`,
-      });
+      const result = parseAccountingPrompt(prompt);
+      setParsedResult(result);
       setIsAnalyzing(false);
-    }, 600);
+    }, 400);
   };
 
   const handleConfirmPost = () => {
@@ -181,6 +103,7 @@ export default function SmartAiAccountantModal({ onClose }: Props) {
               
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Try Prompts:</span>
+                <button type="button" onClick={() => setPrompt("Transfer 1000 rs from Sahil Traders to Sharma Traders pvt ltd")} style={{ fontSize: 11, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '2px 8px', color: 'var(--brand-primary)', cursor: 'pointer' }}>⇄ Inter-Party Transfer</button>
                 <button type="button" onClick={() => setPrompt("Add 2000 rupees to petty cash for this month , withdraw against check 45922")} style={{ fontSize: 11, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '2px 8px', color: 'var(--brand-primary)', cursor: 'pointer' }}>Petty Cash Cheque</button>
                 <button type="button" onClick={() => setPrompt("i want to pay my rent of 25000 from bank to vendor SAHIL TRADER for the month of August , keep the posting date 1st August")} style={{ fontSize: 11, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '2px 8px', color: 'var(--brand-primary)', cursor: 'pointer' }}>Rent Payment</button>
                 <button type="button" onClick={() => setPrompt("i recived bank charges of 10 rupees against late fee , post it for today")} style={{ fontSize: 11, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '2px 8px', color: 'var(--brand-primary)', cursor: 'pointer' }}>Bank Charges</button>
