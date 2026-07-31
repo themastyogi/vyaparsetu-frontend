@@ -12,7 +12,9 @@ export default function ProcurementHub() {
     purchaseOrders,
     createIndent,
     generateRFQFromIndent,
-    convertL1QuoteToPO
+    convertL1QuoteToPO,
+    updateDepartmentBudget,
+    addDepartment
   } = useProcurement();
 
   const [activeTab, setActiveTab] = useState<'budgets' | 'indents' | 'rfqs' | 'pos'>('budgets');
@@ -28,6 +30,42 @@ export default function ProcurementHub() {
     availableStockQty: 2,
     estimatedRate: 65000
   });
+
+  // Edit Budget Modal State
+  const [showEditBudgetModal, setShowEditBudgetModal] = useState(false);
+  const [editingDeptId, setEditingDeptId] = useState<string | null>(null);
+  const [editingDeptName, setEditingDeptName] = useState('');
+  const [newBudgetVal, setNewBudgetVal] = useState<number>(5000000);
+
+  // Add Department Modal State
+  const [showAddDeptModal, setShowAddDeptModal] = useState(false);
+  const [addDeptForm, setAddDeptForm] = useState({
+    name: '',
+    code: '',
+    budget: 1000000
+  });
+
+  const handleOpenEditBudget = (deptId: string, currentName: string, currentVal: number) => {
+    setEditingDeptId(deptId);
+    setEditingDeptName(currentName);
+    setNewBudgetVal(currentVal);
+    setShowEditBudgetModal(true);
+  };
+
+  const handleSaveBudgetSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingDeptId) {
+      updateDepartmentBudget(editingDeptId, Number(newBudgetVal));
+    }
+    setShowEditBudgetModal(false);
+  };
+
+  const handleAddDeptSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    addDepartment(addDeptForm.name, addDeptForm.code || 'DEPT-00', Number(addDeptForm.budget));
+    setShowAddDeptModal(false);
+    setAddDeptForm({ name: '', code: '', budget: 1000000 });
+  };
 
   const handleCreateIndentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,53 +204,76 @@ export default function ProcurementHub() {
 
       {/* TAB 1: DEPARTMENT BUDGETS */}
       {activeTab === 'budgets' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-          {departments.map(dept => {
-            const totalUsed = dept.consumedBudget + dept.pendingPRValue;
-            const remaining = dept.allocatedBudget - totalUsed;
-            const pctUsed = Math.min(100, Math.round((totalUsed / dept.allocatedBudget) * 100));
-            const isOverBudget = remaining < 0;
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              Manage annual/monthly budget allocations by department. System tracks real-time utilization &amp; alerts on over-budget indents.
+            </span>
+            <button
+              onClick={() => setShowAddDeptModal(true)}
+              className="btn-action btn-action-secondary"
+              style={{ fontSize: 12, padding: '6px 14px', fontWeight: 800 }}
+            >
+              + Add New Department Budget
+            </button>
+          </div>
 
-            return (
-              <div key={dept.id} style={{ background: 'var(--bg-card)', borderRadius: 14, border: isOverBudget ? '2px solid #EF4444' : '1px solid var(--border-default)', padding: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-primary)', textTransform: 'uppercase' }}>{dept.code}</span>
-                    <h3 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', margin: '2px 0 0' }}>{dept.departmentName}</h3>
-                  </div>
-                  <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 12, fontWeight: 800, background: isOverBudget ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', color: isOverBudget ? '#EF4444' : '#10B981' }}>
-                    {isOverBudget ? '🔴 BEYOND BUDGET' : '🟢 Within Budget'}
-                  </span>
-                </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+            {departments.map(dept => {
+              const totalUsed = dept.consumedBudget + dept.pendingPRValue;
+              const remaining = dept.allocatedBudget - totalUsed;
+              const pctUsed = Math.min(100, Math.round((totalUsed / dept.allocatedBudget) * 100));
+              const isOverBudget = remaining < 0;
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12, marginBottom: 14 }}>
-                  <div>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block' }}>Allocated Annual Budget</span>
-                    <strong style={{ color: 'var(--text-primary)', fontSize: 14 }}>₹{dept.allocatedBudget.toLocaleString('en-IN')}</strong>
+              return (
+                <div key={dept.id} style={{ background: 'var(--bg-card)', borderRadius: 14, border: isOverBudget ? '2px solid #EF4444' : '1px solid var(--border-default)', padding: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-primary)', textTransform: 'uppercase' }}>{dept.code}</span>
+                      <h3 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', margin: '2px 0 0' }}>{dept.departmentName}</h3>
+                    </div>
+                    <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 12, fontWeight: 800, background: isOverBudget ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', color: isOverBudget ? '#EF4444' : '#10B981' }}>
+                      {isOverBudget ? '🔴 BEYOND BUDGET' : '🟢 Within Budget'}
+                    </span>
                   </div>
-                  <div>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block' }}>Available Remaining</span>
-                    <strong style={{ color: isOverBudget ? '#EF4444' : '#10B981', fontSize: 14 }}>₹{remaining.toLocaleString('en-IN')}</strong>
-                  </div>
-                </div>
 
-                {/* Progress Bar */}
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
-                    <span>Budget Utilized ({pctUsed}%)</span>
-                    <span>Consumed: ₹{dept.consumedBudget.toLocaleString('en-IN')}</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12, marginBottom: 14 }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Allocated Budget</span>
+                        <button
+                          onClick={() => handleOpenEditBudget(dept.id, dept.departmentName, dept.allocatedBudget)}
+                          style={{ background: 'rgba(108,71,255,0.15)', border: 'none', color: 'var(--brand-primary)', borderRadius: 4, padding: '1px 6px', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          ✏ Edit
+                        </button>
+                      </div>
+                      <strong style={{ color: 'var(--text-primary)', fontSize: 14 }}>₹{dept.allocatedBudget.toLocaleString('en-IN')}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block' }}>Available Remaining</span>
+                      <strong style={{ color: isOverBudget ? '#EF4444' : '#10B981', fontSize: 14 }}>₹{remaining.toLocaleString('en-IN')}</strong>
+                    </div>
                   </div>
-                  <div style={{ width: '100%', height: 8, borderRadius: 4, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
-                    <div style={{ width: `${pctUsed}%`, height: '100%', background: isOverBudget ? '#EF4444' : pctUsed > 85 ? '#F59E0B' : '#10B981', transition: 'width 0.3s' }}/>
-                  </div>
-                </div>
 
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '6px 10px', borderRadius: 6 }}>
-                  Pending PR Indents Value: <strong>₹{dept.pendingPRValue.toLocaleString('en-IN')}</strong>
+                  {/* Progress Bar */}
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
+                      <span>Budget Utilized ({pctUsed}%)</span>
+                      <span>Consumed: ₹{dept.consumedBudget.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div style={{ width: '100%', height: 8, borderRadius: 4, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
+                      <div style={{ width: `${pctUsed}%`, height: '100%', background: isOverBudget ? '#EF4444' : pctUsed > 85 ? '#F59E0B' : '#10B981', transition: 'width 0.3s' }}/>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '6px 10px', borderRadius: 6 }}>
+                    Pending PR Indents Value: <strong>₹{dept.pendingPRValue.toLocaleString('en-IN')}</strong>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -476,6 +537,95 @@ export default function ProcurementHub() {
                 <button type="button" className="btn-action btn-action-ghost" onClick={() => setShowIndentModal(false)}>Cancel</button>
                 <button type="submit" className="btn-action btn-action-primary" style={{ background: '#10B981', borderColor: '#10B981', fontWeight: 800 }}>
                   Submit Purchase Indent
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDIT DEPARTMENT BUDGET */}
+      {showEditBudgetModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1250, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 440, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 6 }}>
+              ✏ Edit Allocated Budget
+            </h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
+              Department: <strong>{editingDeptName}</strong>
+            </p>
+
+            <form onSubmit={handleSaveBudgetSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label className="field-label">New Allocated Annual Budget (₹) *</label>
+                <input
+                  type="number"
+                  required
+                  value={newBudgetVal}
+                  onChange={e => setNewBudgetVal(Number(e.target.value))}
+                  className="field-input"
+                  style={{ fontSize: 16, fontWeight: 800, color: 'var(--brand-primary)' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+                <button type="button" className="btn-action btn-action-ghost" onClick={() => setShowEditBudgetModal(false)}>Cancel</button>
+                <button type="submit" className="btn-action btn-action-primary" style={{ background: 'var(--brand-primary)', fontWeight: 800 }}>
+                  Save Allocated Budget
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD NEW DEPARTMENT */}
+      {showAddDeptModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1250, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 460, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 16 }}>
+              ➕ Add New Department &amp; Allocated Budget
+            </h3>
+
+            <form onSubmit={handleAddDeptSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label className="field-label">Department Name *</label>
+                <input
+                  required
+                  value={addDeptForm.name}
+                  onChange={e => setAddDeptForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. Research & Development (R&D)"
+                  className="field-input"
+                />
+              </div>
+
+              <div>
+                <label className="field-label">Department Code *</label>
+                <input
+                  required
+                  value={addDeptForm.code}
+                  onChange={e => setAddDeptForm(f => ({ ...f, code: e.target.value }))}
+                  placeholder="e.g. RND-05"
+                  className="field-input"
+                />
+              </div>
+
+              <div>
+                <label className="field-label">Allocated Annual Budget (₹) *</label>
+                <input
+                  type="number"
+                  required
+                  value={addDeptForm.budget}
+                  onChange={e => setAddDeptForm(f => ({ ...f, budget: Number(e.target.value) }))}
+                  className="field-input"
+                  style={{ fontSize: 15, fontWeight: 800 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+                <button type="button" className="btn-action btn-action-ghost" onClick={() => setShowAddDeptModal(false)}>Cancel</button>
+                <button type="submit" className="btn-action btn-action-primary" style={{ background: '#10B981', borderColor: '#10B981', fontWeight: 800 }}>
+                  Add Department
                 </button>
               </div>
             </form>

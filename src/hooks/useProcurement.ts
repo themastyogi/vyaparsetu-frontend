@@ -212,6 +212,26 @@ export function useProcurement() {
     save('vs_pos', newPOs);
   }, []);
 
+  // Update Department Budget
+  const updateDepartmentBudget = useCallback((departmentId: string, newAllocatedBudget: number) => {
+    const updated = departments.map(d => d.id === departmentId ? { ...d, allocatedBudget: newAllocatedBudget } : d);
+    updateDepartments(updated);
+  }, [departments, updateDepartments]);
+
+  // Add New Department Budget
+  const addDepartment = useCallback((deptName: string, code: string, allocatedBudget: number) => {
+    const newDept: DepartmentBudget = {
+      id: `dept_${Date.now()}`,
+      departmentName: deptName,
+      code,
+      allocatedBudget,
+      consumedBudget: 0,
+      pendingPRValue: 0,
+      fiscalYear: '2026-27'
+    };
+    updateDepartments([...departments, newDept]);
+  }, [departments, updateDepartments]);
+
   // 1. Create New Purchase Indent / Requisition
   const createIndent = useCallback((data: {
     departmentId: string;
@@ -391,6 +411,8 @@ export function useProcurement() {
     purchaseOrders,
     createIndent,
     generateRFQFromIndent,
-    convertL1QuoteToPO
+    convertL1QuoteToPO,
+    updateDepartmentBudget,
+    addDepartment
   };
 }
