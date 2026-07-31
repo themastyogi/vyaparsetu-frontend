@@ -591,7 +591,7 @@ const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
   companyName: 'VyaparSetu Enterprises',
   companyGstin: '29AABCV1234F1Z5',
   inboundEmail: 'themastyogi@gmail.com',
-  whatsAppNumber: '+91 80000 73887',
+  whatsAppNumber: '+91 98765 43210',
   email: 'themastyogi@gmail.com',
   phone: '+91 98765 43210',
   address: 'Plot 42, Industrial Area, Phase II',

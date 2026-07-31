@@ -9,11 +9,13 @@ interface Props {
 }
 
 export default function WhatsAppBillIngestionModal({ onClose, onSuccessIngest }: Props) {
-  const { postJournalEntry } = useAccounting();
+  const { postJournalEntry, companySettings } = useAccounting();
   const [inbox, setInbox] = useState<WhatsAppIncomingInvoice[]>(MOCK_WHATSAPP_INBOX);
   const [selectedInvoice, setSelectedInvoice] = useState<WhatsAppIncomingInvoice | null>(MOCK_WHATSAPP_INBOX[0]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [ingestSuccess, setIngestSuccess] = useState<string | null>(null);
+
+  const activeWhatsAppNo = companySettings.whatsAppNumber || '+91 98765 43210';
 
   const handleIngestAndPost = (inv: WhatsAppIncomingInvoice) => {
     setIsProcessing(true);
@@ -59,7 +61,7 @@ export default function WhatsAppBillIngestionModal({ onClose, onSuccessIngest }:
                 WhatsApp Vendor Bill Ingestion Hub <Sparkles size={16} style={{ color: '#FDE047' }}/>
               </h3>
               <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2 }}>
-                Dedicated WhatsApp Number: <strong>+91 80000 73887</strong> (Tenant ID: <code>tenant_demo_01</code>)
+                Configured WhatsApp Number: <strong>{activeWhatsAppNo}</strong> (Tenant ID: <code>tenant_demo_01</code>)
               </div>
             </div>
           </div>
@@ -116,7 +118,7 @@ export default function WhatsAppBillIngestionModal({ onClose, onSuccessIngest }:
 
             {/* Simulated WhatsApp Vendor Action Tip */}
             <div style={{ marginTop: 16, padding: 12, background: 'rgba(59,130,246,0.08)', borderRadius: 10, border: '1px solid rgba(59,130,246,0.2)', fontSize: 11, color: 'var(--text-secondary)' }}>
-              💡 <strong>How Vendors Send Bills:</strong> Vendors simply message their PDF/Photo invoice to <strong>+91 80000 73887</strong>. VyaparSetu AI extracts line items automatically!
+              💡 <strong>How Vendors Send Bills:</strong> Vendors simply message their PDF/Photo invoice to your WhatsApp number <strong>{activeWhatsAppNo}</strong>. VyaparSetu AI extracts line items automatically!
             </div>
           </div>
 
