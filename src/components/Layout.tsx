@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Package, FileText,
   ShoppingCart, BarChart3, Settings, LogOut,
-  Bell, Search, Building2, ShieldCheck,
+  Bell, Search, Building2, ShieldCheck, UserCheck, Calculator,
   HelpCircle, Menu, X, BookOpen, Zap, CreditCard, Sun, Moon, Bot, Sparkles
 } from 'lucide-react';
 import './Layout.css';
@@ -16,35 +16,44 @@ import FloatingAiChatWidget from './FloatingAiChatWidget';
 
 const NAV_SECTIONS = [
   {
-    label: 'MAIN',
+    label: 'EXECUTIVE',
     items: [
-      { key: 'nav.dashboard', icon: <LayoutDashboard size={18}/>, path: '/dashboard', label: 'Dashboard' },
-      { key: 'nav.parties',   icon: <Users size={18}/>,           path: '/dashboard/parties', label: 'Parties' },
-      { key: 'nav.items',     icon: <Package size={18}/>,         path: '/dashboard/items',   label: 'Items' },
+      { key: 'nav.dashboard', icon: <LayoutDashboard size={18}/>, path: '/dashboard', label: 'Executive Dashboard' },
     ],
   },
   {
-    label: 'TRANSACTIONS',
+    label: 'MASTER DATA MANAGEMENT (MDM)',
     items: [
-      { key: 'nav.procurement', icon: <Building2 size={18}/>, path: '/dashboard/procurement', label: 'Procurement & L1 Hub' },
-      { key: 'nav.sales',       icon: <ShoppingCart size={18}/>, path: '/dashboard/sales',       label: 'Sales Invoices' },
+      { key: 'nav.master_dept',    icon: <Building2 size={18}/>,  path: '/dashboard/master-departments', label: 'Department Master' },
+      { key: 'nav.master_emp',     icon: <UserCheck size={18}/>,  path: '/dashboard/employees',          label: 'Employee Master' },
+      { key: 'nav.parties',        icon: <Users size={18}/>,      path: '/dashboard/parties',            label: 'Parties & Contacts' },
+      { key: 'nav.items',          icon: <Package size={18}/>,    path: '/dashboard/items',              label: 'Items & Inventory Master' },
+      { key: 'nav.master_budgets', icon: <Calculator size={18}/>, path: '/dashboard/master-budgets',    label: 'Departmental Budgets' },
+    ],
+  },
+  {
+    label: 'STRATEGIC PROCUREMENT & SOURCING',
+    items: [
+      { key: 'nav.procurement', icon: <ShoppingCart size={18}/>, path: '/dashboard/procurement', label: 'Procurement & L1 Engine' },
       { key: 'nav.purchases',   icon: <FileText size={18}/>,     path: '/dashboard/purchases',   label: 'Purchase Bills' },
-      { key: 'nav.debit-notes', icon: <Zap size={18}/>,         path: '/dashboard/debit-notes', label: 'Debit Notes' },
-      { key: 'nav.payments',    icon: <CreditCard size={18}/>,  path: '/dashboard/payments',    label: 'Payments & Advisor' },
+      { key: 'nav.debit-notes', icon: <Zap size={18}/>,          path: '/dashboard/debit-notes', label: 'Debit Notes & Returns' },
     ],
   },
   {
-    label: 'FINANCE',
+    label: 'SALES & FINANCIAL OPERATIONS',
     items: [
-      { key: 'nav.coa',     icon: <BookOpen size={18}/>,  path: '/dashboard/chart-of-accounts', label: 'Chart of Accounts' },
-      { key: 'nav.reports', icon: <BarChart3 size={18}/>, path: '/dashboard/reports',           label: 'Reports & Ledger' },
+      { key: 'nav.sales',    icon: <FileText size={18}/>,   path: '/dashboard/sales',             label: 'Sales Invoices & Billing' },
+      { key: 'nav.payments', icon: <CreditCard size={18}/>, path: '/dashboard/payments',          label: 'Payments & Advisor' },
+      { key: 'nav.coa',      icon: <BookOpen size={18}/>,   path: '/dashboard/chart-of-accounts', label: 'Chart of Accounts' },
+      { key: 'nav.reports',  icon: <BarChart3 size={18}/>,  path: '/dashboard/reports',           label: 'Financial Statements & Reports' },
     ],
   },
   {
-    label: 'ADMIN & SAAS',
+    label: 'SYSTEM ADMINISTRATION',
     items: [
-      { key: 'nav.settings', icon: <Settings size={18}/>, path: '/dashboard/settings', label: 'Company Settings' },
-      { key: 'nav.saas_admin', icon: <ShieldCheck size={18}/>, path: '/dashboard/saas-admin', label: 'VyaparSetu Admin Portal' },
+      { key: 'nav.user_mgmt',  icon: <ShieldCheck size={18}/>, path: '/dashboard/user-management', label: 'User & Role Access Management' },
+      { key: 'nav.settings',   icon: <Settings size={18}/>,    path: '/dashboard/settings',        label: 'Company Settings' },
+      { key: 'nav.saas_admin', icon: <ShieldCheck size={18}/>, path: '/dashboard/saas-admin',      label: 'VyaparSetu Admin Portal' },
     ],
   },
 ];

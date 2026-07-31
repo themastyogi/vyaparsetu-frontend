@@ -4,6 +4,10 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Parties from './pages/Parties';
 import Items from './pages/Items';
+import Employees from './pages/Employees';
+import DepartmentMasterHub from './pages/DepartmentMasterHub';
+import BudgetMasterHub from './pages/BudgetMasterHub';
+import UserManagement from './pages/UserManagement';
 import Purchases from './pages/Purchases';
 import ProcurementHub from './pages/ProcurementHub';
 import Reports from './pages/Reports';
@@ -22,17 +26,21 @@ export default function App() {
         <Route path="/" element={<Login />} />
         <Route path="/dashboard" element={<Layout />}>
           <Route index                    element={<Dashboard />} />
-          <Route path="procurement"       element={<ProcurementHub />} />
-          <Route path="parties"           element={<Parties />} />
-          <Route path="items"             element={<Items />} />
-          <Route path="sales"             element={<SalesInvoices />} />
-          <Route path="purchases"         element={<Purchases />} />
-          <Route path="debit-notes"       element={<DebitNotes />} />
-          <Route path="payments"          element={<Payments />} />
-          <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
-          <Route path="reports"           element={<Reports />} />
-          <Route path="settings"          element={<Settings />} />
-          <Route path="saas-admin"        element={<SaasAdminPortal />} />
+          <Route path="master-departments" element={<DepartmentMasterHub />} />
+          <Route path="employees"          element={<Employees />} />
+          <Route path="parties"            element={<Parties />} />
+          <Route path="items"              element={<Items />} />
+          <Route path="master-budgets"     element={<BudgetMasterHub />} />
+          <Route path="procurement"        element={<ProcurementHub />} />
+          <Route path="sales"              element={<SalesInvoices />} />
+          <Route path="purchases"          element={<Purchases />} />
+          <Route path="debit-notes"        element={<DebitNotes />} />
+          <Route path="payments"           element={<Payments />} />
+          <Route path="chart-of-accounts"  element={<ChartOfAccounts />} />
+          <Route path="reports"            element={<Reports />} />
+          <Route path="user-management"    element={<UserManagement />} />
+          <Route path="settings"           element={<Settings />} />
+          <Route path="saas-admin"         element={<SaasAdminPortal />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -47,9 +47,16 @@ export interface BudgetAuditLog {
 
 export interface Employee {
   id: string;
+  employeeCode: string;
   name: string;
   department: string;
+  departmentCode?: string;
   designation: string;
+  email: string;
+  phone: string;
+  status: 'Active' | 'Inactive';
+  dateOfJoining: string;
+  tenantId: string;
 }
 
 export interface IndentItem {
@@ -132,11 +139,11 @@ export interface PurchaseOrderRecord {
 // ────────────────────────────────────────────────────────────────
 
 export const SYSTEM_EMPLOYEES: Employee[] = [
-  { id: 'emp-1', name: 'Vikram Singh (IT Head)', department: 'IT & Hardware Infrastructure', designation: 'IT Operations Head' },
-  { id: 'emp-2', name: 'Rahul Sharma (Plant Mgr)', department: 'Manufacturing & Production', designation: 'Factory Plant Manager' },
-  { id: 'emp-3', name: 'Priya Verma (VP Mktg)', department: 'Marketing & Sales Promotion', designation: 'VP Marketing' },
-  { id: 'emp-4', name: 'Ankit Mehta (Facilities)', department: 'Administration & Facilities', designation: 'Facilities Lead' },
-  { id: 'emp-5', name: 'Neha Gupta (SysAdmin)', department: 'IT & Hardware Infrastructure', designation: 'Senior Systems Admin' }
+  { id: 'emp-1', employeeCode: 'EMP-101', name: 'Vikram Singh (IT Head)', department: 'IT & Hardware Infrastructure', departmentCode: 'IT-01', designation: 'IT Operations Head', email: 'vikram.singh@company.com', phone: '+91 98765 43210', status: 'Active', dateOfJoining: '2024-01-15', tenantId: 'tenant_demo_01' },
+  { id: 'emp-2', employeeCode: 'EMP-102', name: 'Rahul Sharma (Plant Mgr)', department: 'Manufacturing & Production', departmentCode: 'MFG-02', designation: 'Factory Plant Manager', email: 'rahul.sharma@company.com', phone: '+91 98765 43211', status: 'Active', dateOfJoining: '2024-03-01', tenantId: 'tenant_demo_01' },
+  { id: 'emp-3', employeeCode: 'EMP-103', name: 'Priya Verma (VP Mktg)', department: 'Marketing & Sales Promotion', departmentCode: 'MKT-03', designation: 'VP Marketing', email: 'priya.verma@company.com', phone: '+91 98765 43212', status: 'Active', dateOfJoining: '2024-05-10', tenantId: 'tenant_demo_01' },
+  { id: 'emp-4', employeeCode: 'EMP-104', name: 'Ankit Mehta (Facilities)', department: 'Administration & Facilities', departmentCode: 'ADM-04', designation: 'Facilities Lead', email: 'ankit.mehta@company.com', phone: '+91 98765 43213', status: 'Active', dateOfJoining: '2024-06-20', tenantId: 'tenant_demo_01' },
+  { id: 'emp-5', employeeCode: 'EMP-105', name: 'Neha Gupta (SysAdmin)', department: 'IT & Hardware Infrastructure', departmentCode: 'IT-01', designation: 'Senior Systems Admin', email: 'neha.gupta@company.com', phone: '+91 98765 43214', status: 'Active', dateOfJoining: '2025-01-10', tenantId: 'tenant_demo_01' }
 ];
 
 const SEED_AUDIT_LOGS: BudgetAuditLog[] = [
@@ -241,6 +248,7 @@ function save<T>(key: string, val: T): void {
 export function useProcurement() {
   const [departments, setDepartments] = useState<DepartmentBudget[]>(() => load('vs_departments', SEED_DEPARTMENTS));
   const [masterDepartments, setMasterDepartments] = useState<MasterDepartment[]>(() => load('vs_master_departments', SEED_MASTER_DEPARTMENTS));
+  const [employees, setEmployees] = useState<Employee[]>(() => load('vs_employees', SYSTEM_EMPLOYEES));
   const [auditLogs, setAuditLogs] = useState<BudgetAuditLog[]>(() => load('vs_budget_audits', SEED_AUDIT_LOGS));
   const [indents, setIndents] = useState<PurchaseIndent[]>(() => load('vs_indents', SEED_INDENTS));
   const [rfqs, setRfqs] = useState<PurchaseQuoteRFQ[]>(() => load('vs_rfqs', SEED_RFQS));
@@ -255,6 +263,11 @@ export function useProcurement() {
   const updateMasterDepartments = useCallback((newMasterDepts: MasterDepartment[]) => {
     setMasterDepartments(newMasterDepts);
     save('vs_master_departments', newMasterDepts);
+  }, []);
+
+  const updateEmployees = useCallback((newEmps: Employee[]) => {
+    setEmployees(newEmps);
+    save('vs_employees', newEmps);
   }, []);
 
   const updateAuditLogs = useCallback((newAudits: BudgetAuditLog[]) => {
@@ -361,6 +374,26 @@ export function useProcurement() {
     const updated = masterDepartments.filter(d => d.id !== id);
     updateMasterDepartments(updated);
   }, [masterDepartments, updateMasterDepartments]);
+
+  const addEmployee = useCallback((empData: Omit<Employee, 'id'>) => {
+    const newEmp: Employee = {
+      id: `emp_${Date.now()}`,
+      ...empData
+    };
+    const updated = [newEmp, ...employees];
+    updateEmployees(updated);
+    return newEmp;
+  }, [employees, updateEmployees]);
+
+  const updateEmployeeRecord = useCallback((id: string, updates: Partial<Employee>) => {
+    const updated = employees.map(e => e.id === id ? { ...e, ...updates } : e);
+    updateEmployees(updated);
+  }, [employees, updateEmployees]);
+
+  const deleteEmployee = useCallback((id: string) => {
+    const updated = employees.filter(e => e.id !== id);
+    updateEmployees(updated);
+  }, [employees, updateEmployees]);
 
   // 1. Create New Purchase Indent / Requisition
   const createIndent = useCallback((data: {
@@ -537,6 +570,7 @@ export function useProcurement() {
   return {
     departments,
     masterDepartments,
+    employees,
     auditLogs,
     indents,
     rfqs,
@@ -548,6 +582,9 @@ export function useProcurement() {
     addDepartment,
     addMasterDepartment,
     updateMasterDepartmentRecord,
-    deleteMasterDepartment
+    deleteMasterDepartment,
+    addEmployee,
+    updateEmployeeRecord,
+    deleteEmployee
   };
 }

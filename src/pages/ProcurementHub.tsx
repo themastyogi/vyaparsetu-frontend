@@ -160,10 +160,10 @@ export default function ProcurementHub() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 className="page-title" style={{ fontSize: 24, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10, margin: 0 }}>
-            🏢 Departmental Procurement &amp; L1 Quote-to-Order Hub <Sparkles size={20} style={{ color: '#FBBF24' }}/>
+            🏢 Strategic Procurement &amp; L1 Sourcing Engine <Sparkles size={20} style={{ color: '#FBBF24' }}/>
           </h1>
           <p className="page-sub" style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-            Department Budget Tracking · Stock Verification · Multi-Vendor L1 Quotation Comparison · Audit Linked PO Conversion
+            Requisition Workflows · Stock Verification · Multi-Vendor L1 Quotation Engine · Audit Linked PO Conversion
           </p>
         </div>
 
