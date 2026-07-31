@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import {
-  Building2, FileText, Plus, Sparkles, Award, FileCheck
+  Building2, FileText, Plus, Sparkles, Award, FileCheck,
+  History, Calendar
 } from 'lucide-react';
-import { useProcurement } from '../hooks/useProcurement';
+import { useProcurement, SYSTEM_EMPLOYEES } from '../hooks/useProcurement';
+import { useMaster } from '../hooks/useMaster';
 
 export default function ProcurementHub() {
   const {
     departments,
+    auditLogs,
     indents,
     rfqs,
     purchaseOrders,
@@ -17,18 +20,31 @@ export default function ProcurementHub() {
     addDepartment
   } = useProcurement();
 
+  const { items: masterItems } = useMaster();
+
   const [activeTab, setActiveTab] = useState<'budgets' | 'indents' | 'rfqs' | 'pos'>('budgets');
+
+  // User Role Switcher: 'admin' sees budget targets & edits; 'user' is restricted
+  const [userRole, setUserRole] = useState<'admin' | 'user'>('admin');
+
+  // Budget Allocation Audit Trail History Modal State
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [fromDate, setFromDate] = useState('2026-07-01');
+  const [toDate, setToDate] = useState('2026-07-31');
 
   // Modal State for New Indent
   const [showIndentModal, setShowIndentModal] = useState(false);
   const [indentForm, setIndentForm] = useState({
     departmentId: departments[0]?.id || 'dept-1',
-    requestedBy: 'Department Head',
-    itemDescription: 'High-Performance Laptops',
-    hsnCode: '8471',
+    requestedBy: SYSTEM_EMPLOYEES[0]?.name || 'Vikram Singh (IT Head)',
+    selectedItemId: masterItems[0]?.id || 'i1',
+    itemDescription: masterItems[0]?.name || 'A4 Paper Ream',
+    hsnCode: masterItems[0]?.hsn || '48021000',
     requestedQty: 10,
     availableStockQty: 2,
-    estimatedRate: 65000
+    estimatedRate: masterItems[0]?.price || 450,
+    specifications: 'Standard 80GSM A4 Copier Paper, 500 Sheets per Ream, Bright White',
+    expectedReceiptDate: '2026-08-15'
   });
 
   // Edit Budget Modal State
@@ -67,6 +83,20 @@ export default function ProcurementHub() {
     setAddDeptForm({ name: '', code: '', budget: 1000000 });
   };
 
+  const handleItemSelectChange = (itemId: string) => {
+    const found = masterItems.find(i => i.id === itemId);
+    if (found) {
+      setIndentForm(f => ({
+        ...f,
+        selectedItemId: found.id,
+        itemDescription: found.name,
+        hsnCode: found.hsn || '8471',
+        availableStockQty: (found as any).qty ?? 2,
+        estimatedRate: found.price || 1000
+      }));
+    }
+  };
+
   const handleCreateIndentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createIndent({
@@ -74,11 +104,14 @@ export default function ProcurementHub() {
       requestedBy: indentForm.requestedBy,
       items: [
         {
+          itemId: indentForm.selectedItemId,
           itemDescription: indentForm.itemDescription,
           hsnCode: indentForm.hsnCode,
           requestedQty: Number(indentForm.requestedQty),
           availableStockQty: Number(indentForm.availableStockQty),
-          estimatedRate: Number(indentForm.estimatedRate)
+          estimatedRate: Number(indentForm.estimatedRate),
+          specifications: indentForm.specifications,
+          expectedReceiptDate: indentForm.expectedReceiptDate
         }
       ]
     });
@@ -104,7 +137,7 @@ export default function ProcurementHub() {
     <div className="page-container" style={{ padding: 24 }}>
       
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 className="page-title" style={{ fontSize: 24, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10, margin: 0 }}>
             🏢 Departmental Procurement &amp; L1 Quote-to-Order Hub <Sparkles size={20} style={{ color: '#FBBF24' }}/>
@@ -114,13 +147,43 @@ export default function ProcurementHub() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowIndentModal(true)}
-          className="btn-action btn-action-primary"
-          style={{ padding: '10px 20px', fontWeight: 800, gap: 8, background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)', borderColor: '#10B981' }}
-        >
-          <Plus size={16}/> + Raise New Purchase Indent (PR)
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          {/* Role Switcher */}
+          <div style={{ background: 'var(--bg-card)', padding: '4px 8px', borderRadius: 8, border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Active Role:</span>
+            <button
+              onClick={() => setUserRole('admin')}
+              style={{ padding: '3px 10px', borderRadius: 6, border: 'none', background: userRole === 'admin' ? 'var(--brand-primary)' : 'none', color: userRole === 'admin' ? '#fff' : 'var(--text-muted)', fontWeight: 800, cursor: 'pointer', fontSize: 11 }}
+            >
+              👑 Admin / Finance
+            </button>
+            <button
+              onClick={() => setUserRole('user')}
+              style={{ padding: '3px 10px', borderRadius: 6, border: 'none', background: userRole === 'user' ? '#10B981' : 'none', color: userRole === 'user' ? '#fff' : 'var(--text-muted)', fontWeight: 800, cursor: 'pointer', fontSize: 11 }}
+            >
+              👤 Normal Employee
+            </button>
+          </div>
+
+          {/* Audit Trail History Button */}
+          {userRole === 'admin' && (
+            <button
+              onClick={() => setShowAuditModal(true)}
+              className="btn-action btn-action-secondary"
+              style={{ fontSize: 12, padding: '8px 14px', fontWeight: 800, gap: 6 }}
+            >
+              <History size={15}/> 📜 Budget History Log
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowIndentModal(true)}
+            className="btn-action btn-action-primary"
+            style={{ padding: '8px 18px', fontWeight: 800, gap: 8, background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)', borderColor: '#10B981' }}
+          >
+            <Plus size={16}/> + Raise Purchase Indent (PR)
+          </button>
+        </div>
       </div>
 
       {/* Tabs Bar */}
@@ -241,18 +304,24 @@ export default function ProcurementHub() {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Allocated Budget</span>
-                        <button
-                          onClick={() => handleOpenEditBudget(dept.id, dept.departmentName, dept.allocatedBudget)}
-                          style={{ background: 'rgba(108,71,255,0.15)', border: 'none', color: 'var(--brand-primary)', borderRadius: 4, padding: '1px 6px', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ✏ Edit
-                        </button>
+                        {userRole === 'admin' && (
+                          <button
+                            onClick={() => handleOpenEditBudget(dept.id, dept.departmentName, dept.allocatedBudget)}
+                            style={{ background: 'rgba(108,71,255,0.15)', border: 'none', color: 'var(--brand-primary)', borderRadius: 4, padding: '1px 6px', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            ✏ Edit
+                          </button>
+                        )}
                       </div>
-                      <strong style={{ color: 'var(--text-primary)', fontSize: 14 }}>₹{dept.allocatedBudget.toLocaleString('en-IN')}</strong>
+                      <strong style={{ color: 'var(--text-primary)', fontSize: 14 }}>
+                        {userRole === 'admin' ? `₹${dept.allocatedBudget.toLocaleString('en-IN')}` : '🔒 Restricted (Admin Only)'}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block' }}>Available Remaining</span>
-                      <strong style={{ color: isOverBudget ? '#EF4444' : '#10B981', fontSize: 14 }}>₹{remaining.toLocaleString('en-IN')}</strong>
+                      <strong style={{ color: isOverBudget ? '#EF4444' : '#10B981', fontSize: 14 }}>
+                        {userRole === 'admin' ? `₹${remaining.toLocaleString('en-IN')}` : '🔒 Restricted (Admin Only)'}
+                      </strong>
                     </div>
                   </div>
 
@@ -305,8 +374,18 @@ export default function ProcurementHub() {
                       <div key={idx}>
                         <strong style={{ color: 'var(--text-primary)' }}>{item.itemDescription}</strong>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block' }}>
-                          Req: {item.requestedQty} Pcs | Avail Stock: {item.availableStockQty} Pcs
+                          Req: {item.requestedQty} Pcs | Actual Warehouse Stock: {item.availableStockQty} Pcs
                         </span>
+                        {item.specifications && (
+                          <div style={{ fontSize: 11, color: 'var(--brand-primary)', marginTop: 2, fontStyle: 'italic' }}>
+                            📋 Specs: {item.specifications}
+                          </div>
+                        )}
+                        {item.expectedReceiptDate && (
+                          <div style={{ fontSize: 11, color: '#10B981', marginTop: 2, fontWeight: 700 }}>
+                            📅 Expected Receipt: {item.expectedReceiptDate}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </td>
@@ -474,29 +553,43 @@ export default function ProcurementHub() {
                   style={{ fontWeight: 700 }}
                 >
                   {departments.map(d => (
-                    <option key={d.id} value={d.id}>{d.departmentName} (Avail: ₹{(d.allocatedBudget - (d.consumedBudget + d.pendingPRValue)).toLocaleString('en-IN')})</option>
+                    <option key={d.id} value={d.id}>
+                      {d.departmentName} {userRole === 'admin' ? `(Avail: ₹${(d.allocatedBudget - (d.consumedBudget + d.pendingPRValue)).toLocaleString('en-IN')})` : ''}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="field-label">Requested By (Staff Name / Designation) *</label>
-                <input
-                  required
+                <label className="field-label">Requested By (Select Employee / User) *</label>
+                <select
                   value={indentForm.requestedBy}
                   onChange={e => setIndentForm(f => ({ ...f, requestedBy: e.target.value }))}
                   className="field-input"
-                />
+                  style={{ fontWeight: 700 }}
+                >
+                  {SYSTEM_EMPLOYEES.map(emp => (
+                    <option key={emp.id} value={emp.name}>
+                      👤 {emp.name} — {emp.designation} ({emp.department})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="field-label">Item Description *</label>
-                <input
-                  required
-                  value={indentForm.itemDescription}
-                  onChange={e => setIndentForm(f => ({ ...f, itemDescription: e.target.value }))}
+                <label className="field-label">Select Item from System Master *</label>
+                <select
+                  value={indentForm.selectedItemId}
+                  onChange={e => handleItemSelectChange(e.target.value)}
                   className="field-input"
-                />
+                  style={{ fontWeight: 700, color: 'var(--brand-primary)' }}
+                >
+                  {masterItems.map(item => (
+                    <option key={item.id} value={item.id}>
+                      📦 {item.name} (HSN: {item.hsn} | Stock: {(item as any).qty ?? 2} {item.unit || 'Pcs'} | Est Rate: ₹{item.price})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -508,32 +601,59 @@ export default function ProcurementHub() {
                     value={indentForm.requestedQty}
                     onChange={e => setIndentForm(f => ({ ...f, requestedQty: Number(e.target.value) }))}
                     className="field-input"
+                    style={{ fontWeight: 800 }}
                   />
                 </div>
                 <div>
-                  <label className="field-label">Warehouse Stock Qty *</label>
+                  <label className="field-label">Actual Warehouse Stock Qty</label>
+                  <input
+                    type="number"
+                    readOnly
+                    value={indentForm.availableStockQty}
+                    className="field-input"
+                    style={{ background: 'var(--bg-elevated)', fontWeight: 800, color: '#10B981' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="field-label">Est. Unit Rate (₹) *</label>
                   <input
                     type="number"
                     required
-                    value={indentForm.availableStockQty}
-                    onChange={e => setIndentForm(f => ({ ...f, availableStockQty: Number(e.target.value) }))}
+                    value={indentForm.estimatedRate}
+                    onChange={e => setIndentForm(f => ({ ...f, estimatedRate: Number(e.target.value) }))}
                     className="field-input"
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Expected Receipt Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={indentForm.expectedReceiptDate}
+                    onChange={e => setIndentForm(f => ({ ...f, expectedReceiptDate: e.target.value }))}
+                    className="field-input"
+                    style={{ fontWeight: 700 }}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="field-label">Estimated Rate per Unit (₹) *</label>
-                <input
-                  type="number"
+                <label className="field-label">Detailed Technical Specifications / Requirements *</label>
+                <textarea
+                  rows={2}
                   required
-                  value={indentForm.estimatedRate}
-                  onChange={e => setIndentForm(f => ({ ...f, estimatedRate: Number(e.target.value) }))}
+                  value={indentForm.specifications}
+                  onChange={e => setIndentForm(f => ({ ...f, specifications: e.target.value }))}
+                  placeholder="Enter detailed technical specs, model numbers, warranty requirements..."
                   className="field-input"
+                  style={{ resize: 'vertical', fontSize: 12 }}
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
                 <button type="button" className="btn-action btn-action-ghost" onClick={() => setShowIndentModal(false)}>Cancel</button>
                 <button type="submit" className="btn-action btn-action-primary" style={{ background: '#10B981', borderColor: '#10B981', fontWeight: 800 }}>
                   Submit Purchase Indent
@@ -629,6 +749,96 @@ export default function ProcurementHub() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: BUDGET ALLOCATION AUDIT TRAIL HISTORY */}
+      {showAuditModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 780, maxHeight: '82vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.6)', border: '1px solid var(--border-default)', overflow: 'hidden' }}>
+            
+            {/* Modal Header */}
+            <div style={{ padding: '16px 24px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-default)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <History size={20} style={{ color: 'var(--brand-primary)' }}/>
+                <h3 style={{ fontSize: 17, fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
+                  📜 Department Budget Allocation Audit History
+                </h3>
+              </div>
+              <button onClick={() => setShowAuditModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer' }}>✕</button>
+            </div>
+
+            {/* Filter Bar: From Date -> To Date */}
+            <div style={{ padding: '12px 24px', background: 'var(--bg-card)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                <Calendar size={15} style={{ color: 'var(--brand-primary)' }}/>
+                <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>From Date:</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={e => setFromDate(e.target.value)}
+                  className="field-input"
+                  style={{ padding: '4px 8px', fontSize: 12 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                <Calendar size={15} style={{ color: 'var(--brand-primary)' }}/>
+                <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>To Date:</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={e => setToDate(e.target.value)}
+                  className="field-input"
+                  style={{ padding: '4px 8px', fontSize: 12 }}
+                />
+              </div>
+
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                Showing <strong>{auditLogs.filter(a => a.date.substring(0, 10) >= fromDate && a.date.substring(0, 10) <= toDate).length}</strong> change records
+              </span>
+            </div>
+
+            {/* Audit Logs Table */}
+            <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-default)', color: 'var(--text-muted)', textAlign: 'left' }}>
+                    <th style={{ padding: 10 }}>Date &amp; Time</th>
+                    <th style={{ padding: 10 }}>Department Name</th>
+                    <th style={{ padding: 10, textAlign: 'right' }}>Old Budget</th>
+                    <th style={{ padding: 10, textAlign: 'right' }}>New Budget</th>
+                    <th style={{ padding: 10, textAlign: 'right' }}>Change (+/-)</th>
+                    <th style={{ padding: 10 }}>Modified By</th>
+                    <th style={{ padding: 10 }}>Reason / Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs
+                    .filter(a => a.date.substring(0, 10) >= fromDate && a.date.substring(0, 10) <= toDate)
+                    .map(log => (
+                      <tr key={log.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: 10, fontFamily: 'monospace', color: 'var(--text-muted)' }}>{log.date}</td>
+                        <td style={{ padding: 10, fontWeight: 800, color: 'var(--text-primary)' }}>{log.departmentName}</td>
+                        <td style={{ padding: 10, textAlign: 'right' }}>₹{log.oldAmount.toLocaleString('en-IN')}</td>
+                        <td style={{ padding: 10, textAlign: 'right', fontWeight: 800, color: 'var(--brand-primary)' }}>₹{log.newAmount.toLocaleString('en-IN')}</td>
+                        <td style={{ padding: 10, textAlign: 'right', fontWeight: 900, color: log.changeAmount >= 0 ? '#10B981' : '#EF4444' }}>
+                          {log.changeAmount >= 0 ? `+₹${log.changeAmount.toLocaleString('en-IN')}` : `-₹${Math.abs(log.changeAmount).toLocaleString('en-IN')}`}
+                        </td>
+                        <td style={{ padding: 10, fontWeight: 700, color: 'var(--text-secondary)' }}>{log.changedBy}</td>
+                        <td style={{ padding: 10, color: 'var(--text-muted)' }}>{log.reason || 'Manual Update'}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '12px 24px', background: 'var(--bg-elevated)', borderTop: '1px solid var(--border-default)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowAuditModal(false)} className="btn-action btn-action-ghost">Close History Audit</button>
+            </div>
+
           </div>
         </div>
       )}

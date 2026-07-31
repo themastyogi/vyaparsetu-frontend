@@ -23,14 +23,36 @@ export interface DepartmentBudget {
   fiscalYear: string;
 }
 
+export interface BudgetAuditLog {
+  id: string;
+  departmentId: string;
+  departmentName: string;
+  oldAmount: number;
+  newAmount: number;
+  changeAmount: number;
+  changedBy: string;
+  date: string;
+  reason?: string;
+}
+
+export interface Employee {
+  id: string;
+  name: string;
+  department: string;
+  designation: string;
+}
+
 export interface IndentItem {
   id: string;
+  itemId?: string;
   itemDescription: string;
   hsnCode: string;
   requestedQty: number;
   availableStockQty: number; // Current Warehouse Stock
   estimatedRate: number;
   estimatedTotal: number;
+  specifications?: string;    // Technical Specs / Detailed Requirements
+  expectedReceiptDate?: string; // Target Delivery Date
 }
 
 export interface PurchaseIndent {
@@ -98,6 +120,19 @@ export interface PurchaseOrderRecord {
 // ────────────────────────────────────────────────────────────────
 // Initial Seed Data
 // ────────────────────────────────────────────────────────────────
+
+export const SYSTEM_EMPLOYEES: Employee[] = [
+  { id: 'emp-1', name: 'Vikram Singh (IT Head)', department: 'IT & Hardware Infrastructure', designation: 'IT Operations Head' },
+  { id: 'emp-2', name: 'Rahul Sharma (Plant Mgr)', department: 'Manufacturing & Production', designation: 'Factory Plant Manager' },
+  { id: 'emp-3', name: 'Priya Verma (VP Mktg)', department: 'Marketing & Sales Promotion', designation: 'VP Marketing' },
+  { id: 'emp-4', name: 'Ankit Mehta (Facilities)', department: 'Administration & Facilities', designation: 'Facilities Lead' },
+  { id: 'emp-5', name: 'Neha Gupta (SysAdmin)', department: 'IT & Hardware Infrastructure', designation: 'Senior Systems Admin' }
+];
+
+const SEED_AUDIT_LOGS: BudgetAuditLog[] = [
+  { id: 'audit-1', departmentId: 'dept-1', departmentName: 'IT & Hardware Infrastructure', oldAmount: 4000000, newAmount: 5000000, changeAmount: 1000000, changedBy: 'Admin (System)', date: '2026-07-01 10:00:00', reason: 'Annual Budget Expansion' },
+  { id: 'audit-2', departmentId: 'dept-2', departmentName: 'Manufacturing & Production', oldAmount: 10000000, newAmount: 12000000, changeAmount: 2000000, changedBy: 'Admin (System)', date: '2026-07-15 14:30:00', reason: 'Q2 Production Scaling Allocation' }
+];
 
 const SEED_DEPARTMENTS: DepartmentBudget[] = [
   { id: 'dept-1', departmentName: 'IT & Hardware Infrastructure', code: 'IT-01', allocatedBudget: 5000000, consumedBudget: 1250000, pendingPRValue: 650000, fiscalYear: '2026-27' },
@@ -187,6 +222,7 @@ function save<T>(key: string, val: T): void {
 
 export function useProcurement() {
   const [departments, setDepartments] = useState<DepartmentBudget[]>(() => load('vs_departments', SEED_DEPARTMENTS));
+  const [auditLogs, setAuditLogs] = useState<BudgetAuditLog[]>(() => load('vs_budget_audits', SEED_AUDIT_LOGS));
   const [indents, setIndents] = useState<PurchaseIndent[]>(() => load('vs_indents', SEED_INDENTS));
   const [rfqs, setRfqs] = useState<PurchaseQuoteRFQ[]>(() => load('vs_rfqs', SEED_RFQS));
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderRecord[]>(() => load('vs_pos', SEED_POS));
@@ -195,6 +231,11 @@ export function useProcurement() {
   const updateDepartments = useCallback((newDepts: DepartmentBudget[]) => {
     setDepartments(newDepts);
     save('vs_departments', newDepts);
+  }, []);
+
+  const updateAuditLogs = useCallback((newAudits: BudgetAuditLog[]) => {
+    setAuditLogs(newAudits);
+    save('vs_budget_audits', newAudits);
   }, []);
 
   const updateIndents = useCallback((newIndents: PurchaseIndent[]) => {
@@ -212,14 +253,35 @@ export function useProcurement() {
     save('vs_pos', newPOs);
   }, []);
 
-  // Update Department Budget
-  const updateDepartmentBudget = useCallback((departmentId: string, newAllocatedBudget: number) => {
+  // Update Department Budget with Audit Trail Logging
+  const updateDepartmentBudget = useCallback((departmentId: string, newAllocatedBudget: number, changedBy = 'Admin User', reason = 'Budget Re-allocation') => {
+    const targetDept = departments.find(d => d.id === departmentId);
+    if (!targetDept) return;
+
+    const oldVal = targetDept.allocatedBudget;
+    const diff = newAllocatedBudget - oldVal;
+
     const updated = departments.map(d => d.id === departmentId ? { ...d, allocatedBudget: newAllocatedBudget } : d);
     updateDepartments(updated);
-  }, [departments, updateDepartments]);
 
-  // Add New Department Budget
-  const addDepartment = useCallback((deptName: string, code: string, allocatedBudget: number) => {
+    // Record Audit Entry
+    const auditEntry: BudgetAuditLog = {
+      id: `audit_${Date.now()}`,
+      departmentId,
+      departmentName: targetDept.departmentName,
+      oldAmount: oldVal,
+      newAmount: newAllocatedBudget,
+      changeAmount: diff,
+      changedBy,
+      date: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      reason
+    };
+
+    updateAuditLogs([auditEntry, ...auditLogs]);
+  }, [departments, auditLogs, updateDepartments, updateAuditLogs]);
+
+  // Add New Department Budget with Audit Trail Logging
+  const addDepartment = useCallback((deptName: string, code: string, allocatedBudget: number, changedBy = 'Admin User') => {
     const newDept: DepartmentBudget = {
       id: `dept_${Date.now()}`,
       departmentName: deptName,
@@ -230,13 +292,28 @@ export function useProcurement() {
       fiscalYear: '2026-27'
     };
     updateDepartments([...departments, newDept]);
-  }, [departments, updateDepartments]);
+
+    // Record Audit Entry
+    const auditEntry: BudgetAuditLog = {
+      id: `audit_${Date.now()}`,
+      departmentId: newDept.id,
+      departmentName: deptName,
+      oldAmount: 0,
+      newAmount: allocatedBudget,
+      changeAmount: allocatedBudget,
+      changedBy,
+      date: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      reason: 'Initial Department Creation & Allocation'
+    };
+
+    updateAuditLogs([auditEntry, ...auditLogs]);
+  }, [departments, auditLogs, updateDepartments, updateAuditLogs]);
 
   // 1. Create New Purchase Indent / Requisition
   const createIndent = useCallback((data: {
     departmentId: string;
     requestedBy: string;
-    items: { itemDescription: string; hsnCode: string; requestedQty: number; availableStockQty: number; estimatedRate: number }[];
+    items: { itemId?: string; itemDescription: string; hsnCode: string; requestedQty: number; availableStockQty: number; estimatedRate: number; specifications?: string; expectedReceiptDate?: string }[];
   }) => {
     const dept = departments.find(d => d.id === data.departmentId) || departments[0];
 
@@ -406,6 +483,7 @@ export function useProcurement() {
 
   return {
     departments,
+    auditLogs,
     indents,
     rfqs,
     purchaseOrders,
