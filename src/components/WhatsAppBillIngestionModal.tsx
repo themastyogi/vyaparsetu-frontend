@@ -86,7 +86,8 @@ export default function WhatsAppBillIngestionModal({ onClose, onSuccessIngest }:
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
               {/* Option A */}
               <div style={{ background: 'rgba(16,185,129,0.08)', borderRadius: 12, border: '1px solid #10B981', padding: 20 }}>
-                <h5 style={{ fontSize: 15, fontWeight: 800, color: '#10B981', margin: '0 0 8px' }}>Option A: WhatsApp Business App (Free - 2 Mins)</h5>
+                <h5 style={{ fontSize: 15, fontWeight: 800, color: '#10B981', margin: '0 0 4px' }}>Option A: WhatsApp Business App</h5>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#10B981', marginBottom: 8 }}>Cost: ₹0 / FREE FOREVER 🎉</div>
                 <ol style={{ fontSize: 12, color: 'var(--text-secondary)', paddingLeft: 18, margin: 0, lineHeight: 1.6 }}>
                   <li>Install <strong>WhatsApp Business App</strong> on your phone.</li>
                   <li>Verify your company SIM card number via SMS OTP.</li>
@@ -97,7 +98,8 @@ export default function WhatsAppBillIngestionModal({ onClose, onSuccessIngest }:
 
               {/* Option B */}
               <div style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 12, border: '1px solid #3B82F6', padding: 20 }}>
-                <h5 style={{ fontSize: 15, fontWeight: 800, color: '#3B82F6', margin: '0 0 8px' }}>Option B: Meta Cloud API (Enterprise Auto-Bot)</h5>
+                <h5 style={{ fontSize: 15, fontWeight: 800, color: '#3B82F6', margin: '0 0 4px' }}>Option B: Meta Cloud API</h5>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#3B82F6', marginBottom: 8 }}>Cost: 1,000 Free Conversations / Month (Then ~₹0.35/conv)</div>
                 <ol style={{ fontSize: 12, color: 'var(--text-secondary)', paddingLeft: 18, margin: 0, lineHeight: 1.6 }}>
                   <li>Go to <strong>developers.facebook.com</strong> and click <strong>Create App</strong>.</li>
                   <li>Select <strong>Business</strong> and add the <strong>WhatsApp</strong> product.</li>
