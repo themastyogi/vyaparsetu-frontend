@@ -21,7 +21,8 @@ export default function ProcurementHub() {
     addDepartment,
     addMasterDepartment,
     updateMasterDepartmentRecord,
-    deleteMasterDepartment
+    deleteMasterDepartment,
+    addVendorResponseToRFQ
   } = useProcurement();
 
   const { items: masterItems } = useMaster();
@@ -44,8 +45,26 @@ export default function ProcurementHub() {
   const [fromDate, setFromDate] = useState('2026-07-01');
   const [toDate, setToDate] = useState('2026-07-31');
 
-  // Modal State for New Indent
+  // L1 Evaluation Explanation Modal State
+  const [showL1ExplanationModal, setShowL1ExplanationModal] = useState(false);
+  const [selectedL1RfqId, setSelectedL1RfqId] = useState<string | null>(null);
+
+  // Vendor Response Entry Modal State
+  const [showVendorQuoteModal, setShowVendorQuoteModal] = useState(false);
+  const [editingRfqId, setEditingRfqId] = useState<string | null>(null);
+  const [vendorQuoteForm, setVendorQuoteForm] = useState({
+    vendorName: '',
+    unitRate: 50000,
+    freightAmount: 1500,
+    gstPct: 18,
+    deliveryDays: 5,
+    paymentTerms: 'Net 30'
+  });
+
+  // Modal State for New Indent with Item Search, Employee Search, and Image Upload
   const [showIndentModal, setShowIndentModal] = useState(false);
+  const [itemSearchQuery, setItemSearchQuery] = useState('');
+  const [empSearchQuery, setEmpSearchQuery] = useState('');
   const [indentForm, setIndentForm] = useState({
     departmentId: departments[0]?.id || 'dept-1',
     requestedBy: SYSTEM_EMPLOYEES[0]?.name || 'Vikram Singh (IT Head)',
@@ -56,7 +75,8 @@ export default function ProcurementHub() {
     availableStockQty: 2,
     estimatedRate: masterItems[0]?.price || 450,
     specifications: 'Standard 80GSM A4 Copier Paper, 500 Sheets per Ream, Bright White',
-    expectedReceiptDate: '2026-08-15'
+    expectedReceiptDate: '2026-08-15',
+    itemImage: ''
   });
 
   // Edit Budget Modal State
@@ -117,6 +137,17 @@ export default function ProcurementHub() {
     }
   };
 
+  const handleItemImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setIndentForm(f => ({ ...f, itemImage: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreateIndentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createIndent({
@@ -131,7 +162,8 @@ export default function ProcurementHub() {
           availableStockQty: Number(indentForm.availableStockQty),
           estimatedRate: Number(indentForm.estimatedRate),
           specifications: indentForm.specifications,
-          expectedReceiptDate: indentForm.expectedReceiptDate
+          expectedReceiptDate: indentForm.expectedReceiptDate,
+          itemImage: indentForm.itemImage
         }
       ]
     });
@@ -146,6 +178,22 @@ export default function ProcurementHub() {
       'Sahil Traders Pvt Ltd'
     ]);
     setActiveTab('rfqs');
+  };
+
+  const handleAddVendorQuoteSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingRfqId && vendorQuoteForm.vendorName) {
+      addVendorResponseToRFQ(editingRfqId, {
+        vendorName: vendorQuoteForm.vendorName,
+        unitRate: Number(vendorQuoteForm.unitRate),
+        freightAmount: Number(vendorQuoteForm.freightAmount),
+        gstPct: Number(vendorQuoteForm.gstPct),
+        deliveryDays: Number(vendorQuoteForm.deliveryDays),
+        paymentTerms: vendorQuoteForm.paymentTerms
+      });
+      setShowVendorQuoteModal(false);
+      setVendorQuoteForm({ vendorName: '', unitRate: 50000, freightAmount: 1500, gstPct: 18, deliveryDays: 5, paymentTerms: 'Net 30' });
+    }
   };
 
   const handleConvertL1PO = (rfqId: string) => {
@@ -457,22 +505,49 @@ export default function ProcurementHub() {
           {rfqs.map(rfq => (
             <div key={rfq.id} style={{ background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border-default)', padding: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 12, flexWrap: 'wrap', gap: 12 }}>
                 <div>
                   <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-primary)', textTransform: 'uppercase' }}>{rfq.rfqNo} (Linked Indent: {rfq.indentNo})</span>
                   <h3 style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', margin: '2px 0 0' }}>{rfq.itemDescription} (Qty: {rfq.qty} Pcs)</h3>
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Department: {rfq.departmentName}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Department: {rfq.departmentName} | Evaluated L1: <strong style={{ color: '#10B981' }}>{rfq.selectedL1Vendor}</strong></span>
                 </div>
 
-                {rfq.status !== 'Converted to PO' && (
-                  <button
-                    onClick={() => handleConvertL1PO(rfq.id)}
-                    className="btn-action btn-action-primary"
-                    style={{ padding: '10px 20px', fontWeight: 900, background: '#10B981', borderColor: '#10B981', gap: 8 }}
-                  >
-                    ⚡ Convert L1 Quote to Purchase Order (PO) →
-                  </button>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  {rfq.status !== 'Converted to PO' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setEditingRfqId(rfq.id);
+                          setVendorQuoteForm({ vendorName: '', unitRate: 50000, freightAmount: 1500, gstPct: 18, deliveryDays: 5, paymentTerms: 'Net 30' });
+                          setShowVendorQuoteModal(true);
+                        }}
+                        className="btn-action btn-action-secondary"
+                        style={{ fontSize: 12, padding: '8px 14px', fontWeight: 800, gap: 6 }}
+                      >
+                        <Plus size={15}/> + Record Vendor Bid
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setSelectedL1RfqId(rfq.id);
+                          setShowL1ExplanationModal(true);
+                        }}
+                        className="btn-action btn-action-secondary"
+                        style={{ fontSize: 12, padding: '8px 14px', fontWeight: 800, gap: 6, borderColor: 'var(--brand-primary)', color: 'var(--brand-primary)' }}
+                      >
+                        🔍 L1 Evaluation Logic
+                      </button>
+
+                      <button
+                        onClick={() => handleConvertL1PO(rfq.id)}
+                        className="btn-action btn-action-primary"
+                        style={{ padding: '8px 18px', fontWeight: 900, background: '#10B981', borderColor: '#10B981', gap: 8 }}
+                      >
+                        ⚡ Convert Evaluated L1 Quote to PO →
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Vendor Quotes Comparison Table */}
@@ -590,35 +665,71 @@ export default function ProcurementHub() {
               </div>
 
               <div>
-                <label className="field-label">Requested By (Select Employee / User) *</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label className="field-label" style={{ margin: 0 }}>Requested By (Searchable Employee Master) *</label>
+                  <input
+                    placeholder="🔍 Filter employee..."
+                    value={empSearchQuery}
+                    onChange={e => setEmpSearchQuery(e.target.value)}
+                    style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)', background: 'var(--bg-elevated)', width: 140 }}
+                  />
+                </div>
                 <select
                   value={indentForm.requestedBy}
                   onChange={e => setIndentForm(f => ({ ...f, requestedBy: e.target.value }))}
                   className="field-input"
                   style={{ fontWeight: 700 }}
                 >
-                  {SYSTEM_EMPLOYEES.map(emp => (
-                    <option key={emp.id} value={emp.name}>
-                      👤 {emp.name} — {emp.designation} ({emp.department})
-                    </option>
-                  ))}
+                  {SYSTEM_EMPLOYEES
+                    .filter(emp => emp.name.toLowerCase().includes(empSearchQuery.toLowerCase()) || emp.employeeCode.toLowerCase().includes(empSearchQuery.toLowerCase()))
+                    .map(emp => (
+                      <option key={emp.id} value={emp.name}>
+                        👤 {emp.name} ({emp.employeeCode}) — {emp.designation}
+                      </option>
+                    ))}
                 </select>
               </div>
 
               <div>
-                <label className="field-label">Select Item from System Master *</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label className="field-label" style={{ margin: 0 }}>Select Item (Searchable Item Master) *</label>
+                  <input
+                    placeholder="🔍 Filter item name/HSN..."
+                    value={itemSearchQuery}
+                    onChange={e => setItemSearchQuery(e.target.value)}
+                    style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)', background: 'var(--bg-elevated)', width: 150 }}
+                  />
+                </div>
                 <select
                   value={indentForm.selectedItemId}
                   onChange={e => handleItemSelectChange(e.target.value)}
                   className="field-input"
                   style={{ fontWeight: 700, color: 'var(--brand-primary)' }}
                 >
-                  {masterItems.map(item => (
-                    <option key={item.id} value={item.id}>
-                      📦 {item.name} (HSN: {item.hsn} | Stock: {(item as any).qty ?? 2} {item.unit || 'Pcs'} | Est Rate: ₹{item.price})
-                    </option>
-                  ))}
+                  {masterItems
+                    .filter(item => item.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) || item.hsn.toLowerCase().includes(itemSearchQuery.toLowerCase()))
+                    .map(item => (
+                      <option key={item.id} value={item.id}>
+                        📦 {item.name} (HSN: {item.hsn} | Stock: {(item as any).qty ?? 2} {item.unit || 'Pcs'} | Est Rate: ₹{item.price})
+                      </option>
+                    ))}
                 </select>
+              </div>
+
+              {/* Product Photo Upload */}
+              <div style={{ background: 'var(--bg-elevated)', padding: 10, borderRadius: 10, border: '1px dashed var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                {indentForm.itemImage ? (
+                  <img src={indentForm.itemImage} alt="Product Attachment" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border-default)' }}/>
+                ) : (
+                  <div style={{ width: 44, height: 44, background: 'var(--bg-card)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📸</div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-primary)', cursor: 'pointer' }}>
+                    {indentForm.itemImage ? 'Change Product Image' : '+ Upload Sample / Required Product Image'}
+                    <input type="file" accept="image/*" onChange={handleItemImageUpload} style={{ display: 'none' }}/>
+                  </label>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Attach photo, drawing, or technical sample image</div>
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -995,6 +1106,158 @@ export default function ProcurementHub() {
               <button onClick={() => setShowMasterDeptModal(false)} className="btn-action btn-action-ghost">Close Master Manager</button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: RECORD VENDOR BID RESPONSE */}
+      {showVendorQuoteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 480, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 6 }}>
+              📝 Record Vendor Quotation Response (RFQ)
+            </h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
+              Enter vendor's commercial bid response. L1 Evaluation engine will recalculate landed costs dynamically!
+            </p>
+
+            <form onSubmit={handleAddVendorQuoteSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label className="field-label">Vendor Name *</label>
+                <input
+                  required
+                  placeholder="e.g. Reliancesoft Systems Pvt Ltd"
+                  value={vendorQuoteForm.vendorName}
+                  onChange={e => setVendorQuoteForm(f => ({ ...f, vendorName: e.target.value }))}
+                  className="field-input"
+                  style={{ fontWeight: 700 }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="field-label">Unit Rate (₹) *</label>
+                  <input
+                    type="number"
+                    required
+                    value={vendorQuoteForm.unitRate}
+                    onChange={e => setVendorQuoteForm(f => ({ ...f, unitRate: Number(e.target.value) }))}
+                    className="field-input"
+                    style={{ fontWeight: 800 }}
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Freight Charge (₹)</label>
+                  <input
+                    type="number"
+                    value={vendorQuoteForm.freightAmount}
+                    onChange={e => setVendorQuoteForm(f => ({ ...f, freightAmount: Number(e.target.value) }))}
+                    className="field-input"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="field-label">GST Tax Rate (%)</label>
+                  <select
+                    value={vendorQuoteForm.gstPct}
+                    onChange={e => setVendorQuoteForm(f => ({ ...f, gstPct: Number(e.target.value) }))}
+                    className="field-input"
+                  >
+                    <option value={0}>0% (Exempt)</option>
+                    <option value={5}>5%</option>
+                    <option value={12}>12%</option>
+                    <option value={18}>18% (Standard)</option>
+                    <option value={28}>28%</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="field-label">Delivery Lead Time (Days)</label>
+                  <input
+                    type="number"
+                    value={vendorQuoteForm.deliveryDays}
+                    onChange={e => setVendorQuoteForm(f => ({ ...f, deliveryDays: Number(e.target.value) }))}
+                    className="field-input"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="field-label">Payment Terms</label>
+                <select
+                  value={vendorQuoteForm.paymentTerms}
+                  onChange={e => setVendorQuoteForm(f => ({ ...f, paymentTerms: e.target.value }))}
+                  className="field-input"
+                >
+                  <option value="Net 15">Net 15 Days</option>
+                  <option value="Net 30">Net 30 Days</option>
+                  <option value="Net 45">Net 45 Days</option>
+                  <option value="100% Advance">100% Advance</option>
+                  <option value="50% Advance, 50% Delivery">50% Advance / 50% Delivery</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+                <button type="button" className="btn-action btn-action-ghost" onClick={() => setShowVendorQuoteModal(false)}>Cancel</button>
+                <button type="submit" className="btn-action btn-action-primary" style={{ background: '#10B981', borderColor: '#10B981', fontWeight: 800 }}>
+                  Save Vendor Response &amp; Run L1
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: L1 EVALUATION ENGINE EXPLANATION TOOL */}
+      {showL1ExplanationModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 650, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.6)', border: '1px solid var(--border-default)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Award size={22} style={{ color: '#10B981' }}/>
+                <h3 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
+                  🔍 How System Evaluates L1 (Lowest Landed Cost)
+                </h3>
+              </div>
+              <button onClick={() => setShowL1ExplanationModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: 13 }}>
+              {selectedL1RfqId && (() => {
+                const currentRfq = rfqs.find(r => r.id === selectedL1RfqId);
+                if (!currentRfq) return null;
+                const l1Res = currentRfq.vendorResponses.find(v => v.isL1);
+                return (
+                  <div style={{ background: 'var(--bg-elevated)', padding: 12, borderRadius: 10, border: '1px solid var(--border-default)' }}>
+                    <div style={{ fontSize: 11, color: 'var(--brand-primary)', fontWeight: 900 }}>RFQ: {currentRfq.rfqNo} — {currentRfq.itemDescription}</div>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-primary)', marginTop: 2 }}>
+                      Evaluated L1 Winner: <span style={{ color: '#10B981' }}>{l1Res?.vendorName || currentRfq.selectedL1Vendor}</span> (₹{(l1Res?.totalLandedCost || 0).toLocaleString('en-IN')})
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div style={{ background: 'rgba(16,185,129,0.1)', padding: 14, borderRadius: 10, border: '1px solid rgba(16,185,129,0.3)', color: 'var(--text-primary)' }}>
+                <strong style={{ color: '#10B981', display: 'block', marginBottom: 4 }}>📐 L1 Evaluation Criteria &amp; Scenario Formula:</strong>
+                L1 (Lowest Bidder) is evaluated based on total <strong>Landed Net Cost per Unit</strong> including base rates, freight, and applicable GST taxes:
+                <div style={{ background: 'var(--bg-card)', padding: '10px 14px', borderRadius: 8, marginTop: 8, fontFamily: 'monospace', fontWeight: 700, fontSize: 12, color: 'var(--brand-primary)' }}>
+                  Total Landed Cost = (Unit Rate × Qty + Freight) × (1 + GST % / 100)
+                </div>
+              </div>
+
+              <div>
+                <strong style={{ display: 'block', marginBottom: 6 }}>🔒 PO Conversion Rule Enforcement:</strong>
+                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 12 }}>
+                  To ensure audit compliance and prevent unauthorized over-spending, the ERP system restricts Purchase Order (PO) creation strictly to the evaluated <strong>L1 Lowest Bidder</strong>. Non-L1 vendor quotes cannot be converted into POs without executive override.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                <button onClick={() => setShowL1ExplanationModal(false)} className="btn-action btn-action-primary">Understood</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

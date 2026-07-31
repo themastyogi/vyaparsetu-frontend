@@ -48,14 +48,20 @@ export interface BudgetAuditLog {
 export interface Employee {
   id: string;
   employeeCode: string;
+  firstName: string;
+  lastName: string;
   name: string;
   department: string;
   departmentCode?: string;
   designation: string;
+  role: string;
   email: string;
   phone: string;
+  address: string;
   status: 'Active' | 'Inactive';
   dateOfJoining: string;
+  dateOfExit?: string;
+  photoUrl?: string;
   tenantId: string;
 }
 
@@ -70,6 +76,7 @@ export interface IndentItem {
   estimatedTotal: number;
   specifications?: string;    // Technical Specs / Detailed Requirements
   expectedReceiptDate?: string; // Target Delivery Date
+  itemImage?: string;
 }
 
 export interface PurchaseIndent {
@@ -88,7 +95,7 @@ export interface PurchaseIndent {
 }
 
 export interface VendorQuoteResponse {
-  vendorId: string;
+  vendorId?: string;
   vendorName: string;
   unitRate: number;
   freightAmount: number;
@@ -96,7 +103,7 @@ export interface VendorQuoteResponse {
   totalLandedCost: number;
   deliveryDays: number;
   paymentTerms: string;
-  isL1: boolean; // System auto-evaluates L1 (Lowest Bidder)
+  isL1: boolean;
 }
 
 export interface PurchaseQuoteRFQ {
@@ -139,11 +146,11 @@ export interface PurchaseOrderRecord {
 // ────────────────────────────────────────────────────────────────
 
 export const SYSTEM_EMPLOYEES: Employee[] = [
-  { id: 'emp-1', employeeCode: 'EMP-101', name: 'Vikram Singh (IT Head)', department: 'IT & Hardware Infrastructure', departmentCode: 'IT-01', designation: 'IT Operations Head', email: 'vikram.singh@company.com', phone: '+91 98765 43210', status: 'Active', dateOfJoining: '2024-01-15', tenantId: 'tenant_demo_01' },
-  { id: 'emp-2', employeeCode: 'EMP-102', name: 'Rahul Sharma (Plant Mgr)', department: 'Manufacturing & Production', departmentCode: 'MFG-02', designation: 'Factory Plant Manager', email: 'rahul.sharma@company.com', phone: '+91 98765 43211', status: 'Active', dateOfJoining: '2024-03-01', tenantId: 'tenant_demo_01' },
-  { id: 'emp-3', employeeCode: 'EMP-103', name: 'Priya Verma (VP Mktg)', department: 'Marketing & Sales Promotion', departmentCode: 'MKT-03', designation: 'VP Marketing', email: 'priya.verma@company.com', phone: '+91 98765 43212', status: 'Active', dateOfJoining: '2024-05-10', tenantId: 'tenant_demo_01' },
-  { id: 'emp-4', employeeCode: 'EMP-104', name: 'Ankit Mehta (Facilities)', department: 'Administration & Facilities', departmentCode: 'ADM-04', designation: 'Facilities Lead', email: 'ankit.mehta@company.com', phone: '+91 98765 43213', status: 'Active', dateOfJoining: '2024-06-20', tenantId: 'tenant_demo_01' },
-  { id: 'emp-5', employeeCode: 'EMP-105', name: 'Neha Gupta (SysAdmin)', department: 'IT & Hardware Infrastructure', departmentCode: 'IT-01', designation: 'Senior Systems Admin', email: 'neha.gupta@company.com', phone: '+91 98765 43214', status: 'Active', dateOfJoining: '2025-01-10', tenantId: 'tenant_demo_01' }
+  { id: 'emp-1', employeeCode: 'EMP-101', firstName: 'Vikram', lastName: 'Singh', name: 'Vikram Singh', department: 'IT & Hardware Infrastructure', departmentCode: 'IT-01', designation: 'IT Operations Head', role: 'Department Head', email: 'vikram.singh@company.com', phone: '+91 98765 43210', address: 'Indiranagar 100ft Rd, Bengaluru, KA', status: 'Active', dateOfJoining: '2024-01-15', tenantId: 'tenant_demo_01' },
+  { id: 'emp-2', employeeCode: 'EMP-102', firstName: 'Rahul', lastName: 'Sharma', name: 'Rahul Sharma', department: 'Manufacturing & Production', departmentCode: 'MFG-02', designation: 'Factory Plant Manager', role: 'Plant Operations Lead', email: 'rahul.sharma@company.com', phone: '+91 98765 43211', address: 'MIDC Industrial Estate, Pune, MH', status: 'Active', dateOfJoining: '2024-03-01', tenantId: 'tenant_demo_01' },
+  { id: 'emp-3', employeeCode: 'EMP-103', firstName: 'Priya', lastName: 'Verma', name: 'Priya Verma', department: 'Marketing & Sales Promotion', departmentCode: 'MKT-03', designation: 'VP Marketing', role: 'Executive Officer', email: 'priya.verma@company.com', phone: '+91 98765 43212', address: 'Connaught Place, New Delhi, DL', status: 'Active', dateOfJoining: '2024-05-10', tenantId: 'tenant_demo_01' },
+  { id: 'emp-4', employeeCode: 'EMP-104', firstName: 'Ankit', lastName: 'Mehta', name: 'Ankit Mehta', department: 'Administration & Facilities', departmentCode: 'ADM-04', designation: 'Facilities Lead', role: 'Operations Officer', email: 'ankit.mehta@company.com', phone: '+91 98765 43213', address: 'SG Highway, Ahmedabad, GJ', status: 'Active', dateOfJoining: '2024-06-20', tenantId: 'tenant_demo_01' },
+  { id: 'emp-5', employeeCode: 'EMP-105', firstName: 'Neha', lastName: 'Gupta', name: 'Neha Gupta', department: 'IT & Hardware Infrastructure', departmentCode: 'IT-01', designation: 'Senior Systems Admin', role: 'Senior Engineer', email: 'neha.gupta@company.com', phone: '+91 98765 43214', address: 'Hitech City, Hyderabad, TS', status: 'Inactive', dateOfJoining: '2025-01-10', dateOfExit: '2026-06-30', tenantId: 'tenant_demo_01' }
 ];
 
 const SEED_AUDIT_LOGS: BudgetAuditLog[] = [
@@ -399,7 +406,7 @@ export function useProcurement() {
   const createIndent = useCallback((data: {
     departmentId: string;
     requestedBy: string;
-    items: { itemId?: string; itemDescription: string; hsnCode: string; requestedQty: number; availableStockQty: number; estimatedRate: number; specifications?: string; expectedReceiptDate?: string }[];
+    items: { itemId?: string; itemDescription: string; hsnCode: string; requestedQty: number; availableStockQty: number; estimatedRate: number; specifications?: string; expectedReceiptDate?: string; itemImage?: string }[];
   }) => {
     const dept = departments.find(d => d.id === data.departmentId) || departments[0];
 
@@ -567,6 +574,40 @@ export function useProcurement() {
     return newPO;
   }, [rfqs, purchaseOrders, indents, departments, updatePurchaseOrders, updateRfqs, updateIndents, updateDepartments]);
 
+  const addVendorResponseToRFQ = useCallback((rfqId: string, response: Omit<VendorQuoteResponse, 'totalLandedCost' | 'isL1'>) => {
+    const rfq = rfqs.find(r => r.id === rfqId);
+    if (!rfq) return;
+
+    const sub = response.unitRate * rfq.qty;
+    const totalLanded = Math.round((sub + response.freightAmount) * (1 + response.gstPct / 100));
+
+    const newResponse: VendorQuoteResponse = {
+      ...response,
+      vendorId: response.vendorId || `v_${Date.now()}`,
+      totalLandedCost: totalLanded,
+      isL1: false
+    };
+
+    const allResponses = [...rfq.vendorResponses, newResponse];
+    const minLanded = Math.min(...allResponses.map(r => r.totalLandedCost));
+
+    const reEvaluatedResponses = allResponses.map(r => ({
+      ...r,
+      isL1: r.totalLandedCost === minLanded
+    }));
+
+    const l1Vendor = reEvaluatedResponses.find(r => r.isL1)?.vendorName || rfq.selectedL1Vendor;
+
+    const updatedRfqs = rfqs.map(r => r.id === rfqId ? {
+      ...r,
+      vendorResponses: reEvaluatedResponses,
+      selectedL1Vendor: l1Vendor,
+      l1QuoteAmount: minLanded
+    } : r);
+
+    updateRfqs(updatedRfqs);
+  }, [rfqs, updateRfqs]);
+
   return {
     departments,
     masterDepartments,
@@ -585,6 +626,7 @@ export function useProcurement() {
     deleteMasterDepartment,
     addEmployee,
     updateEmployeeRecord,
-    deleteEmployee
+    deleteEmployee,
+    addVendorResponseToRFQ
   };
 }

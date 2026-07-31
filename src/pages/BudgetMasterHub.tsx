@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { History, Calendar, ShieldCheck } from 'lucide-react';
+import { History, Calendar, Plus, ShieldCheck } from 'lucide-react';
 import { useProcurement } from '../hooks/useProcurement';
 
 export default function BudgetMasterHub() {
   const {
     departments,
+    masterDepartments,
     auditLogs,
-    updateDepartmentBudget
+    updateDepartmentBudget,
+    addDepartment
   } = useProcurement();
 
   const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
@@ -19,11 +21,34 @@ export default function BudgetMasterHub() {
   const [editingDeptName, setEditingDeptName] = useState('');
   const [newBudgetVal, setNewBudgetVal] = useState<number>(5000000);
 
+  // Add Budget Modal with Master Department Lookup
+  const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
+  const [selectedMasterId, setSelectedMasterId] = useState(masterDepartments[0]?.id || '');
+  const [addBudgetForm, setAddBudgetForm] = useState({
+    departmentName: masterDepartments[0]?.name || '',
+    code: masterDepartments[0]?.code || '',
+    description: masterDepartments[0]?.description || '',
+    allocatedBudget: 5000000
+  });
+
   const handleOpenEditBudget = (deptId: string, currentName: string, currentVal: number) => {
     setEditingDeptId(deptId);
     setEditingDeptName(currentName);
     setNewBudgetVal(currentVal);
     setShowEditModal(true);
+  };
+
+  const handleMasterDeptLookupChange = (masterId: string) => {
+    setSelectedMasterId(masterId);
+    const found = masterDepartments.find(m => m.id === masterId);
+    if (found) {
+      setAddBudgetForm(f => ({
+        ...f,
+        departmentName: found.name,
+        code: found.code,
+        description: found.description
+      }));
+    }
   };
 
   const handleSaveBudget = (e: React.FormEvent) => {
@@ -32,6 +57,12 @@ export default function BudgetMasterHub() {
       updateDepartmentBudget(editingDeptId, Number(newBudgetVal));
       setShowEditModal(false);
     }
+  };
+
+  const handleAddBudgetSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    addDepartment(addBudgetForm.departmentName, addBudgetForm.code, Number(addBudgetForm.allocatedBudget));
+    setShowAddBudgetModal(false);
   };
 
   return (
@@ -48,7 +79,18 @@ export default function BudgetMasterHub() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => {
+              if (masterDepartments[0]) handleMasterDeptLookupChange(masterDepartments[0].id);
+              setShowAddBudgetModal(true);
+            }}
+            className="btn-action btn-action-primary"
+            style={{ fontWeight: 800, gap: 6 }}
+          >
+            <Plus size={16}/> + Allocate Budget to Department
+          </button>
+
           <button
             onClick={() => setActiveTab('current')}
             className={`btn-action ${activeTab === 'current' ? 'btn-action-primary' : 'btn-action-secondary'}`}
@@ -70,6 +112,7 @@ export default function BudgetMasterHub() {
       {activeTab === 'current' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
           {departments.map(dept => {
+            const masterDeptObj = masterDepartments.find(m => m.code === dept.code || m.name === dept.departmentName);
             const totalUsed = dept.consumedBudget + dept.pendingPRValue;
             const remaining = dept.allocatedBudget - totalUsed;
             const pctUsed = Math.min(100, Math.round((totalUsed / dept.allocatedBudget) * 100));
@@ -86,6 +129,13 @@ export default function BudgetMasterHub() {
                     {isOverBudget ? '🔴 BEYOND BUDGET' : '🟢 Within Budget'}
                   </span>
                 </div>
+
+                {/* Master Description */}
+                {masterDeptObj && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '6px 10px', borderRadius: 6, marginBottom: 12 }}>
+                    📋 {masterDeptObj.description}
+                  </div>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12, marginBottom: 14 }}>
                   <div>
@@ -183,6 +233,89 @@ export default function BudgetMasterHub() {
                 ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* MODAL: ADD BUDGET WITH MASTER DEPARTMENT LOOKUP */}
+      {showAddBudgetModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1250, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 480, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.5)', border: '1px solid var(--border-default)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 6 }}>
+              ➕ Allocate Budget (Tenant Master Lookup)
+            </h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
+              Select a Department from Tenant Master Table. Department code and operational scope will auto-update!
+            </p>
+
+            <form onSubmit={handleAddBudgetSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label className="field-label">Select Tenant Master Department *</label>
+                <select
+                  value={selectedMasterId}
+                  onChange={e => handleMasterDeptLookupChange(e.target.value)}
+                  className="field-input"
+                  style={{ fontWeight: 800, color: 'var(--brand-primary)' }}
+                >
+                  {masterDepartments.map(d => (
+                    <option key={d.id} value={d.id}>
+                      🏢 {d.name} ({d.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 12 }}>
+                <div>
+                  <label className="field-label">Dept Code</label>
+                  <input
+                    readOnly
+                    value={addBudgetForm.code}
+                    className="field-input"
+                    style={{ background: 'var(--bg-elevated)', fontWeight: 900, color: 'var(--brand-primary)' }}
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Department Name</label>
+                  <input
+                    readOnly
+                    value={addBudgetForm.departmentName}
+                    className="field-input"
+                    style={{ background: 'var(--bg-elevated)', fontWeight: 700 }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="field-label">Master Operational Scope / Description</label>
+                <textarea
+                  rows={2}
+                  readOnly
+                  value={addBudgetForm.description}
+                  className="field-input"
+                  style={{ background: 'var(--bg-elevated)', resize: 'none', fontSize: 12 }}
+                />
+              </div>
+
+              <div>
+                <label className="field-label">Annual Allocated Budget (₹) *</label>
+                <input
+                  type="number"
+                  required
+                  value={addBudgetForm.allocatedBudget}
+                  onChange={e => setAddBudgetForm(f => ({ ...f, allocatedBudget: Number(e.target.value) }))}
+                  className="field-input"
+                  style={{ fontSize: 16, fontWeight: 800, color: '#10B981' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+                <button type="button" className="btn-action btn-action-ghost" onClick={() => setShowAddBudgetModal(false)}>Cancel</button>
+                <button type="submit" className="btn-action btn-action-primary" style={{ background: '#10B981', borderColor: '#10B981', fontWeight: 800 }}>
+                  Allocate Department Budget
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
