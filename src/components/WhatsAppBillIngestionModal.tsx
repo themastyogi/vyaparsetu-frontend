@@ -14,6 +14,7 @@ export default function WhatsAppBillIngestionModal({ onClose, onSuccessIngest }:
   const [selectedInvoice, setSelectedInvoice] = useState<WhatsAppIncomingInvoice | null>(MOCK_WHATSAPP_INBOX[0]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [ingestSuccess, setIngestSuccess] = useState<string | null>(null);
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
 
   const activeWhatsAppNo = companySettings.whatsAppNumber || '+91 98765 43210';
 
@@ -65,11 +66,54 @@ export default function WhatsAppBillIngestionModal({ onClose, onSuccessIngest }:
               </div>
             </div>
           </div>
-          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 20 }}>✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => setShowSetupGuide(!showSetupGuide)}
+              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+            >
+              {showSetupGuide ? '📥 Back to Inbox' : '📖 2-Min Setup Guide'}
+            </button>
+            <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 20 }}>✕</button>
+          </div>
         </div>
 
-        {/* Content Body: Left Inbox List + Right AI Extraction Canvas */}
-        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', flex: 1, overflow: 'hidden' }}>
+        {/* Setup Guide Banner View */}
+        {showSetupGuide ? (
+          <div style={{ padding: 28, overflowY: 'auto', flex: 1, background: 'var(--bg-card)' }}>
+            <h4 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 12 }}>📱 How to Setup Your WhatsApp Business Phone Number</h4>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+              {/* Option A */}
+              <div style={{ background: 'rgba(16,185,129,0.08)', borderRadius: 12, border: '1px solid #10B981', padding: 20 }}>
+                <h5 style={{ fontSize: 15, fontWeight: 800, color: '#10B981', margin: '0 0 8px' }}>Option A: WhatsApp Business App (Free - 2 Mins)</h5>
+                <ol style={{ fontSize: 12, color: 'var(--text-secondary)', paddingLeft: 18, margin: 0, lineHeight: 1.6 }}>
+                  <li>Install <strong>WhatsApp Business App</strong> on your phone.</li>
+                  <li>Verify your company SIM card number via SMS OTP.</li>
+                  <li>Set Company Name &amp; Profile Picture.</li>
+                  <li>Open VyaparSetu ➔ <strong>Purchase Bills</strong> ➔ click <strong>✏ Edit WhatsApp Number</strong> and save your phone number!</li>
+                </ol>
+              </div>
+
+              {/* Option B */}
+              <div style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 12, border: '1px solid #3B82F6', padding: 20 }}>
+                <h5 style={{ fontSize: 15, fontWeight: 800, color: '#3B82F6', margin: '0 0 8px' }}>Option B: Meta Cloud API (Enterprise Auto-Bot)</h5>
+                <ol style={{ fontSize: 12, color: 'var(--text-secondary)', paddingLeft: 18, margin: 0, lineHeight: 1.6 }}>
+                  <li>Go to <strong>developers.facebook.com</strong> and click <strong>Create App</strong>.</li>
+                  <li>Select <strong>Business</strong> and add the <strong>WhatsApp</strong> product.</li>
+                  <li>Register phone number &amp; copy <strong>Phone Number ID</strong>.</li>
+                  <li>Set Webhook URL: <code>https://api.vyaparsetu.in/v1/whatsapp/webhook</code></li>
+                </ol>
+              </div>
+            </div>
+
+            <button type="button" onClick={() => setShowSetupGuide(false)} className="btn-action btn-action-primary" style={{ background: '#10B981', borderColor: '#10B981' }}>
+              Got It! Back to Live WhatsApp Inbox →
+            </button>
+          </div>
+        ) : (
+          /* Content Body: Left Inbox List + Right AI Extraction Canvas */
+          <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', flex: 1, overflow: 'hidden' }}>
           
           {/* Left Panel: WhatsApp Incoming Messages */}
           <div style={{ borderRight: '1px solid var(--border-default)', background: 'var(--bg-elevated)', overflowY: 'auto', padding: 12 }}>
@@ -226,6 +270,7 @@ export default function WhatsAppBillIngestionModal({ onClose, onSuccessIngest }:
           </div>
 
         </div>
+        )}
 
       </div>
     </div>
