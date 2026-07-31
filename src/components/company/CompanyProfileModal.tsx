@@ -3,7 +3,7 @@
  * Configures company information (GSTIN, Address, Contact, Inbound Booking Email) for any business.
  */
 import React, { useState, useEffect } from 'react';
-import { Building2, Mail, CheckCircle2, X, ShieldCheck } from 'lucide-react';
+import { Building2, Mail, MessageSquare, CheckCircle2, X, ShieldCheck } from 'lucide-react';
 import { useAccounting } from '../../hooks/useAccounting';
 
 interface CompanyProfileModalProps {
@@ -18,6 +18,7 @@ export default function CompanyProfileModal({ isOpen, onClose }: CompanyProfileM
     companyName: companySettings.companyName || '',
     companyGstin: companySettings.companyGstin || '',
     inboundEmail: companySettings.inboundEmail || '',
+    whatsAppNumber: companySettings.whatsAppNumber || '+91 80000 73887',
     email: companySettings.email || '',
     phone: companySettings.phone || '',
     address: companySettings.address || '',
@@ -33,6 +34,7 @@ export default function CompanyProfileModal({ isOpen, onClose }: CompanyProfileM
       companyName: companySettings.companyName || '',
       companyGstin: companySettings.companyGstin || '',
       inboundEmail: companySettings.inboundEmail || '',
+      whatsAppNumber: companySettings.whatsAppNumber || '+91 80000 73887',
       email: companySettings.email || '',
       phone: companySettings.phone || '',
       address: companySettings.address || '',
@@ -50,6 +52,7 @@ export default function CompanyProfileModal({ isOpen, onClose }: CompanyProfileM
       companyName: form.companyName,
       companyGstin: form.companyGstin,
       inboundEmail: form.inboundEmail,
+      whatsAppNumber: form.whatsAppNumber,
       email: form.email,
       phone: form.phone,
       address: form.address,
@@ -58,7 +61,7 @@ export default function CompanyProfileModal({ isOpen, onClose }: CompanyProfileM
       pincode: form.pincode,
     });
 
-    setToast('Company Profile & Inbound Email updated successfully!');
+    setToast('Company Profile, Inbound Email & WhatsApp Ingestion Number updated successfully!');
     setTimeout(() => {
       setToast(null);
       onClose();
@@ -117,6 +120,17 @@ export default function CompanyProfileModal({ isOpen, onClose }: CompanyProfileM
               Vendors send PDF purchase invoices to this email address. The system automatically reads and drafts bills for this email.
             </p>
             <input type="email" required value={form.inboundEmail} onChange={e => setForm(f => ({ ...f, inboundEmail: e.target.value }))} placeholder="e.g. themastyogi@gmail.com or billing@yourcompany.com" className="field-input" style={{ fontWeight: 800, background: 'var(--bg-card)' }}/>
+          </div>
+
+          {/* WhatsApp Ingestion Number Card */}
+          <div style={{ background: 'rgba(16,185,129,0.08)', padding: 16, borderRadius: 12, border: '1px solid rgba(16,185,129,0.2)' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#10B981', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <MessageSquare size={16}/> Dedicated WhatsApp Ingestion Number *
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, lineHeight: '1.4' }}>
+              Vendors send PDF / Photo invoices to this WhatsApp Business number. AI Vision extracts items &amp; ingests bills automatically.
+            </p>
+            <input type="text" required value={form.whatsAppNumber} onChange={e => setForm(f => ({ ...f, whatsAppNumber: e.target.value }))} placeholder="e.g. +91 80000 73887" className="field-input" style={{ fontWeight: 800, background: 'var(--bg-card)', color: '#10B981' }}/>
           </div>
 
           {/* Contact Email & Address */}

@@ -244,6 +244,29 @@ export default function Purchases() {
         </button>
       </div>
 
+      {/* Company Dedicated WhatsApp Ingestion Card */}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 12, padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginTop: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10B981' }}>
+            <MessageSquare size={20}/>
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>Dedicated WhatsApp Ingestion Number: <strong style={{ fontFamily: 'monospace', color: '#10B981' }}>{companySettings.whatsAppNumber || '+91 80000 73887'}</strong></span>
+              <button onClick={() => setShowEditCompanyEmail(true)} style={{ background: 'rgba(16,185,129,0.15)', border: 'none', color: '#10B981', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                ✏ Edit WhatsApp Number
+              </button>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+              Ask vendors to send PDF / Photo invoices to this WhatsApp Business number. AI extracts items &amp; auto-ingests into your Purchase Bills.
+            </div>
+          </div>
+        </div>
+        <button className="btn-action btn-action-secondary" onClick={() => setShowWhatsAppModal(true)} style={{ fontSize: 12, border: '1px solid #10B981', color: '#10B981', background: 'rgba(16,185,129,0.1)' }}>
+          Open WhatsApp Hub →
+        </button>
+      </div>
+
       {/* Summary */}
       <div className="party-summary" style={{ marginTop: 16 }}>
         <div className="summary-card"><div className="summary-val">{postedBills.length}</div><div className="summary-lbl">Posted Bills</div></div>

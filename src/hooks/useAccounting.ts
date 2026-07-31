@@ -123,6 +123,7 @@ export interface CompanySettings {
   companyName: string;
   companyGstin: string;
   inboundEmail: string;        // Purchase booking email configured by user
+  whatsAppNumber?: string;     // Dedicated WhatsApp Vendor Ingestion Number
   googleConnected?: boolean;   // Official Google OAuth2 Connected Status
   googleConnectedEmail?: string; // Connected Google Account Email
   googleAccessToken?: string;  // OAuth2 Access Token
@@ -590,6 +591,7 @@ const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
   companyName: 'VyaparSetu Enterprises',
   companyGstin: '29AABCV1234F1Z5',
   inboundEmail: 'themastyogi@gmail.com',
+  whatsAppNumber: '+91 80000 73887',
   email: 'themastyogi@gmail.com',
   phone: '+91 98765 43210',
   address: 'Plot 42, Industrial Area, Phase II',
