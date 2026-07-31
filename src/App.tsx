@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Parties from './pages/Parties';
 import Items from './pages/Items';
 import Purchases from './pages/Purchases';
+import ProcurementHub from './pages/ProcurementHub';
 import Reports from './pages/Reports';
 import SalesInvoices from './pages/SalesInvoices';
 import ChartOfAccounts from './pages/ChartOfAccounts';
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/" element={<Login />} />
         <Route path="/dashboard" element={<Layout />}>
           <Route index                    element={<Dashboard />} />
+          <Route path="procurement"       element={<ProcurementHub />} />
           <Route path="parties"           element={<Parties />} />
           <Route path="items"             element={<Items />} />
           <Route path="sales"             element={<SalesInvoices />} />

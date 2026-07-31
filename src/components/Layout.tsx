@@ -26,6 +26,7 @@ const NAV_SECTIONS = [
   {
     label: 'TRANSACTIONS',
     items: [
+      { key: 'nav.procurement', icon: <Building2 size={18}/>, path: '/dashboard/procurement', label: 'Procurement & L1 Hub' },
       { key: 'nav.sales',       icon: <ShoppingCart size={18}/>, path: '/dashboard/sales',       label: 'Sales Invoices' },
       { key: 'nav.purchases',   icon: <FileText size={18}/>,     path: '/dashboard/purchases',   label: 'Purchase Bills' },
       { key: 'nav.debit-notes', icon: <Zap size={18}/>,         path: '/dashboard/debit-notes', label: 'Debit Notes' },
