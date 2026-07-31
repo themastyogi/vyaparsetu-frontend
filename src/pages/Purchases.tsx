@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Search, Plus, Camera, Mail,
+  Search, Plus, Camera, Mail, MessageSquare,
   Trash2, Link2, X, FileUp, RotateCcw, Eye, AlertCircle
 } from 'lucide-react';
 import { usePurchaseWizard } from '../components/purchase/usePurchaseWizard';
 import PurchaseWizard from '../components/purchase/PurchaseWizard';
 import EmailInboxModal from '../components/purchase/EmailInboxModal';
+import WhatsAppBillIngestionModal from '../components/WhatsAppBillIngestionModal';
 import CompanyProfileModal from '../components/company/CompanyProfileModal';
 import { useAccounting, type PurchaseInvoice, type SalesInvoice } from '../hooks/useAccounting';
 import { useMaster } from '../hooks/useMaster';
@@ -51,6 +52,7 @@ export default function Purchases() {
   const [linkModal,   setLinkModal]   = useState<PurchaseInvoice | null>(null);
   const [reversingBill, setReversingBill] = useState<PurchaseInvoice | null>(null);
   const [showEmailInbox, setShowEmailInbox] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [showEditCompanyEmail, setShowEditCompanyEmail] = useState(false);
   const [emailAckToast, setEmailAckToast]   = useState<{ party: string; email: string; invNo: string; amount: number } | null>(null);
 
@@ -195,6 +197,9 @@ export default function Purchases() {
           <p className="page-sub">Linked to accounting ledger · Incremental Email Ingestion · Auto-posted</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn-action btn-action-secondary" onClick={() => setShowWhatsAppModal(true)} style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid #10B981', color: '#10B981', fontWeight: 800 }}>
+            <MessageSquare size={15} style={{ color: '#10B981' }}/> 📲 WhatsApp Bill Ingestion
+          </button>
           <label className="btn-action btn-action-secondary" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <FileUp size={15} style={{ color: 'var(--brand-primary)' }}/> Upload PDF Invoice
             <input type="file" accept=".pdf" onChange={handleDirectPDFUpload} style={{ display: 'none' }}/>
@@ -489,6 +494,13 @@ export default function Purchases() {
         onClose={() => setShowEmailInbox(false)}
         onSelectDraftToBook={handleBookDraft}
       />
+
+      {/* WhatsApp Bill Ingestion Modal */}
+      {showWhatsAppModal && (
+        <WhatsAppBillIngestionModal
+          onClose={() => setShowWhatsAppModal(false)}
+        />
+      )}
 
       {/* Purchase Wizard */}
       <PurchaseWizard wizard={wizard} />
