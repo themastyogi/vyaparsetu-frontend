@@ -23,6 +23,16 @@ export interface DepartmentBudget {
   fiscalYear: string;
 }
 
+export interface MasterDepartment {
+  id: string;
+  code: string;       // e.g. 'IT-01', 'MFG-02', 'RND-05'
+  name: string;       // e.g. 'IT & Hardware Infrastructure'
+  description: string; // e.g. 'Manages corporate IT hardware, software licenses & network infrastructure'
+  status: 'Active' | 'Inactive';
+  tenantId: string;   // Tenant Isolation (e.g. 'tenant_demo_01')
+  createdAt: string;
+}
+
 export interface BudgetAuditLog {
   id: string;
   departmentId: string;
@@ -134,6 +144,14 @@ const SEED_AUDIT_LOGS: BudgetAuditLog[] = [
   { id: 'audit-2', departmentId: 'dept-2', departmentName: 'Manufacturing & Production', oldAmount: 10000000, newAmount: 12000000, changeAmount: 2000000, changedBy: 'Admin (System)', date: '2026-07-15 14:30:00', reason: 'Q2 Production Scaling Allocation' }
 ];
 
+export const SEED_MASTER_DEPARTMENTS: MasterDepartment[] = [
+  { id: 'dept-m-1', code: 'IT-01', name: 'IT & Hardware Infrastructure', description: 'Manages corporate IT hardware, software licenses & network infrastructure', status: 'Active', tenantId: 'tenant_demo_01', createdAt: '2026-07-01T00:00:00Z' },
+  { id: 'dept-m-2', code: 'MFG-02', name: 'Manufacturing & Production', description: 'Oversees plant machinery, raw materials, job work & shop floor operations', status: 'Active', tenantId: 'tenant_demo_01', createdAt: '2026-07-01T00:00:00Z' },
+  { id: 'dept-m-3', code: 'MKT-03', name: 'Marketing & Sales Promotion', description: 'Handles brand campaigns, advertising expenditure & customer outreach', status: 'Active', tenantId: 'tenant_demo_01', createdAt: '2026-07-01T00:00:00Z' },
+  { id: 'dept-m-4', code: 'ADM-04', name: 'Administration & Facilities', description: 'Facilities management, office rent, utilities & administrative supplies', status: 'Active', tenantId: 'tenant_demo_01', createdAt: '2026-07-01T00:00:00Z' },
+  { id: 'dept-m-5', code: 'RND-05', name: 'Research & Development (R&D)', description: 'Product R&D, prototype testing, lab equipment & patent filings', status: 'Active', tenantId: 'tenant_demo_01', createdAt: '2026-07-01T00:00:00Z' }
+];
+
 const SEED_DEPARTMENTS: DepartmentBudget[] = [
   { id: 'dept-1', departmentName: 'IT & Hardware Infrastructure', code: 'IT-01', allocatedBudget: 5000000, consumedBudget: 1250000, pendingPRValue: 650000, fiscalYear: '2026-27' },
   { id: 'dept-2', departmentName: 'Manufacturing & Production', code: 'MFG-02', allocatedBudget: 12000000, consumedBudget: 4800000, pendingPRValue: 1200000, fiscalYear: '2026-27' },
@@ -222,6 +240,7 @@ function save<T>(key: string, val: T): void {
 
 export function useProcurement() {
   const [departments, setDepartments] = useState<DepartmentBudget[]>(() => load('vs_departments', SEED_DEPARTMENTS));
+  const [masterDepartments, setMasterDepartments] = useState<MasterDepartment[]>(() => load('vs_master_departments', SEED_MASTER_DEPARTMENTS));
   const [auditLogs, setAuditLogs] = useState<BudgetAuditLog[]>(() => load('vs_budget_audits', SEED_AUDIT_LOGS));
   const [indents, setIndents] = useState<PurchaseIndent[]>(() => load('vs_indents', SEED_INDENTS));
   const [rfqs, setRfqs] = useState<PurchaseQuoteRFQ[]>(() => load('vs_rfqs', SEED_RFQS));
@@ -231,6 +250,11 @@ export function useProcurement() {
   const updateDepartments = useCallback((newDepts: DepartmentBudget[]) => {
     setDepartments(newDepts);
     save('vs_departments', newDepts);
+  }, []);
+
+  const updateMasterDepartments = useCallback((newMasterDepts: MasterDepartment[]) => {
+    setMasterDepartments(newMasterDepts);
+    save('vs_master_departments', newMasterDepts);
   }, []);
 
   const updateAuditLogs = useCallback((newAudits: BudgetAuditLog[]) => {
@@ -308,6 +332,35 @@ export function useProcurement() {
 
     updateAuditLogs([auditEntry, ...auditLogs]);
   }, [departments, auditLogs, updateDepartments, updateAuditLogs]);
+
+  const addMasterDepartment = useCallback((code: string, name: string, description: string) => {
+    const newDept: MasterDepartment = {
+      id: `dept_m_${Date.now()}`,
+      code: code.toUpperCase(),
+      name,
+      description,
+      status: 'Active',
+      tenantId: 'tenant_demo_01',
+      createdAt: new Date().toISOString()
+    };
+    const updated = [newDept, ...masterDepartments];
+    updateMasterDepartments(updated);
+
+    // Also initialize budget record if not present
+    addDepartment(name, code.toUpperCase(), 1000000);
+
+    return newDept;
+  }, [masterDepartments, updateMasterDepartments, addDepartment]);
+
+  const updateMasterDepartmentRecord = useCallback((id: string, updates: Partial<MasterDepartment>) => {
+    const updated = masterDepartments.map(d => d.id === id ? { ...d, ...updates } : d);
+    updateMasterDepartments(updated);
+  }, [masterDepartments, updateMasterDepartments]);
+
+  const deleteMasterDepartment = useCallback((id: string) => {
+    const updated = masterDepartments.filter(d => d.id !== id);
+    updateMasterDepartments(updated);
+  }, [masterDepartments, updateMasterDepartments]);
 
   // 1. Create New Purchase Indent / Requisition
   const createIndent = useCallback((data: {
@@ -483,6 +536,7 @@ export function useProcurement() {
 
   return {
     departments,
+    masterDepartments,
     auditLogs,
     indents,
     rfqs,
@@ -491,6 +545,9 @@ export function useProcurement() {
     generateRFQFromIndent,
     convertL1QuoteToPO,
     updateDepartmentBudget,
-    addDepartment
+    addDepartment,
+    addMasterDepartment,
+    updateMasterDepartmentRecord,
+    deleteMasterDepartment
   };
 }

@@ -9,6 +9,7 @@ import { useMaster } from '../hooks/useMaster';
 export default function ProcurementHub() {
   const {
     departments,
+    masterDepartments,
     auditLogs,
     indents,
     rfqs,
@@ -17,7 +18,10 @@ export default function ProcurementHub() {
     generateRFQFromIndent,
     convertL1QuoteToPO,
     updateDepartmentBudget,
-    addDepartment
+    addDepartment,
+    addMasterDepartment,
+    updateMasterDepartmentRecord,
+    deleteMasterDepartment
   } = useProcurement();
 
   const { items: masterItems } = useMaster();
@@ -26,6 +30,14 @@ export default function ProcurementHub() {
 
   // User Role Switcher: 'admin' sees budget targets & edits; 'user' is restricted
   const [userRole, setUserRole] = useState<'admin' | 'user'>('admin');
+
+  // Department Master Table Modal State
+  const [showMasterDeptModal, setShowMasterDeptModal] = useState(false);
+  const [masterDeptForm, setMasterDeptForm] = useState({
+    code: '',
+    name: '',
+    description: ''
+  });
 
   // Budget Allocation Audit Trail History Modal State
   const [showAuditModal, setShowAuditModal] = useState(false);
@@ -81,6 +93,14 @@ export default function ProcurementHub() {
     addDepartment(addDeptForm.name, addDeptForm.code || 'DEPT-00', Number(addDeptForm.budget));
     setShowAddDeptModal(false);
     setAddDeptForm({ name: '', code: '', budget: 1000000 });
+  };
+
+  const handleCreateMasterDeptSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (masterDeptForm.code && masterDeptForm.name) {
+      addMasterDepartment(masterDeptForm.code, masterDeptForm.name, masterDeptForm.description);
+      setMasterDeptForm({ code: '', name: '', description: '' });
+    }
   };
 
   const handleItemSelectChange = (itemId: string) => {
@@ -165,15 +185,24 @@ export default function ProcurementHub() {
             </button>
           </div>
 
-          {/* Audit Trail History Button */}
+          {/* Master Departments & Audit Trail History Buttons */}
           {userRole === 'admin' && (
-            <button
-              onClick={() => setShowAuditModal(true)}
-              className="btn-action btn-action-secondary"
-              style={{ fontSize: 12, padding: '8px 14px', fontWeight: 800, gap: 6 }}
-            >
-              <History size={15}/> 📜 Budget History Log
-            </button>
+            <>
+              <button
+                onClick={() => setShowMasterDeptModal(true)}
+                className="btn-action btn-action-secondary"
+                style={{ fontSize: 12, padding: '8px 14px', fontWeight: 800, gap: 6, borderColor: 'var(--brand-primary)', color: 'var(--brand-primary)' }}
+              >
+                <Building2 size={15}/> ⚙️ Master Departments ({masterDepartments.length})
+              </button>
+              <button
+                onClick={() => setShowAuditModal(true)}
+                className="btn-action btn-action-secondary"
+                style={{ fontSize: 12, padding: '8px 14px', fontWeight: 800, gap: 6 }}
+              >
+                <History size={15}/> 📜 Budget History Log
+              </button>
+            </>
           )}
 
           <button
@@ -837,6 +866,133 @@ export default function ProcurementHub() {
             {/* Modal Footer */}
             <div style={{ padding: '12px 24px', background: 'var(--bg-elevated)', borderTop: '1px solid var(--border-default)', display: 'flex', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowAuditModal(false)} className="btn-action btn-action-ghost">Close History Audit</button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: TENANT DEPARTMENT MASTER TABLE MANAGER */}
+      {showMasterDeptModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 840, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.6)', border: '1px solid var(--border-default)', overflow: 'hidden' }}>
+            
+            {/* Header */}
+            <div style={{ padding: '16px 24px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-default)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Building2 size={22} style={{ color: 'var(--brand-primary)' }}/>
+                <div>
+                  <h3 style={{ fontSize: 17, fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
+                    🏢 Tenant Department Master Table &amp; Central Lookup
+                  </h3>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Tenant-isolated master list of custom business departments &amp; codes</div>
+                </div>
+              </div>
+              <button onClick={() => setShowMasterDeptModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer' }}>✕</button>
+            </div>
+
+            {/* Content: Form + Table */}
+            <div style={{ padding: 24, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
+              
+              {/* Add New Master Department Form */}
+              <form onSubmit={handleCreateMasterDeptSubmit} style={{ background: 'var(--bg-elevated)', padding: 16, borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--brand-primary)', marginBottom: 10 }}>
+                  ➕ Add New Custom Department to Tenant Master
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr auto', gap: 10, alignItems: 'end' }}>
+                  <div>
+                    <label className="field-label" style={{ fontSize: 11 }}>Dept Code *</label>
+                    <input
+                      required
+                      placeholder="e.g. LOG-06"
+                      value={masterDeptForm.code}
+                      onChange={e => setMasterDeptForm(f => ({ ...f, code: e.target.value }))}
+                      className="field-input"
+                      style={{ fontWeight: 800, textTransform: 'uppercase', padding: '6px 10px', fontSize: 12 }}
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label" style={{ fontSize: 11 }}>Department Name *</label>
+                    <input
+                      required
+                      placeholder="e.g. Logistics & Supply Chain"
+                      value={masterDeptForm.name}
+                      onChange={e => setMasterDeptForm(f => ({ ...f, name: e.target.value }))}
+                      className="field-input"
+                      style={{ fontWeight: 700, padding: '6px 10px', fontSize: 12 }}
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label" style={{ fontSize: 11 }}>Description / Scope</label>
+                    <input
+                      placeholder="e.g. Warehousing, freight & last-mile delivery"
+                      value={masterDeptForm.description}
+                      onChange={e => setMasterDeptForm(f => ({ ...f, description: e.target.value }))}
+                      className="field-input"
+                      style={{ padding: '6px 10px', fontSize: 12 }}
+                    />
+                  </div>
+                  <button type="submit" className="btn-action btn-action-primary" style={{ height: 34, fontSize: 12, padding: '0 16px', fontWeight: 800 }}>
+                    + Save to Master
+                  </button>
+                </div>
+              </form>
+
+              {/* Master Department Table */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
+                  Configured Tenant Departments ({masterDepartments.length})
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-default)', color: 'var(--text-muted)', textAlign: 'left' }}>
+                      <th style={{ padding: 10 }}>Code</th>
+                      <th style={{ padding: 10 }}>Department Name</th>
+                      <th style={{ padding: 10 }}>Description / Scope</th>
+                      <th style={{ padding: 10 }}>Tenant ID</th>
+                      <th style={{ padding: 10 }}>Status</th>
+                      <th style={{ padding: 10, textAlign: 'right' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {masterDepartments.map(d => (
+                      <tr key={d.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: 10, fontWeight: 900, color: 'var(--brand-primary)' }}>{d.code}</td>
+                        <td style={{ padding: 10, fontWeight: 800, color: 'var(--text-primary)' }}>{d.name}</td>
+                        <td style={{ padding: 10, color: 'var(--text-muted)' }}>{d.description}</td>
+                        <td style={{ padding: 10 }}><code style={{ fontSize: 11 }}>{d.tenantId}</code></td>
+                        <td style={{ padding: 10 }}>
+                          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: d.status === 'Active' ? 'rgba(16,185,129,0.15)' : 'rgba(107,114,128,0.15)', color: d.status === 'Active' ? '#10B981' : '#6B7280', fontWeight: 800 }}>
+                            {d.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: 10, textAlign: 'right' }}>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                            <button
+                              onClick={() => updateMasterDepartmentRecord(d.id, { status: d.status === 'Active' ? 'Inactive' : 'Active' })}
+                              style={{ background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 4, padding: '2px 8px', fontSize: 10, cursor: 'pointer', color: 'var(--text-muted)' }}
+                            >
+                              Toggle Status
+                            </button>
+                            <button
+                              onClick={() => deleteMasterDepartment(d.id)}
+                              style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 4, padding: '2px 8px', fontSize: 10, cursor: 'pointer', color: '#EF4444' }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '12px 24px', background: 'var(--bg-elevated)', borderTop: '1px solid var(--border-default)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowMasterDeptModal(false)} className="btn-action btn-action-ghost">Close Master Manager</button>
             </div>
 
           </div>
