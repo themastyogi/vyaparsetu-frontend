@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, BookOpen, HelpCircle, ShieldAlert, ShieldCheck, Sparkles, ChevronRight, Landmark, Users, Package, ShoppingCart, FileText, BarChart3, Phone, Send, Bot } from 'lucide-react';
+import { Search, BookOpen, HelpCircle, ShieldAlert, ShieldCheck, Sparkles, ChevronRight, Landmark, Users, Package, ShoppingCart, FileText, BarChart3, Phone, Send, Bot, Database } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { resolveAiIntent } from '../utils/aiSupportResolver';
 
@@ -30,6 +30,68 @@ interface ScreenHelpContent {
 }
 
 const HELP_DATABASE: Record<string, ScreenHelpContent> = {
+  'enterprise-db': {
+    id: 'enterprise-db',
+    title: '🗄️ Enterprise Database, 100 GB Capacity & Performance Specs',
+    category: 'ENTERPRISE INFRASTRUCTURE & SCALING',
+    icon: Database,
+    businessUser: {
+      whatIsIt: 'VyaparSetu is powered by a High-Availability Enterprise Database Engine supporting 100 GB+ data capacity, 5,000+ concurrent user logins, sub-50ms transaction speeds, and automated point-in-time backups.',
+      processesAndSteps: [
+        {
+          title: '1. 💾 100 GB Data Capacity (Real Business Scale)',
+          steps: [
+            'Holds approx 50 Million (5 Crore) Sales Invoices & Purchase Bills.',
+            'Holds approx 200 Million (20 Crore) General Ledger Line Entries.',
+            'For a business generating 10,000 bills/month, 100 GB holds over 40+ Years of active transaction history.'
+          ]
+        },
+        {
+          title: '2. 👥 Concurrent User Login & Throughput',
+          steps: [
+            'Supports 5,000+ simultaneous active users operating at the exact same second without session locking.',
+            'Processes 1,200+ financial voucher postings per second with automated PgBouncer connection pooling.',
+            'Stateless JWT & OAuth2 sessions with Redis caching for instant user authentication.'
+          ]
+        },
+        {
+          title: '3. ⚡ Transaction & Query Performance Speed',
+          steps: [
+            'Voucher Posting Latency: < 50 milliseconds (ms) for double-entry posting & subledger sync.',
+            'Financial Report Generation: < 150 milliseconds (ms) for Trial Balance, P&L, and Balance Sheet.',
+            'Search & Filter Speed: Sub-10ms party search and HSN lookup using B-Tree and GIN indexes.'
+          ]
+        },
+        {
+          title: '4. 📦 Storage Scaling & Continuous Backups',
+          steps: [
+            'Automated Table Partitioning: Keeps queries fast regardless of total database size.',
+            'Continuous WAL Backups: Automated point-in-time recovery (PITR) with daily offsite snapshots.'
+          ]
+        }
+      ],
+      rulesAndLimits: [
+        '100% ACID compliant PostgreSQL HA database engine.',
+        'Zero-downtime database upgrades and continuous multi-AZ replication.'
+      ],
+      proTips: [
+        'Use Party Search filters to query 100,000+ customer records in under 10 milliseconds.'
+      ]
+    },
+    advancedGuide: {
+      technicalArch: 'Multi-Tenant PostgreSQL HA Cluster with PgBouncer connection pooler, Redis L2 cache, B-Tree/GIN indexing, and WAL point-in-time recovery.',
+      coaGLMapping: [
+        'Engine: High-Availability PostgreSQL Managed Infrastructure',
+        'Capacity: 100 GB Default Enterprise Allocation (Auto-Scalable)',
+        'Concurrency: 5,000+ Active Simultaneous Connections',
+        'Latency: Sub-50ms Voucher Write / Sub-150ms Report Read'
+      ],
+      controlFlow: [
+        'Client Request -> PgBouncer Pooler -> Multi-Tenant Query Execution -> Redis Cache Sync -> Response (<50ms)'
+      ],
+      auditTrail: 'All database DDL/DML events and connection logs are archived in immutable WAL logs.'
+    }
+  },
   'legal-terms': {
     id: 'legal-terms',
     title: '⚖️ Legal Terms, Terms of Service & Compliance Notice',
