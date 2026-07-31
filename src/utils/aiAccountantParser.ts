@@ -195,6 +195,76 @@ export const parseAccountingPrompt = (prompt: string): ParsedAccountingVoucher =
     creditAccount = 'Bank Account';
   }
 
+  // SCENARIO N: Capital Contribution / Owner's Equity
+  else if (lower.includes('capital') || lower.includes('introduced capital') || lower.includes('equity added') || lower.includes('owner funds')) {
+    entryType = 'Capital Contribution (Equity)';
+    debitAccount = lower.includes('cash') ? 'Cash Account' : 'Bank Account';
+    creditAccount = "Owner's Equity & Capital Account";
+  }
+
+  // SCENARIO O: Owner's Personal Drawings
+  else if (lower.includes('personal drawing') || lower.includes('personal use') || lower.includes('drawings') || lower.includes('owner withdrew')) {
+    entryType = "Owner's Drawings";
+    debitAccount = "Owner's Drawings Account";
+    creditAccount = lower.includes('cash') ? 'Cash Account' : 'Bank Account';
+  }
+
+  // SCENARIO P: Business Loan Disbursement Received
+  else if (lower.includes('loan received') || lower.includes('business loan') || lower.includes('bank loan')) {
+    entryType = 'Bank Loan Disbursement';
+    debitAccount = 'Bank Account';
+    creditAccount = 'Bank Loan Liability Account';
+  }
+
+  // SCENARIO Q: Loan EMI Payment
+  else if (lower.includes('loan emi') || lower.includes('paid emi') || lower.includes('emi payment')) {
+    entryType = 'Loan EMI Payment';
+    debitAccount = 'Bank Loan Liability Account';
+    creditAccount = 'Bank Account';
+  }
+
+  // SCENARIO R: Fixed Asset Purchase (Computers, Laptops, Machinery, Vehicles)
+  else if (lower.includes('laptop') || lower.includes('computer') || lower.includes('machinery') || lower.includes('furniture') || lower.includes('vehicle') || lower.includes('fixed asset')) {
+    entryType = 'Fixed Asset Purchase';
+    debitAccount = lower.includes('laptop') || lower.includes('computer') ? 'Computer Equipment & Hardware' : 'Machinery & Equipment';
+    creditAccount = lower.includes('cash') ? 'Cash Account' : 'Bank Account';
+  }
+
+  // SCENARIO S: Discount Allowed to Customer
+  else if (lower.includes('discount allowed') || lower.includes('cash discount to customer')) {
+    entryType = 'Discount Allowed Expense';
+    debitAccount = 'Discount Allowed Expense';
+    creditAccount = party !== 'General' ? party : 'Accounts Receivable (Customers)';
+  }
+
+  // SCENARIO T: Discount Received from Vendor
+  else if (lower.includes('discount received') || lower.includes('trade discount from vendor')) {
+    entryType = 'Discount Received Income';
+    debitAccount = party !== 'General' ? party : 'Accounts Payable (Vendors)';
+    creditAccount = 'Discount Received Income';
+  }
+
+  // SCENARIO U: Bad Debts Written Off
+  else if (lower.includes('bad debt') || lower.includes('wrote off') || lower.includes('bad debts')) {
+    entryType = 'Bad Debts Write-Off';
+    debitAccount = 'Bad Debts Expense Account';
+    creditAccount = party !== 'General' ? party : 'Accounts Receivable (Customers)';
+  }
+
+  // SCENARIO V: Insurance Premium Payment
+  else if (lower.includes('insurance') || lower.includes('policy premium')) {
+    entryType = 'Insurance Expense';
+    debitAccount = 'Insurance & Risk Expense';
+    creditAccount = lower.includes('cash') ? 'Cash Account' : 'Bank Account';
+  }
+
+  // SCENARIO W: Professional & Legal Fees
+  else if (lower.includes('audit fee') || lower.includes('legal fee') || lower.includes('professional fee') || lower.includes('ca fee')) {
+    entryType = 'Legal & Professional Fees';
+    debitAccount = 'Legal & Professional Fees';
+    creditAccount = lower.includes('cash') ? 'Cash Account' : 'Bank Account';
+  }
+
   return {
     entryType,
     date,
